@@ -231,9 +231,27 @@ export class TwistedChessGame extends DurableObject {
         turnStartedAt: Date.now(), history: [], rematchVotes: {},
       };
       this.setTimeoutAlarm();
+      // Colors swapped — tell every socket its new color and refresh attachment.
+      this.reseatSockets();
     }
     this.save();
     this.broadcastState();
+  }
+
+  // Recompute each connected socket's color from its playerId against the
+  // current players map, update its attachment, and notify it. Used after a
+  // rematch (which swaps sides) so clients re-orient correctly.
+  reseatSockets() {
+    const g = this.game;
+    for (const ws of this.ctx.getWebSockets()) {
+      const a = ws.deserializeAttachment() || {};
+      let color = null;
+      if (g.players.w && g.players.w.id === a.playerId) color = 'w';
+      else if (g.players.b && g.players.b.id === a.playerId) color = 'b';
+      ws.serializeAttachment({ playerId: a.playerId, color });
+      const name = color && g.players[color] ? g.players[color].name : (a.name || '');
+      this.send(ws, { type: 'joined', color, you: name });
+    }
   }
 
   handleChat(ws, att, msg) {

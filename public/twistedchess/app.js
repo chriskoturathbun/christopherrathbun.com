@@ -165,9 +165,10 @@ function buildBoardGrid() {
     // quadrant dividers: between col 3|4 and row 3|4
     if (c === 3) sq.classList.add('qedge-r');
     if (r === 3) sq.classList.add('qedge-b');
-    sq.addEventListener('click', () => onSquareClick(i));
+    sq.addEventListener('click', () => onSquareClick(Number(sq.dataset.i)));
     board.appendChild(sq);
   }
+  App._gridFlip = App.flip; // remember the orientation this grid was built for
 }
 
 function onState(s) {
@@ -193,6 +194,9 @@ function onState(s) {
 
 function renderBoard() {
   const s = App.state;
+  // Rebuild the grid if orientation changed (e.g. after 'joined' flips Black's
+  // board, or the Flip button) so click handlers map to the right squares.
+  if (App._gridFlip !== App.flip) buildBoardGrid();
   const myTurn = isMyMoveTurn();
   $('#board').classList.toggle('my-turn', myTurn);
 
@@ -537,9 +541,28 @@ function renderGameOver() {
   $('#over-sub').textContent = sub;
 
   const votes = s.rematchVotes || {};
-  const mine = App.color && votes[App.color];
-  const other = App.color && votes[App.color === 'w' ? 'b' : 'w'];
-  $('#rematch-status').textContent = mine ? 'Waiting for opponent to accept rematch…' : (other ? 'Opponent wants a rematch!' : '');
+  const mine = !!(App.color && votes[App.color]);
+  const other = !!(App.color && votes[App.color === 'w' ? 'b' : 'w']);
+  const btn = $('#btn-rematch');
+  const st = $('#rematch-status');
+  btn.classList.remove('glow');
+  st.classList.remove('notify');
+  if (!App.color) {
+    btn.style.display = 'none';
+    st.textContent = '';
+  } else if (other && !mine) {
+    // Opponent has requested — make it an unmistakable call to action.
+    btn.textContent = '✓ Accept rematch';
+    btn.classList.add('glow');
+    st.textContent = '🔁 Your opponent wants a rematch!';
+    st.classList.add('notify');
+  } else if (mine && !other) {
+    btn.textContent = 'Rematch requested ✓';
+    st.textContent = 'Waiting for your opponent to accept…';
+  } else {
+    btn.textContent = 'Rematch';
+    st.textContent = '';
+  }
   $('#overlay').classList.remove('hidden');
 }
 

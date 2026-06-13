@@ -242,6 +242,17 @@ input[type=text]:focus, select:focus { border-color: var(--accent); }
 .modal p { color: var(--muted); margin: 0 0 18px; }
 .modal-actions { display: flex; gap: 10px; }
 .modal-actions .btn { flex: 1; }
+.btn.glow {
+  background: linear-gradient(135deg, var(--accent2), #00b488);
+  border-color: transparent; color: #04130d;
+  animation: btnglow 1.2s ease-in-out infinite;
+}
+@keyframes btnglow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,212,160,.55); }
+  50% { box-shadow: 0 0 0 8px rgba(0,212,160,0); }
+}
+.hint.notify { color: var(--accent2); font-weight: 700; font-size: 15px; }
+
 .promo-row { display: flex; gap: 10px; justify-content: center; }
 .promo-row button {
   width: 64px; height: 64px; font-size: 40px; border-radius: 12px;
