@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# OS / editor
+.DS_Store
+*.log
+
+# Local build output
+dist/
+.output/
+
+# Local editor/agent config
+.claude/

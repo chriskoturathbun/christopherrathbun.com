@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Christopher Rathbun</title>
+  <meta name="description" content="Products, tools, and ventures — built by Christopher Rathbun." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0c0c0c;
+      --card: #111111;
+      --card-hover: #161616;
+      --border: #222222;
+      --text: #e8e8e8;
+      --text-muted: #666666;
+      --text-dim: #333333;
+      --tag-color: #555555;
+      --accent: #e8e8e8;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Space Mono', 'Courier New', monospace;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      cursor: none;
+    }
+
+    /* ── Custom cursor ── */
+    .cursor {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background: var(--text);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      transition: width 0.15s, height 0.15s, opacity 0.15s;
+    }
+    .cursor.over-link { width: 40px; height: 40px; opacity: 0.12; background: #fff; }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      mix-blend-mode: normal;
+    }
+    .nav-name {
+      font-size: 0.75rem;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+    .nav-coords {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .nav-count {
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 0 28px 60px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(5rem, 15vw, 14rem);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      line-height: 0.88;
+      text-transform: uppercase;
+      color: #e8e8e8;
+      user-select: none;
+    }
+    .hero-title span {
+      display: block;
+    }
+    .hero-title .line-2 {
+      color: #202020;
+    }
+    .hero-sub-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-top: 32px;
+    }
+    .hero-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+      max-width: 380px;
+      line-height: 1.7;
+    }
+    .hero-scroll {
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hero-scroll::before {
+      content: '';
+      display: block;
+      width: 40px;
+      height: 1px;
+      background: var(--text-dim);
+    }
+
+    /* ── Tags filter ── */
+    .filters-wrap {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--bg);
+    }
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 4px;
+      align-items: center;
+    }
+    .filter-btn {
+      font-size: 0.68rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--tag-color);
+      background: none;
+      border: none;
+      padding: 4px 0;
+      cursor: none;
+      transition: color 0.15s;
+    }
+    .filter-btn::before { content: '[ '; }
+    .filter-btn::after  { content: ' ]'; }
+    .filter-btn:hover { color: var(--text-muted); }
+    .filter-btn.active { color: var(--text); }
+    .filter-sep {
+      color: var(--text-dim);
+      font-size: 0.65rem;
+    }
+
+    /* ── Grid ── */
+    .grid-wrap { padding: 0 20px 120px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      padding: 0;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      transition: background 0.2s;
+      cursor: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .card:hover { background: var(--card-hover); }
+
+    /* ── Preview screenshot ── */
+    .card-preview {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      background: #0a0a0a;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .card-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+      transition: transform 0.5s ease, opacity 0.3s ease;
+      opacity: 0.75;
+      filter: grayscale(20%);
+    }
+    .card:hover .card-preview img {
+      transform: scale(1.04);
+      opacity: 1;
+      filter: grayscale(0%);
+    }
+    .card-preview-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    /* ── Card body ── */
+    .card-body {
+      padding: 20px 24px 24px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .card-num {
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .card-arrow {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .card:hover .card-arrow { opacity: 1; transform: translate(2px, -2px); }
+
+    .card-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .card-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.65;
+      font-weight: 400;
+      flex: 1;
+    }
+
+    .card-footer {
+      margin-top: 16px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .card-tag {
+      font-size: 0.62rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--tag-color);
+    }
+
+    .card-domain {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .card.hidden { display: none; }
+
+    /* ── Featured card (spans 2 cols) ── */
+    .card-featured { grid-column: span 2; }
+    .card-featured .card-name { font-size: 1.5rem; }
+    .card-featured .card-preview { aspect-ratio: 21 / 9; }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-left {
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+    .footer-links a {
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: var(--text-muted); }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .card-featured { grid-column: span 2; }
+      .hero-title { font-size: clamp(4rem, 14vw, 9rem); }
+    }
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .card-featured { grid-column: span 1; }
+      .hero-title { font-size: clamp(3.5rem, 16vw, 6rem); }
+      .grid-wrap { padding: 0 0 80px; }
+      nav, .hero, .filters-wrap, footer { padding-left: 20px; padding-right: 20px; }
+      .card { padding: 20px; min-height: 220px; }
+      body { cursor: auto; }
+      .cursor { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Custom cursor -->
+  <div class="cursor" id="cursor"></div>
+
+  <!-- Nav -->
+  <nav>
+    <a href="#" class="nav-name">Christopher Rathbun</a>
+    <div class="nav-right">
+      <span class="nav-coords" id="coords">X : 0 &nbsp; Y : 0</span>
+      <span class="nav-count" id="counter">[ 0 / 15 ]</span>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <h1 class="hero-title" id="heroTitle">
+      <span class="line-1">PORTFOLIO,</span>
+      <span class="line-2">CHRISTOPHER RATHBUN</span>
+    </h1>
+    <div class="hero-sub-row">
+      <p class="hero-desc">Products, tools &amp; ventures — from bill splitting to AI agents and corporate compliance. All made to solve real problems.</p>
+      <div class="hero-scroll">Scroll to explore</div>
+    </div>
+  </section>
+
+  <!-- Filters -->
+  <div class="filters-wrap">
+    <div class="filters" id="filters">
+      <button class="filter-btn active" data-filter="all">ALL</button>
+      <span class="filter-sep">·</span>
+      <button class="filter-btn" data-filter="tool">TOOL</button>
+      <span class="filter-sep">·</span>
+      <button class="filter-btn" data-filter="ai">AI</button>
+      <span class="filter-sep">·</span>
+      <button class="filter-btn" data-filter="platform">PLATFORM</button>
+      <span class="filter-sep">·</span>
+      <button class="filter-btn" data-filter="saas">SAAS</button>
+      <span class="filter-sep">·</span>
+      <button class="filter-btn" data-filter="media">MEDIA</button>
+      <span class="filter-sep">·</span>
+      <button class="filter-btn" data-filter="wellness">WELLNESS</button>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="grid-wrap">
+    <div class="grid" id="grid">
+
+      <!-- 01 SplitBill — featured -->
+      <a class="card card-featured" href="https://christopherrathbun.com/splitbill" target="_blank" rel="noopener" data-tags="tool finance">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://christopherrathbun.com/splitbill" alt="SplitBill" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 01 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">SplitBill</div>
+          <p class="card-desc">Effortlessly split bills, track who owes what, and settle up with friends — without the awkward conversations. Clean math, zero drama.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Tool</span><span class="card-tag">Finance</span><span class="card-tag">Utility</span></div>
+            <span class="card-domain">christopherrathbun.com</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 02 Mood Log -->
+      <a class="card" href="https://mood-log.christopherrathbun.com" target="_blank" rel="noopener" data-tags="tool wellness">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://mood-log.pages.dev" alt="Mood Log" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 02 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Mood Log</div>
+          <p class="card-desc">A lightweight daily mood tracker. Spot patterns, understand your emotional rhythms, and build better self-awareness over time.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Tool</span><span class="card-tag">Wellness</span></div>
+            <span class="card-domain">christopherrathbun.com</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 03 Gift an Agent -->
+      <a class="card" href="https://giftanagent.com" target="_blank" rel="noopener" data-tags="ai platform">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://giftanagent.com" alt="Gift an Agent" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 03 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Gift an Agent</div>
+          <p class="card-desc">Give the gift of AI. Purchase a personal AI agent for someone you care about — delivered directly to their Telegram.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">AI</span><span class="card-tag">Platform</span></div>
+            <span class="card-domain">giftanagent.com</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 04 Corporate Experiences -->
+      <a class="card" href="https://www.corporateexperiences.us" target="_blank" rel="noopener" data-tags="platform saas">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://www.corporateexperiences.us" alt="Corporate Experiences" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 04 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Corporate Experiences</div>
+          <p class="card-desc">Unforgettable team events — from AI-powered Survivor game builders to curated group activities. Make your next off-site legendary.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Platform</span><span class="card-tag">Events</span></div>
+            <span class="card-domain">corporateexperiences.us</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 05 Envoi -->
+      <a class="card" href="https://envoi.work" target="_blank" rel="noopener" data-tags="saas platform">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://envoi.work" alt="Envoi" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 05 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Envoi</div>
+          <p class="card-desc">Next-generation work management — built for the pace of today's most ambitious teams. Ship faster, communicate clearer.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">SaaS</span><span class="card-tag">Productivity</span></div>
+            <span class="card-domain">envoi.work</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 06 Couch Director -->
+      <a class="card" href="https://couchdirector.com" target="_blank" rel="noopener" data-tags="ai tool media">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://couchdirector.com" alt="Couch Director" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 06 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Couch Director</div>
+          <p class="card-desc">Your AI-powered viewing companion. Personalized movie and show recommendations — never waste an evening on something mediocre.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">AI</span><span class="card-tag">Media</span></div>
+            <span class="card-domain">couchdirector.com</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 07 ClawbackX — featured -->
+      <a class="card card-featured" href="https://clawbackx.com" target="_blank" rel="noopener" data-tags="saas platform">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://clawbackx.com" alt="ClawbackX" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 07 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">ClawbackX</div>
+          <p class="card-desc">Demand-pool group buying for AI agents. Agents commit budgets, the platform negotiates, and the best vendor wins — collective purchasing power at scale.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">AI</span><span class="card-tag">Platform</span><span class="card-tag">Group Buying</span></div>
+            <span class="card-domain">clawbackx.com</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 08 Innovator Media — featured -->
+      <a class="card card-featured" href="https://www.innovator.media" target="_blank" rel="noopener" data-tags="media platform">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://www.innovator.media" alt="Innovator Media" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 08 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Innovator Media</div>
+          <p class="card-desc">Media for builders and innovators. Covering the ideas, people, and companies shaping what comes next — books, blog, and beyond.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Media</span><span class="card-tag">Publishing</span></div>
+            <span class="card-domain">innovator.media</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 09 The Lilac -->
+      <a class="card" href="https://thelilac.app" target="_blank" rel="noopener" data-tags="platform tool">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://thelilac.app" alt="The Lilac" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 09 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">The Lilac</div>
+          <p class="card-desc">Food delivery built differently — curated local restaurants, multi-source deals aggregation, and an experience worth coming back to.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Platform</span><span class="card-tag">Food</span></div>
+            <span class="card-domain">thelilac.app</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 10 Vibe Support -->
+      <a class="card" href="https://vibesupport.ai" target="_blank" rel="noopener" data-tags="ai saas">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://vibesupport.ai" alt="Vibe Support" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 10 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Vibe Support</div>
+          <p class="card-desc">AI-powered customer support that actually feels human. Resolve tickets faster, keep your customers happy, and let your team focus on what matters.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">AI</span><span class="card-tag">SaaS</span><span class="card-tag">Support</span></div>
+            <span class="card-domain">vibesupport.ai</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 11 Bucketize -->
+      <a class="card" href="https://bucketize.org" target="_blank" rel="noopener" data-tags="tool platform">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://bucketize.org" alt="Bucketize" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 11 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Bucketize</div>
+          <p class="card-desc">Budgeting in buckets — a finance tool built for business partners that empowers smarter spending, saving, and shared financial clarity.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Tool</span><span class="card-tag">Finance</span></div>
+            <span class="card-domain">bucketize.org</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 12 GRC Global Group -->
+      <a class="card" href="https://www.grcglobalgroup.com" target="_blank" rel="noopener" data-tags="platform saas">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://www.grcglobalgroup.com" alt="GRC Global Group" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 12 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">GRC Global Group</div>
+          <p class="card-desc">A nonprofit connecting social impact organizations with university talent — helping nonprofits, startups, and governments achieve meaningful goals.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Nonprofit</span><span class="card-tag">Consulting</span><span class="card-tag">Impact</span></div>
+            <span class="card-domain">grcglobalgroup.com</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 13 RathbunTax -->
+      <a class="card" href="https://app.rathbuntax.com" target="_blank" rel="noopener" data-tags="saas tool finance">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://app.rathbuntax.com" alt="RathbunTax" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 13 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">RathbunTax</div>
+          <p class="card-desc">A tax-strategy app for freelancers. Auto-categorizes bank transactions against Schedule C deductions and generates a clean year-end summary.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">SaaS</span><span class="card-tag">Finance</span><span class="card-tag">Tax</span></div>
+            <span class="card-domain">app.rathbuntax.com</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 14 Innovating Through Impact -->
+      <a class="card" href="https://www.amazon.com/Innovating-Through-Impact-Innovators-Business-ebook/dp/B0CVF8TTW1/" target="_blank" rel="noopener" data-tags="media">
+        <div class="card-preview"><img src="/img/innovating-book.jpg" alt="Innovating Through Impact" loading="lazy" style="object-fit:cover;object-position:top center;"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 14 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Innovating Through Impact</div>
+          <p class="card-desc">A guide for the next generation of business leaders — how innovators create lasting change by building with purpose, not just profit.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Book</span><span class="card-tag">Media</span><span class="card-tag">Business</span></div>
+            <span class="card-domain">amazon.com</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- 15 Build4Impact — featured -->
+      <a class="card card-featured" href="https://build4impact.org" target="_blank" rel="noopener" data-tags="platform">
+        <div class="card-preview"><img src="https://image.thum.io/get/width/1200/crop/900/noanimate/https://build4impact.org" alt="Build4Impact" loading="lazy"></div>
+        <div class="card-body">
+          <div class="card-top"><span class="card-num">[ 15 ]</span><span class="card-arrow">↗</span></div>
+          <div class="card-name">Build4Impact</div>
+          <p class="card-desc">A startup and impact cultivation program — empowering the next generation of entrepreneurs to spark innovation and build solutions that change the world.</p>
+          <div class="card-footer">
+            <div class="card-tags"><span class="card-tag">Platform</span><span class="card-tag">Entrepreneurship</span><span class="card-tag">Social Impact</span></div>
+            <span class="card-domain">build4impact.org</span>
+          </div>
+        </div>
+      </a>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <span class="footer-left">© 2026 Christopher Rathbun</span>
+    <div class="footer-links">
+      <a href="https://linkedin.com/in/christopherrathbun" target="_blank" rel="noopener">LinkedIn ↗</a>
+      <a href="mailto:chris@christopherrathbun.com">Email ↗</a>
+    </div>
+  </footer>
+
+  <script>
+    // ── Cursor ──
+    const cursor = document.getElementById('cursor');
+    const coords = document.getElementById('coords');
+
+    document.addEventListener('mousemove', e => {
+      cursor.style.left = e.clientX + 'px';
+      cursor.style.top  = e.clientY + 'px';
+      coords.textContent = 'X : ' + e.clientX + '   Y : ' + e.clientY;
+    });
+
+    document.querySelectorAll('a, button').forEach(el => {
+      el.addEventListener('mouseenter', () => cursor.classList.add('over-link'));
+      el.addEventListener('mouseleave', () => cursor.classList.remove('over-link'));
+    });
+
+    // ── Hero title parallax ──
+    const heroTitle = document.getElementById('heroTitle');
+    window.addEventListener('scroll', () => {
+      const y = window.scrollY;
+      heroTitle.style.transform = 'translateY(' + (y * 0.25) + 'px)';
+      heroTitle.style.opacity = Math.max(0, 1 - y / 500);
+    }, { passive: true });
+
+    // ── Scroll counter ──
+    const counter   = document.getElementById('counter');
+    const cards     = document.querySelectorAll('.card:not(.hidden)');
+    const gridEl    = document.getElementById('grid');
+
+    function updateCounter() {
+      const visible = [...document.querySelectorAll('.card')].filter(c => !c.classList.contains('hidden'));
+      const rect  = gridEl.getBoundingClientRect();
+      const gridH = gridEl.offsetHeight;
+      const scrolled = -rect.top;
+      const progress = Math.max(0, Math.min(visible.length, Math.round((scrolled / gridH) * visible.length)));
+      counter.textContent = '[ ' + progress + ' / ' + visible.length + ' ]';
+    }
+    window.addEventListener('scroll', updateCounter, { passive: true });
+
+    // ── Filter ──
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tag = btn.dataset.filter;
+        document.querySelectorAll('.card').forEach(card => {
+          const tags = card.dataset.tags || '';
+          const show = tag === 'all' || tags.includes(tag);
+          card.classList.toggle('hidden', !show);
+        });
+        updateCounter();
+      });
+    });
+
+    updateCounter();
+  </script>
+
+</body>
+</html>

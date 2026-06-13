@@ -1,0 +1,29 @@
+name = "christopherrathbun-home"
+main = "src/worker.js"
+compatibility_date = "2025-11-01"
+account_id = "edb3337a8ff089aa78cc6cb75e2d15d4"
+workers_dev = false
+
+routes = [
+  { pattern = "christopherrathbun.com",       zone_name = "christopherrathbun.com" },
+  { pattern = "christopherrathbun.com/*",      zone_name = "christopherrathbun.com" },
+  { pattern = "www.christopherrathbun.com",    zone_name = "christopherrathbun.com" },
+  { pattern = "www.christopherrathbun.com/*",  zone_name = "christopherrathbun.com" }
+]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = ["/twistedchess", "/twistedchess/*"]
+
+[observability]
+enabled = true
+
+[[durable_objects.bindings]]
+name = "TWISTED_CHESS"
+class_name = "TwistedChessGame"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["TwistedChessGame"]

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Twisted Chess</title>
+  <meta name="description" content="Twisted Chess — chess where you twist a quadrant of the board 90° after every move. Play live with a friend." />
+  <meta property="og:title" content="Twisted Chess" />
+  <meta property="og:description" content="Chess, but you twist a corner of the board 90° after every move. Challenge a friend to a live game." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="/twistedchess/style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- LOBBY: create a game -->
+    <section id="screen-lobby" class="screen">
+      <div class="card">
+        <div class="brand">
+          <div class="brand-mark">♞</div>
+          <h1>Twisted&nbsp;Chess</h1>
+        </div>
+        <p class="tagline">Normal chess — but after every piece move you <b>twist</b> a corner of the board 90°. Checkmate at the move stage to win.</p>
+
+        <label class="field">
+          <span>Your name</span>
+          <input id="lobby-name" type="text" maxlength="24" placeholder="e.g. Magnus" autocomplete="off" />
+        </label>
+
+        <label class="field">
+          <span>Time control</span>
+          <select id="lobby-time">
+            <option value="3:2">3 min + 2s</option>
+            <option value="5:3" selected>5 min + 3s</option>
+            <option value="10:5">10 min + 5s</option>
+            <option value="15:10">15 min + 10s</option>
+            <option value="30:0">30 min</option>
+          </select>
+        </label>
+
+        <button id="btn-create" class="btn primary big">Create game &amp; get invite link</button>
+        <p class="hint">You'll play <b>White</b>. Share the link with a friend to start.</p>
+
+        <details class="rules">
+          <summary>How Twisted Chess works</summary>
+          <ol>
+            <li>Make any legal chess move (all pieces move normally — castling, en&nbsp;passant, promotion included).</li>
+            <li>Then <b>twist</b> one of the four 4×4 quadrants 90° clockwise or counter-clockwise. Every piece in that quadrant rotates with it.</li>
+            <li>A twist can't leave <i>your own</i> king in check.</li>
+            <li>You win by delivering <b>checkmate</b> at your opponent's move stage — or on the clock.</li>
+          </ol>
+        </details>
+      </div>
+      <footer class="foot">A game by <a href="/">Christopher Rathbun</a></footer>
+    </section>
+
+    <!-- JOIN: invited player enters name -->
+    <section id="screen-join" class="screen hidden">
+      <div class="card">
+        <div class="brand">
+          <div class="brand-mark">♞</div>
+          <h1>Twisted&nbsp;Chess</h1>
+        </div>
+        <p id="join-headline" class="tagline">You've been invited to a game.</p>
+        <label class="field">
+          <span>Your name</span>
+          <input id="join-name" type="text" maxlength="24" placeholder="e.g. Hikaru" autocomplete="off" />
+        </label>
+        <button id="btn-join" class="btn primary big">Join game</button>
+        <p id="join-status" class="hint"></p>
+      </div>
+    </section>
+
+    <!-- GAME -->
+    <section id="screen-game" class="screen hidden">
+      <div class="game-wrap">
+        <main class="board-col">
+          <div class="player-bar" id="bar-top">
+            <span class="pname" id="top-name">—</span>
+            <span class="pclock" id="top-clock">--:--</span>
+          </div>
+
+          <div class="board-stage">
+            <div id="board" class="board"></div>
+            <div id="twist-layer" class="twist-layer hidden"></div>
+            <div id="anim-layer" class="anim-layer"></div>
+            <div id="board-banner" class="board-banner hidden"></div>
+          </div>
+
+          <div class="player-bar" id="bar-bottom">
+            <span class="pname" id="bottom-name">—</span>
+            <span class="pclock" id="bottom-clock">--:--</span>
+          </div>
+        </main>
+
+        <aside class="side-col">
+          <div class="status-box">
+            <div id="phase-pill" class="phase-pill">Connecting…</div>
+            <div id="check-pill" class="check-pill hidden">CHECK</div>
+          </div>
+
+          <div id="invite-box" class="invite-box hidden">
+            <div class="invite-label">Waiting for opponent — share this link:</div>
+            <div class="invite-row">
+              <input id="invite-link" type="text" readonly />
+              <button id="btn-copy" class="btn">Copy</button>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="btn-resign" class="btn danger">Resign</button>
+            <button id="btn-flip" class="btn">Flip board</button>
+          </div>
+
+          <div class="history-box">
+            <div class="side-title">Moves</div>
+            <ol id="history" class="history"></ol>
+          </div>
+
+          <div class="chat-box">
+            <div class="side-title">Chat</div>
+            <div id="chat-log" class="chat-log"></div>
+            <form id="chat-form" class="chat-form">
+              <input id="chat-input" type="text" maxlength="280" placeholder="Say something…" autocomplete="off" />
+              <button class="btn" type="submit">Send</button>
+            </form>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- GAME OVER MODAL -->
+    <div id="overlay" class="overlay hidden">
+      <div class="modal">
+        <h2 id="over-title">Game over</h2>
+        <p id="over-sub"></p>
+        <div class="modal-actions">
+          <button id="btn-rematch" class="btn primary">Rematch</button>
+          <button id="btn-newgame" class="btn">New game</button>
+        </div>
+        <p id="rematch-status" class="hint"></p>
+      </div>
+    </div>
+
+    <!-- PROMOTION CHOOSER -->
+    <div id="promo" class="overlay hidden">
+      <div class="modal promo-modal">
+        <h2>Promote to…</h2>
+        <div class="promo-row" id="promo-row"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/twistedchess/app.js"></script>
+</body>
+</html>

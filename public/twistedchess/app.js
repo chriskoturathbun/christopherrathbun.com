@@ -1,0 +1,581 @@
+import {
+  legalMovesFrom, idx, rc, colorOf, squareName,
+} from '/twistedchess/engine.js';
+
+const PIECES = {
+  K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
+  k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
+};
+
+// --- persistent identity ---
+function getPlayerId() {
+  let id = localStorage.getItem('tc_pid');
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem('tc_pid', id); }
+  return id;
+}
+function getName() { return localStorage.getItem('tc_name') || ''; }
+function setName(n) { localStorage.setItem('tc_name', n); }
+
+const $ = (s) => document.querySelector(s);
+const playerId = getPlayerId();
+
+// --- app state ---
+const App = {
+  gameId: null,
+  color: null,          // 'w' | 'b' | null (spectator)
+  ws: null,
+  state: null,          // last server state
+  flip: false,          // board orientation override
+  selected: null,       // selected square idx
+  legalDests: [],       // [{to, ...}]
+  clockOffset: 0,       // serverNow - localNow at last state
+  prevTwistKey: null,
+  reconnectTimer: null,
+};
+
+// ---------------------------------------------------------------------------
+// Screen routing
+// ---------------------------------------------------------------------------
+function show(screen) {
+  for (const s of document.querySelectorAll('.screen')) s.classList.add('hidden');
+  $('#screen-' + screen).classList.remove('hidden');
+}
+
+function boot() {
+  const params = new URLSearchParams(location.search);
+  App.gameId = params.get('g');
+  wireLobby();
+  wireGameUI();
+
+  if (!App.gameId) { show('lobby'); $('#lobby-name').value = getName(); return; }
+
+  // We have a game id. If we already have a name, connect straight away;
+  // otherwise show the join screen (invited player).
+  if (getName()) {
+    connect();
+  } else {
+    show('join');
+    $('#btn-join').onclick = () => {
+      const n = $('#join-name').value.trim();
+      if (!n) { $('#join-status').textContent = 'Please enter a name.'; return; }
+      setName(n);
+      connect();
+    };
+    $('#join-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-join').click(); });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Lobby
+// ---------------------------------------------------------------------------
+function wireLobby() {
+  $('#btn-create').onclick = async () => {
+    const name = $('#lobby-name').value.trim();
+    if (!name) { $('#lobby-name').focus(); return; }
+    setName(name);
+    const [m, s] = $('#lobby-time').value.split(':').map(Number);
+    $('#btn-create').disabled = true;
+    $('#btn-create').textContent = 'Creating…';
+    try {
+      const res = await fetch('/twistedchess/api/new', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ baseMinutes: m, incrementSeconds: s, creatorId: playerId, creatorName: name }),
+      });
+      const data = await res.json();
+      if (!data.gameId) throw new Error('no game id');
+      location.search = '?g=' + data.gameId;
+    } catch (e) {
+      $('#btn-create').disabled = false;
+      $('#btn-create').textContent = 'Create game & get invite link';
+      alert('Could not create game. Try again.');
+    }
+  };
+  $('#lobby-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-create').click(); });
+}
+
+// ---------------------------------------------------------------------------
+// WebSocket
+// ---------------------------------------------------------------------------
+function connect() {
+  show('game');
+  buildBoardGrid();
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}/twistedchess/ws?g=${encodeURIComponent(App.gameId)}`);
+  App.ws = ws;
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'join', playerId, name: getName() || 'Anonymous' }));
+  };
+  ws.onmessage = (ev) => {
+    let msg; try { msg = JSON.parse(ev.data); } catch { return; }
+    handleMessage(msg);
+  };
+  ws.onclose = () => {
+    setPhase('Disconnected — reconnecting…', 'wait');
+    clearTimeout(App.reconnectTimer);
+    App.reconnectTimer = setTimeout(connect, 1500);
+  };
+  ws.onerror = () => {};
+}
+
+function sendWS(obj) {
+  if (App.ws && App.ws.readyState === WebSocket.OPEN) App.ws.send(JSON.stringify(obj));
+}
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'joined':
+      App.color = msg.color;
+      App.flip = (msg.color === 'b'); // black sees its own pieces at the bottom
+      break;
+    case 'state':
+      onState(msg);
+      break;
+    case 'chat':
+      addChat(msg);
+      break;
+    case 'error':
+      flashBanner(msg.error, 1400);
+      break;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Board grid
+// ---------------------------------------------------------------------------
+function orientedIndices() {
+  // returns array of 64 board indices in display order (row-major top-left)
+  const out = [];
+  if (App.flip) {
+    for (let r = 7; r >= 0; r--) for (let c = 7; c >= 0; c--) out.push(idx(r, c));
+  } else {
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) out.push(idx(r, c));
+  }
+  return out;
+}
+
+function buildBoardGrid() {
+  const board = $('#board');
+  board.innerHTML = '';
+  for (const i of orientedIndices()) {
+    const [r, c] = rc(i);
+    const sq = document.createElement('div');
+    sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+    sq.dataset.i = i;
+    // quadrant dividers: between col 3|4 and row 3|4
+    if (c === 3) sq.classList.add('qedge-r');
+    if (r === 3) sq.classList.add('qedge-b');
+    sq.addEventListener('click', () => onSquareClick(i));
+    board.appendChild(sq);
+  }
+}
+
+function onState(s) {
+  App.state = s;
+  App.clockOffset = s.serverNow - Date.now();
+
+  // twist animation when a new twist appears
+  const twistKey = s.lastTwist ? `${s.history.length}:${s.lastTwist.quadrant}:${s.lastTwist.dir}` : null;
+  const isNewTwist = twistKey && twistKey !== App.prevTwistKey && App.prevBoard;
+  if (isNewTwist) {
+    animateTwist(App.prevBoard, s.lastTwist);
+  }
+  App.prevTwistKey = twistKey;
+  App.prevBoard = s.board.slice();
+
+  renderBoard();
+  renderPlayers();
+  renderStatus();
+  renderHistory();
+  renderInvite();
+  renderGameOver();
+}
+
+function renderBoard() {
+  const s = App.state;
+  const myTurn = isMyMoveTurn();
+  $('#board').classList.toggle('my-turn', myTurn);
+
+  const squares = $('#board').children;
+  const order = orientedIndices();
+  for (let k = 0; k < 64; k++) {
+    const i = order[k];
+    const sq = squares[k];
+    const p = s.board[i];
+    sq.className = 'sq ' + (((Math.floor(i/8) + (i%8)) % 2 === 0) ? 'light' : 'dark');
+    const [r, c] = rc(i);
+    if (c === 3) sq.classList.add('qedge-r');
+    if (r === 3) sq.classList.add('qedge-b');
+    sq.innerHTML = '';
+
+    // coordinates on edge squares (display-relative)
+    addCoords(sq, k, i);
+
+    if (s.lastMove && (s.lastMove.from === i || s.lastMove.to === i)) sq.classList.add('lastmove');
+
+    if (p) {
+      const span = document.createElement('span');
+      span.className = 'piece ' + (colorOf(p) === 'w' ? 'w' : 'b');
+      span.textContent = PIECES[p];
+      sq.appendChild(span);
+      if (App.color && colorOf(p) === App.color) sq.classList.add('mine');
+    }
+
+    // king in check highlight
+    if (s.check && s.status === 'active') {
+      const king = s.turn === 'w' ? 'K' : 'k';
+      if (p === king) sq.classList.add('check');
+    }
+  }
+
+  // selection + destinations
+  if (App.selected != null) {
+    const selPos = order.indexOf(App.selected);
+    if (selPos >= 0) squares[selPos].classList.add('sel');
+    for (const m of App.legalDests) {
+      const pos = order.indexOf(m.to);
+      if (pos < 0) continue;
+      squares[pos].classList.add('dest-host');
+      const dot = document.createElement('div');
+      dot.className = 'dest';
+      if (s.board[m.to]) squares[pos].classList.add('capture');
+      squares[pos].appendChild(dot);
+    }
+  }
+
+  renderTwistLayer();
+}
+
+function addCoords(sq, k, i) {
+  const file = k % 8, rank = Math.floor(k / 8);
+  if (rank === 7) { // bottom row → file letters
+    const el = document.createElement('span'); el.className = 'coord file';
+    el.textContent = squareName(i)[0]; sq.appendChild(el);
+  }
+  if (file === 0) { // left col → rank numbers
+    const el = document.createElement('span'); el.className = 'coord rank';
+    el.textContent = squareName(i)[1]; sq.appendChild(el);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Move interaction
+// ---------------------------------------------------------------------------
+function isMyMoveTurn() {
+  const s = App.state;
+  return s && s.status === 'active' && s.phase === 'move' && s.turn === App.color;
+}
+function isMyTwistTurn() {
+  const s = App.state;
+  return s && s.status === 'active' && s.phase === 'twist' && s.turn === App.color;
+}
+
+function engineState() {
+  const s = App.state;
+  return { board: s.board, turn: s.turn, castling: s.castling, ep: s.ep };
+}
+
+function onSquareClick(i) {
+  if (!isMyMoveTurn()) return;
+  const s = App.state;
+  const p = s.board[i];
+
+  // clicking a destination of the current selection
+  if (App.selected != null) {
+    const move = App.legalDests.find((m) => m.to === i);
+    if (move) { commitMove(App.selected, i, move); return; }
+  }
+
+  // select own piece
+  if (p && colorOf(p) === App.color) {
+    App.selected = i;
+    App.legalDests = legalMovesFrom(engineState(), i);
+    renderBoard();
+    return;
+  }
+  // click elsewhere → clear
+  App.selected = null; App.legalDests = [];
+  renderBoard();
+}
+
+function commitMove(from, to, move) {
+  const needsPromo = App.legalDests.filter((m) => m.to === to && m.promotion).length > 0;
+  App.selected = null; App.legalDests = [];
+  if (needsPromo) {
+    choosePromotion((piece) => {
+      sendWS({ type: 'move', from, to, promotion: piece });
+    });
+  } else {
+    sendWS({ type: 'move', from, to });
+  }
+  renderBoard();
+}
+
+function choosePromotion(cb) {
+  const row = $('#promo-row');
+  row.innerHTML = '';
+  const opts = App.color === 'w' ? ['Q', 'R', 'B', 'N'] : ['q', 'r', 'b', 'n'];
+  for (const o of opts) {
+    const b = document.createElement('button');
+    b.textContent = PIECES[o];
+    b.onclick = () => { $('#promo').classList.add('hidden'); cb(o.toUpperCase()); };
+    row.appendChild(b);
+  }
+  $('#promo').classList.remove('hidden');
+}
+
+// ---------------------------------------------------------------------------
+// Twist interaction
+// ---------------------------------------------------------------------------
+const QUAD_CLASS = { TL: 'tl', TR: 'tr', BL: 'bl', BR: 'br' };
+
+// Map a logical quadrant to its on-screen position given orientation.
+function displayQuad(q) {
+  if (!App.flip) return q;
+  const opp = { TL: 'BR', TR: 'BL', BL: 'TR', BR: 'TL' };
+  return opp[q];
+}
+
+function renderTwistLayer() {
+  const layer = $('#twist-layer');
+  layer.innerHTML = '';
+  if (!isMyTwistTurn()) { layer.classList.add('hidden'); return; }
+  layer.classList.remove('hidden');
+
+  // group legal twists by quadrant
+  const byQuad = {};
+  for (const t of (App.state.twistOptions || [])) {
+    (byQuad[t.quadrant] = byQuad[t.quadrant] || []).push(t.dir);
+  }
+  for (const q of ['TL', 'TR', 'BL', 'BR']) {
+    const dirs = byQuad[q];
+    if (!dirs) continue;
+    const dq = displayQuad(q);
+    const wrap = document.createElement('div');
+    wrap.className = 'twist-quad ' + QUAD_CLASS[dq] + ' glow';
+    for (const dir of ['ccw', 'cw']) {
+      if (!dirs.includes(dir)) continue;
+      const btn = document.createElement('button');
+      btn.className = 'twist-btn';
+      btn.title = dir === 'cw' ? 'Twist clockwise' : 'Twist counter-clockwise';
+      btn.textContent = dir === 'cw' ? '↻' : '↺';
+      btn.onclick = () => sendWS({ type: 'twist', quadrant: q, dir });
+      wrap.appendChild(btn);
+    }
+    layer.appendChild(wrap);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Twist animation
+// ---------------------------------------------------------------------------
+function quadOrigin(q) { return { TL:[0,0], TR:[0,4], BL:[4,0], BR:[4,4] }[q]; }
+
+function animateTwist(prevBoard, twist) {
+  const layer = $('#anim-layer');
+  layer.innerHTML = '';
+  const dq = displayQuad(twist.quadrant);
+  const [or, oc] = quadOrigin(twist.quadrant);
+
+  const quad = document.createElement('div');
+  quad.className = 'anim-quad';
+  // position by display quadrant
+  if (dq === 'TL') { quad.style.left = '0'; quad.style.top = '0'; }
+  if (dq === 'TR') { quad.style.right = '0'; quad.style.top = '0'; }
+  if (dq === 'BL') { quad.style.left = '0'; quad.style.bottom = '0'; }
+  if (dq === 'BR') { quad.style.right = '0'; quad.style.bottom = '0'; }
+
+  // fill the 4x4 with prev pieces, in display order
+  const rows = App.flip ? [3,2,1,0] : [0,1,2,3];
+  const cols = App.flip ? [3,2,1,0] : [0,1,2,3];
+  for (const r of rows) {
+    for (const c of cols) {
+      const cell = document.createElement('div');
+      cell.className = 'ap';
+      const p = prevBoard[idx(or + r, oc + c)];
+      if (p) {
+        const span = document.createElement('span');
+        span.className = 'piece ' + (colorOf(p) === 'w' ? 'w' : 'b');
+        span.textContent = PIECES[p];
+        cell.appendChild(span);
+      }
+      quad.appendChild(cell);
+    }
+  }
+  layer.appendChild(quad);
+
+  // On screen, a logical CW twist appears CW when not flipped, CCW when flipped.
+  let deg = twist.dir === 'cw' ? 90 : -90;
+  if (App.flip) deg = -deg;
+  quad.animate(
+    [
+      { transform: 'rotate(0deg)', opacity: 1 },
+      { transform: `rotate(${deg}deg)`, opacity: 0.15 },
+    ],
+    { duration: 460, easing: 'cubic-bezier(.2,.7,.2,1)' }
+  ).onfinish = () => { layer.innerHTML = ''; };
+}
+
+// ---------------------------------------------------------------------------
+// Players + clocks
+// ---------------------------------------------------------------------------
+function renderPlayers() {
+  const s = App.state;
+  // bottom = my color (or white if spectator), top = opponent
+  const bottomColor = App.color === 'b' ? 'b' : 'w';
+  const topColor = bottomColor === 'w' ? 'b' : 'w';
+  setSeat('bottom', bottomColor);
+  setSeat('top', topColor);
+}
+function setSeat(pos, color) {
+  const s = App.state;
+  const pl = s.players[color];
+  const name = pl ? pl.name : 'Waiting…';
+  const on = color === 'w' ? s.connected.w : s.connected.b;
+  const youTag = color === App.color ? ' (you)' : '';
+  $(`#${pos}-name`).innerHTML = `<span class="dot ${on ? 'on' : ''}"></span>${escapeHtml(name)}${youTag}`;
+}
+
+function tickClocks() {
+  const s = App.state;
+  if (!s) return;
+  const bottomColor = App.color === 'b' ? 'b' : 'w';
+  const topColor = bottomColor === 'w' ? 'b' : 'w';
+  for (const [pos, color] of [['bottom', bottomColor], ['top', topColor]]) {
+    let ms = s.clock[color];
+    if (s.running === color && s.turnStartedAt != null && s.status === 'active') {
+      const now = Date.now() + App.clockOffset;
+      ms = s.clock[color] - (now - s.turnStartedAt);
+    }
+    ms = Math.max(0, ms);
+    const el = $(`#${pos}-clock`);
+    el.textContent = fmtClock(ms);
+    el.classList.toggle('low', ms < 20000 && s.status === 'active');
+    $(`#bar-${pos}`).classList.toggle('active', s.running === color && s.status === 'active');
+  }
+}
+function fmtClock(ms) {
+  const t = Math.ceil(ms / 1000);
+  const m = Math.floor(t / 60), sec = t % 60;
+  if (m >= 1) return `${m}:${String(sec).padStart(2, '0')}`;
+  // under a minute → show tenths
+  const tenths = Math.floor((ms % 1000) / 100);
+  return `0:${String(sec).padStart(2, '0')}.${tenths}`;
+}
+
+// ---------------------------------------------------------------------------
+// Status / phase
+// ---------------------------------------------------------------------------
+function setPhase(text, cls) {
+  const el = $('#phase-pill');
+  el.textContent = text;
+  el.className = 'phase-pill ' + (cls || '');
+}
+function renderStatus() {
+  const s = App.state;
+  $('#check-pill').classList.toggle('hidden', !(s.check && s.status === 'active'));
+
+  if (s.status === 'waiting') { setPhase('Waiting for opponent…', 'wait'); return; }
+  if (s.status === 'finished') { setPhase('Game over', 'wait'); return; }
+
+  if (App.color == null) {
+    setPhase(`${s.turn === 'w' ? 'White' : 'Black'} to ${s.phase}`, 'wait');
+    return;
+  }
+  if (s.turn === App.color) {
+    if (s.phase === 'move') setPhase(s.check ? 'Your move — get out of check!' : 'Your move', 'act-move');
+    else setPhase('Twist a quadrant! ⤴', 'act-twist');
+  } else {
+    setPhase(`Opponent's ${s.phase}…`, 'wait');
+  }
+}
+
+// ---------------------------------------------------------------------------
+// History / chat / invite
+// ---------------------------------------------------------------------------
+function renderHistory() {
+  const ol = $('#history');
+  ol.innerHTML = '';
+  for (const h of App.state.history) {
+    const li = document.createElement('li');
+    const tw = h.twist ? `<span class="tw"> ⟳${h.twist.quadrant}${h.twist.dir === 'cw' ? '↻' : '↺'}</span>` : '';
+    li.innerHTML = `${h.n}. <b>${h.color === 'w' ? '○' : '●'}</b> ${h.from}→${h.to}${tw}`;
+    ol.appendChild(li);
+  }
+  ol.scrollTop = ol.scrollHeight;
+}
+
+function addChat(msg) {
+  const log = $('#chat-log');
+  const div = document.createElement('div');
+  div.className = 'msg';
+  div.innerHTML = `<span class="who ${msg.color || ''}">${escapeHtml(msg.who)}:</span> ${escapeHtml(msg.text)}`;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function renderInvite() {
+  const s = App.state;
+  const show = s.status === 'waiting' && (App.color === 'w');
+  $('#invite-box').classList.toggle('hidden', !show);
+  if (show) $('#invite-link').value = location.origin + '/twistedchess?g=' + App.gameId;
+}
+
+function renderGameOver() {
+  const s = App.state;
+  if (s.status !== 'finished') { $('#overlay').classList.add('hidden'); return; }
+  const r = s.result || {};
+  let title = 'Game over', sub = '';
+  const youWon = r.winner && r.winner === App.color;
+  const winnerName = r.winner ? (s.players[r.winner] ? s.players[r.winner].name : (r.winner === 'w' ? 'White' : 'Black')) : null;
+  if (r.type === 'checkmate') { title = 'Checkmate!'; sub = `${winnerName} wins.`; }
+  else if (r.type === 'resign') { title = 'Resignation'; sub = `${winnerName} wins.`; }
+  else if (r.type === 'timeout') { title = 'Flag fell'; sub = `${winnerName} wins on time.`; }
+  else if (r.type === 'stalemate') { title = 'Stalemate'; sub = 'Draw.'; }
+  if (App.color && r.winner) title = youWon ? '🏆 You win!' : 'You lost';
+  $('#over-title').textContent = title;
+  $('#over-sub').textContent = sub;
+
+  const votes = s.rematchVotes || {};
+  const mine = App.color && votes[App.color];
+  const other = App.color && votes[App.color === 'w' ? 'b' : 'w'];
+  $('#rematch-status').textContent = mine ? 'Waiting for opponent to accept rematch…' : (other ? 'Opponent wants a rematch!' : '');
+  $('#overlay').classList.remove('hidden');
+}
+
+// ---------------------------------------------------------------------------
+// UI wiring
+// ---------------------------------------------------------------------------
+function wireGameUI() {
+  $('#btn-copy').onclick = async () => {
+    const link = $('#invite-link').value;
+    try { await navigator.clipboard.writeText(link); $('#btn-copy').textContent = 'Copied!'; setTimeout(() => $('#btn-copy').textContent = 'Copy', 1500); }
+    catch { $('#invite-link').select(); }
+  };
+  $('#btn-resign').onclick = () => {
+    if (App.state && App.state.status === 'active' && App.color && confirm('Resign this game?')) sendWS({ type: 'resign' });
+  };
+  $('#btn-flip').onclick = () => { App.flip = !App.flip; buildBoardGrid(); renderBoard(); };
+  $('#btn-rematch').onclick = () => sendWS({ type: 'rematch' });
+  $('#btn-newgame').onclick = () => { location.href = '/twistedchess'; };
+  $('#chat-form').onsubmit = (e) => {
+    e.preventDefault();
+    const t = $('#chat-input').value.trim();
+    if (t) { sendWS({ type: 'chat', text: t }); $('#chat-input').value = ''; }
+  };
+}
+
+function flashBanner(text, ms = 1200) {
+  const b = $('#board-banner');
+  b.textContent = text;
+  b.classList.remove('hidden');
+  clearTimeout(b._t);
+  b._t = setTimeout(() => b.classList.add('hidden'), ms);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+setInterval(tickClocks, 100);
+boot();
