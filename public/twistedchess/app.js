@@ -2,8 +2,10 @@ import {
   legalMovesFrom, idx, rc, colorOf, squareName,
 } from '/twistedchess/engine.js';
 
+// Use the solid figurine glyphs for BOTH colours so the silhouettes are a
+// consistent Staunton set; colour is carried entirely by the .w / .b class.
 const PIECES = {
-  K: '♔', Q: '♕', R: '♖', B: '♗', N: '♘', P: '♙',
+  K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟',
   k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
 };
 
