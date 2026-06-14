@@ -117,6 +117,8 @@
             <button id="btn-flip" class="btn">Flip board</button>
           </div>
 
+          <button id="btn-result" class="btn result-btn hidden">View result ›</button>
+
           <div class="history-box">
             <div class="side-title">Moves</div>
             <ol id="history" class="history"></ol>
@@ -137,6 +139,7 @@
     <!-- GAME OVER MODAL -->
     <div id="overlay" class="overlay hidden">
       <div class="modal">
+        <button id="over-close" class="modal-close" aria-label="Close and view the board" title="View the board">✕</button>
         <h2 id="over-title">Game over</h2>
         <p id="over-sub"></p>
         <div class="modal-actions">

@@ -529,7 +529,14 @@ function renderInvite() {
 
 function renderGameOver() {
   const s = App.state;
-  if (s.status !== 'finished') { $('#overlay').classList.add('hidden'); return; }
+  if (s.status !== 'finished') {
+    // New game (e.g. after rematch) — reset the dismiss state.
+    $('#overlay').classList.add('hidden');
+    $('#btn-result').classList.add('hidden');
+    App.overlayDismissed = false;
+    App._prevOther = false;
+    return;
+  }
   const r = s.result || {};
   let title = 'Game over', sub = '';
   const youWon = r.winner && r.winner === App.color;
@@ -565,7 +572,29 @@ function renderGameOver() {
     btn.textContent = 'Rematch';
     st.textContent = '';
   }
-  $('#overlay').classList.remove('hidden');
+
+  // If the opponent has *just* requested a rematch, re-surface the modal even
+  // if the player had dismissed it to study the board.
+  if (other && !mine && !App._prevOther) App.overlayDismissed = false;
+  App._prevOther = other && !mine;
+
+  if (App.overlayDismissed) {
+    $('#overlay').classList.add('hidden');
+    $('#btn-result').classList.remove('hidden');
+  } else {
+    $('#overlay').classList.remove('hidden');
+    $('#btn-result').classList.add('hidden');
+  }
+}
+
+function dismissOverlay() {
+  App.overlayDismissed = true;
+  $('#overlay').classList.add('hidden');
+  if (App.state && App.state.status === 'finished') $('#btn-result').classList.remove('hidden');
+}
+function reopenOverlay() {
+  App.overlayDismissed = false;
+  renderGameOver();
 }
 
 // ---------------------------------------------------------------------------
@@ -581,6 +610,11 @@ function wireGameUI() {
     if (App.state && App.state.status === 'active' && App.color && confirm('Resign this game?')) sendWS({ type: 'resign' });
   };
   $('#btn-flip').onclick = () => { App.flip = !App.flip; buildBoardGrid(); renderBoard(); };
+  $('#over-close').onclick = dismissOverlay;
+  $('#btn-result').onclick = reopenOverlay;
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('#overlay').classList.contains('hidden') && App.state && App.state.status === 'finished') dismissOverlay();
+  });
   $('#btn-rematch').onclick = () => sendWS({ type: 'rematch' });
   $('#btn-newgame').onclick = () => { location.href = '/twistedchess'; };
   $('#chat-form').onsubmit = (e) => {

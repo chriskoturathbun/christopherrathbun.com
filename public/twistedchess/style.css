@@ -335,6 +335,17 @@ select {
   border: 1px solid var(--hair); border-radius: 24px; padding: 34px 32px 28px;
   max-width: 400px; width: 100%; text-align: center; box-shadow: var(--shadow-lg);
 }
+.modal { position: relative; }
+.modal-close {
+  position: absolute; top: 16px; right: 16px;
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 1px solid var(--hair); background: #fff; color: var(--ink-soft);
+  font-size: 13px; line-height: 1; cursor: pointer; display: grid; place-items: center;
+  box-shadow: var(--shadow-sm); transition: color .2s, box-shadow .2s, transform .12s;
+}
+.modal-close:hover { color: var(--ink); box-shadow: var(--shadow-md); }
+.modal-close:active { transform: scale(.94); }
+.result-btn { width: 100%; }
 .modal h2 { margin: 0 0 10px; font-size: 27px; font-weight: 600; letter-spacing: -0.03em; }
 .modal p { color: var(--ink-soft); margin: 0 0 22px; font-size: 15.5px; }
 .modal-actions { display: flex; gap: 12px; }
