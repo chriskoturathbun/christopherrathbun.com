@@ -99,6 +99,15 @@ export default {
       return handleTwistedChess(request, env, url);
     }
 
+    // Stella in the Woods countdown → serve the dedicated page
+    if (path === '/stella-in-the-woods-countdown' || path === '/stella-in-the-woods-countdown/') {
+      const res = await fetchAssetFollow(env, url.origin, '/stella-in-the-woods-countdown/index.html');
+      return new Response(res.body, {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
+    }
+
     // Redirect /mood-log and /mood-log/* to the dedicated subdomain
     if (path === '/mood-log' || path === '/mood-log/' || path.startsWith('/mood-log/')) {
       const dest = 'https://mood-log.christopherrathbun.com' + path.slice('/mood-log'.length) + url.search;
