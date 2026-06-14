@@ -130,6 +130,10 @@ select {
 .btn.big { width: 100%; padding: 16px; font-size: 16px; margin-top: 6px; border-radius: 14px; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 
+.or-sep { display: flex; align-items: center; text-align: center; margin: 18px 0 14px; color: var(--ink-faint); }
+.or-sep::before, .or-sep::after { content: ''; flex: 1; height: 1px; background: var(--hair); }
+.or-sep span { padding: 0 14px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; }
+
 .rules { margin-top: 24px; border-top: 1px solid var(--hair); padding-top: 18px; }
 .rules summary { cursor: pointer; color: var(--ink-soft); font-weight: 600; font-size: 14px; list-style: none; }
 .rules summary::-webkit-details-marker { display: none; }

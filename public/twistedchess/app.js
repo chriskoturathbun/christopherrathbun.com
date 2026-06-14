@@ -1,5 +1,6 @@
 import {
   legalMovesFrom, idx, rc, colorOf, squareName,
+  initialState, applyPieceMove, applyTwist, legalTwists, moveStageStatus,
 } from '/twistedchess/engine.js';
 
 // Use the solid figurine glyphs for BOTH colours so the silhouettes are a
@@ -33,7 +34,16 @@ const App = {
   clockOffset: 0,       // serverNow - localNow at last state
   prevTwistKey: null,
   reconnectTimer: null,
+  local: false,         // pass-and-play (two players, one screen)
+  lstate: null,         // local game state (same shape as server state)
+  overlayDismissed: false,
 };
+
+// Which board colour sits at the bottom of the screen right now.
+function bottomColor() {
+  if (App.local) return App.flip ? 'b' : 'w';
+  return App.color === 'b' ? 'b' : 'w';
+}
 
 // ---------------------------------------------------------------------------
 // Screen routing
@@ -94,6 +104,11 @@ function wireLobby() {
     }
   };
   $('#lobby-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#btn-create').click(); });
+
+  $('#btn-local').onclick = () => {
+    const [m, s] = $('#lobby-time').value.split(':').map(Number);
+    startLocalGame(m * 60000, s * 1000);
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -224,7 +239,8 @@ function renderBoard() {
       span.className = 'piece ' + (colorOf(p) === 'w' ? 'w' : 'b');
       span.textContent = PIECES[p];
       sq.appendChild(span);
-      if (App.color && colorOf(p) === App.color) sq.classList.add('mine');
+      const mineColor = App.local ? (s.status === 'active' ? s.turn : null) : App.color;
+      if (mineColor && colorOf(p) === mineColor) sq.classList.add('mine');
     }
 
     // king in check highlight
@@ -269,11 +285,11 @@ function addCoords(sq, k, i) {
 // ---------------------------------------------------------------------------
 function isMyMoveTurn() {
   const s = App.state;
-  return s && s.status === 'active' && s.phase === 'move' && s.turn === App.color;
+  return s && s.status === 'active' && s.phase === 'move' && (App.local || s.turn === App.color);
 }
 function isMyTwistTurn() {
   const s = App.state;
-  return s && s.status === 'active' && s.phase === 'twist' && s.turn === App.color;
+  return s && s.status === 'active' && s.phase === 'twist' && (App.local || s.turn === App.color);
 }
 
 function engineState() {
@@ -292,8 +308,9 @@ function onSquareClick(i) {
     if (move) { commitMove(App.selected, i, move); return; }
   }
 
-  // select own piece
-  if (p && colorOf(p) === App.color) {
+  // select own piece (in local play, "own" = the side to move)
+  const myColor = App.local ? s.turn : App.color;
+  if (p && colorOf(p) === myColor) {
     App.selected = i;
     App.legalDests = legalMovesFrom(engineState(), i);
     renderBoard();
@@ -307,20 +324,20 @@ function onSquareClick(i) {
 function commitMove(from, to, move) {
   const needsPromo = App.legalDests.filter((m) => m.to === to && m.promotion).length > 0;
   App.selected = null; App.legalDests = [];
-  if (needsPromo) {
-    choosePromotion((piece) => {
-      sendWS({ type: 'move', from, to, promotion: piece });
-    });
-  } else {
-    sendWS({ type: 'move', from, to });
-  }
+  const sendMove = (piece) => {
+    if (App.local) localMove(from, to, piece);
+    else sendWS(piece ? { type: 'move', from, to, promotion: piece } : { type: 'move', from, to });
+  };
+  if (needsPromo) choosePromotion((piece) => sendMove(piece));
+  else sendMove(null);
   renderBoard();
 }
 
 function choosePromotion(cb) {
   const row = $('#promo-row');
   row.innerHTML = '';
-  const opts = App.color === 'w' ? ['Q', 'R', 'B', 'N'] : ['q', 'r', 'b', 'n'];
+  const side = App.local ? App.state.turn : App.color;
+  const opts = side === 'w' ? ['Q', 'R', 'B', 'N'] : ['q', 'r', 'b', 'n'];
   for (const o of opts) {
     const b = document.createElement('button');
     b.textContent = PIECES[o];
@@ -365,7 +382,7 @@ function renderTwistLayer() {
       btn.className = 'twist-btn';
       btn.title = dir === 'cw' ? 'Twist clockwise' : 'Twist counter-clockwise';
       btn.textContent = dir === 'cw' ? '↻' : '↺';
-      btn.onclick = () => sendWS({ type: 'twist', quadrant: q, dir });
+      btn.onclick = () => { if (App.local) localTwist(q, dir); else sendWS({ type: 'twist', quadrant: q, dir }); };
       wrap.appendChild(btn);
     }
     layer.appendChild(wrap);
@@ -426,34 +443,41 @@ function animateTwist(prevBoard, twist) {
 // Players + clocks
 // ---------------------------------------------------------------------------
 function renderPlayers() {
-  const s = App.state;
-  // bottom = my color (or white if spectator), top = opponent
-  const bottomColor = App.color === 'b' ? 'b' : 'w';
-  const topColor = bottomColor === 'w' ? 'b' : 'w';
-  setSeat('bottom', bottomColor);
-  setSeat('top', topColor);
+  const bc = bottomColor();
+  setSeat('bottom', bc);
+  setSeat('top', bc === 'w' ? 'b' : 'w');
 }
 function setSeat(pos, color) {
   const s = App.state;
   const pl = s.players[color];
   const name = pl ? pl.name : 'Waiting…';
   const on = color === 'w' ? s.connected.w : s.connected.b;
-  const youTag = color === App.color ? ' (you)' : '';
-  $(`#${pos}-name`).innerHTML = `<span class="dot ${on ? 'on' : ''}"></span>${escapeHtml(name)}${youTag}`;
+  let tag = '';
+  if (!App.local && color === App.color) tag = ' (you)';
+  if (App.local && s.status === 'active' && s.turn === color) tag = ' — to play';
+  $(`#${pos}-name`).innerHTML = `<span class="dot ${on ? 'on' : ''}"></span>${escapeHtml(name)}${tag}`;
 }
 
 function tickClocks() {
   const s = App.state;
   if (!s) return;
-  const bottomColor = App.color === 'b' ? 'b' : 'w';
-  const topColor = bottomColor === 'w' ? 'b' : 'w';
-  for (const [pos, color] of [['bottom', bottomColor], ['top', topColor]]) {
+  const bc = bottomColor();
+  for (const [pos, color] of [['bottom', bc], ['top', bc === 'w' ? 'b' : 'w']]) {
     let ms = s.clock[color];
     if (s.running === color && s.turnStartedAt != null && s.status === 'active') {
       const now = Date.now() + App.clockOffset;
       ms = s.clock[color] - (now - s.turnStartedAt);
     }
     ms = Math.max(0, ms);
+    // Local mode is its own authority: flag a flag-fall here.
+    if (App.local && ms <= 0 && s.status === 'active' && s.running === color) {
+      s.clock[color] = 0;
+      s.status = 'finished';
+      s.result = { type: 'timeout', winner: color === 'w' ? 'b' : 'w' };
+      s.running = null; s.turnStartedAt = null;
+      lRender();
+      return;
+    }
     const el = $(`#${pos}-clock`);
     el.textContent = fmtClock(ms);
     el.classList.toggle('low', ms < 20000 && s.status === 'active');
@@ -484,6 +508,12 @@ function renderStatus() {
   if (s.status === 'waiting') { setPhase('Waiting for opponent…', 'wait'); return; }
   if (s.status === 'finished') { setPhase('Game over', 'wait'); return; }
 
+  if (App.local) {
+    const who = s.turn === 'w' ? 'White' : 'Black';
+    if (s.phase === 'move') setPhase(s.check ? `${who} — escape check!` : `${who} to move`, 'act-move');
+    else setPhase(`${who}: twist a quadrant ⤴`, 'act-twist');
+    return;
+  }
   if (App.color == null) {
     setPhase(`${s.turn === 'w' ? 'White' : 'Black'} to ${s.phase}`, 'wait');
     return;
@@ -556,7 +586,11 @@ function renderGameOver() {
   const st = $('#rematch-status');
   btn.classList.remove('glow');
   st.classList.remove('notify');
-  if (!App.color) {
+  if (App.local) {
+    btn.style.display = '';
+    btn.textContent = 'Play again';
+    st.textContent = '';
+  } else if (!App.color) {
     btn.style.display = 'none';
     st.textContent = '';
   } else if (other && !mine) {
@@ -607,7 +641,13 @@ function wireGameUI() {
     catch { $('#invite-link').select(); }
   };
   $('#btn-resign').onclick = () => {
-    if (App.state && App.state.status === 'active' && App.color && confirm('Resign this game?')) sendWS({ type: 'resign' });
+    if (!App.state || App.state.status !== 'active') return;
+    if (App.local) {
+      const who = App.state.turn === 'w' ? 'White' : 'Black';
+      if (confirm(`${who} resigns this game?`)) localResign();
+    } else if (App.color && confirm('Resign this game?')) {
+      sendWS({ type: 'resign' });
+    }
   };
   $('#btn-flip').onclick = () => { App.flip = !App.flip; buildBoardGrid(); renderBoard(); };
   $('#over-close').onclick = dismissOverlay;
@@ -615,13 +655,150 @@ function wireGameUI() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !$('#overlay').classList.contains('hidden') && App.state && App.state.status === 'finished') dismissOverlay();
   });
-  $('#btn-rematch').onclick = () => sendWS({ type: 'rematch' });
+  $('#btn-rematch').onclick = () => { if (App.local) startLocalGame(App.lstate.base, App.lstate.increment); else sendWS({ type: 'rematch' }); };
   $('#btn-newgame').onclick = () => { location.href = '/twistedchess'; };
   $('#chat-form').onsubmit = (e) => {
     e.preventDefault();
     const t = $('#chat-input').value.trim();
     if (t) { sendWS({ type: 'chat', text: t }); $('#chat-input').value = ''; }
   };
+}
+
+// ===========================================================================
+// Local pass-and-play (two players, one screen). Runs the engine entirely in
+// the browser; the board flips to face whoever is to move.
+// ===========================================================================
+function prefersReducedMotion() {
+  return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function startLocalGame(baseMs, incMs) {
+  App.local = true;
+  App.ws = null;
+  App.color = null;
+  App.selected = null; App.legalDests = [];
+  App.flip = false; // White moves first, faces White
+  App.overlayDismissed = false;
+  const eng = initialState();
+  const now = Date.now();
+  App.lstate = {
+    status: 'active', result: null,
+    board: eng.board, turn: eng.turn, castling: eng.castling, ep: eng.ep,
+    phase: 'move', check: false, lastMove: null, lastTwist: null,
+    players: { w: { name: 'White' }, b: { name: 'Black' } },
+    connected: { w: true, b: true, spectators: 0 },
+    clock: { w: baseMs, b: baseMs }, increment: incMs, base: baseMs,
+    running: 'w', turnStartedAt: now, serverNow: now,
+    twistOptions: [], history: [], rematchVotes: {},
+  };
+  App.prevTwistKey = null;
+  App.prevBoard = App.lstate.board.slice();
+  show('game');
+  $('#btn-flip').style.display = 'none'; // orientation is automatic in local play
+  buildBoardGrid();
+  lRender();
+}
+
+function lEngine() {
+  const s = App.lstate;
+  return { board: s.board, turn: s.turn, castling: s.castling, ep: s.ep };
+}
+
+function lRender() {
+  App.state = App.lstate;
+  App.clockOffset = 0;
+  renderBoard();
+  renderPlayers();
+  renderStatus();
+  renderHistory();
+  renderInvite();
+  renderGameOver();
+}
+
+function localMove(from, to, promotion) {
+  const s = App.lstate;
+  if (s.status !== 'active' || s.phase !== 'move') return;
+  const res = applyPieceMove(lEngine(), { from, to, promotion });
+  if (!res.ok) { flashBanner(res.error || 'Illegal move', 1200); return; }
+  s.board = res.state.board; s.castling = res.state.castling; s.ep = res.state.ep;
+  s.lastMove = { from: res.move.from, to: res.move.to };
+  s.lastTwist = null;
+  s.phase = 'twist';
+  s.twistOptions = legalTwists(lEngine(), s.turn);
+  App.selected = null; App.legalDests = [];
+  lRender();
+  if (s.twistOptions.length === 0) localFinishTurn(); // no legal twist: pass
+}
+
+function localTwist(quadrant, dir) {
+  const s = App.lstate;
+  if (s.status !== 'active' || s.phase !== 'twist') return;
+  const prev = s.board.slice();
+  const res = applyTwist(lEngine(), quadrant, dir, s.turn);
+  if (!res.ok) { flashBanner(res.error || 'Illegal twist', 1400); return; }
+  s.board = res.state.board; s.ep = null;
+  s.lastTwist = { quadrant, dir };
+  s.twistOptions = [];
+  lRender();
+  animateTwist(prev, { quadrant, dir });
+  // Let the twist settle visually, then complete the turn and flip the board.
+  setTimeout(() => localFinishTurn(), prefersReducedMotion() ? 0 : 500);
+}
+
+function localFinishTurn() {
+  const s = App.lstate;
+  if (s.status !== 'active') return;
+  const mover = s.turn;
+  const now = Date.now();
+  if (s.turnStartedAt != null) {
+    s.clock[mover] = Math.max(0, s.clock[mover] - (now - s.turnStartedAt)) + s.increment;
+  }
+  s.history.push({
+    n: s.history.length + 1, color: mover,
+    from: squareName(s.lastMove.from), to: squareName(s.lastMove.to),
+    twist: s.lastTwist ? { ...s.lastTwist } : null,
+  });
+  const opp = mover === 'w' ? 'b' : 'w';
+  s.turn = opp; s.phase = 'move';
+  s.turnStartedAt = now; s.serverNow = now; s.running = opp;
+
+  const status = moveStageStatus(lEngine());
+  s.check = (status === 'check' || status === 'checkmate');
+  if (status === 'checkmate') {
+    s.status = 'finished'; s.result = { type: 'checkmate', winner: mover };
+    s.running = null; s.turnStartedAt = null; lRender(); return;
+  }
+  if (status === 'stalemate') {
+    s.status = 'finished'; s.result = { type: 'stalemate', winner: null };
+    s.running = null; s.turnStartedAt = null; lRender(); return;
+  }
+  flipLocalOrientation(opp === 'b');
+  if (!prefersReducedMotion()) setTimeout(() => flashBanner(`${opp === 'w' ? 'White' : 'Black'} to move`, 1000), 240);
+}
+
+function localResign() {
+  const s = App.lstate;
+  if (s.status !== 'active') return;
+  s.status = 'finished';
+  s.result = { type: 'resign', winner: s.turn === 'w' ? 'b' : 'w' };
+  s.running = null; s.turnStartedAt = null;
+  lRender();
+}
+
+// Flip the board to face the new player, with a card-flip transition.
+function flipLocalOrientation(toFlip) {
+  const stage = document.querySelector('.board-stage');
+  if (!stage || prefersReducedMotion()) { App.flip = toFlip; buildBoardGrid(); lRender(); return; }
+  stage.style.transition = 'transform .22s ease-in';
+  stage.style.transform = 'perspective(1600px) rotateY(90deg)';
+  setTimeout(() => {
+    App.flip = toFlip;
+    buildBoardGrid();
+    lRender();
+    stage.style.transition = 'transform .26s ease-out';
+    stage.style.transform = 'perspective(1600px) rotateY(0deg)';
+    setTimeout(() => { stage.style.transform = ''; stage.style.transition = ''; }, 320);
+  }, 220);
 }
 
 function flashBanner(text, ms = 1200) {
