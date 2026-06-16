@@ -5,9 +5,13 @@ import {
 
 // Use the solid figurine glyphs for BOTH colours so the silhouettes are a
 // consistent Staunton set; colour is carried entirely by the .w / .b class.
+// U+FE0E (text variation selector) forces TEXT rendering: the pawn glyph
+// U+265F otherwise renders as a dark colour emoji on iOS/Android, which
+// ignores our CSS colour and makes White's pawns look black.
+const VS = '︎';
 const PIECES = {
-  K: '♚', Q: '♛', R: '♜', B: '♝', N: '♞', P: '♟',
-  k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟',
+  K: '♚' + VS, Q: '♛' + VS, R: '♜' + VS, B: '♝' + VS, N: '♞' + VS, P: '♟' + VS,
+  k: '♚' + VS, q: '♛' + VS, r: '♜' + VS, b: '♝' + VS, n: '♞' + VS, p: '♟' + VS,
 };
 
 // --- persistent identity ---

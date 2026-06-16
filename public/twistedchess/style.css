@@ -210,7 +210,13 @@ select {
   background: radial-gradient(circle, rgba(176,74,69,.55), rgba(176,74,69,0) 72%); pointer-events: none;
 }
 
-/* Two-tone Staunton silhouettes */
+/* Two-tone Staunton silhouettes.
+   font-variant-emoji:text keeps the pawn (U+265F) from rendering as a dark
+   colour emoji on mobile, which would ignore our colour and look black. */
+.piece, .promo-row button, .anim-quad .ap {
+  font-variant-emoji: text;
+  -webkit-font-feature-settings: normal;
+}
 .piece { position: relative; z-index: 2; pointer-events: none; transition: transform .12s; }
 .piece.w {
   color: #f7f3ea;

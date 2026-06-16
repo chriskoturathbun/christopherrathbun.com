@@ -15,7 +15,11 @@ routes = [
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/twistedchess", "/twistedchess/*"]
+run_worker_first = ["/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/"]
+
+[vars]
+SENTRY_ORG = "lilac-impact-ventures-llc"
+ALLOWED_EMAIL = "rathbunchristopher18@gmail.com"
 
 [observability]
 enabled = true

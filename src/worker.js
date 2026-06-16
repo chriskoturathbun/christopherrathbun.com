@@ -1,4 +1,5 @@
 export { TwistedChessGame } from './twisted-chess-do.js';
+import { handleSentry } from './sentry-dashboard.js';
 
 function newGameId() {
   // short, URL-friendly id
@@ -90,6 +91,11 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
+    // Sentry error dashboard (private, Google-auth gated)
+    if (path === '/sentry' || path === '/sentry/' || path.startsWith('/sentry/')) {
+      return handleSentry(request, env, url);
+    }
+
     // Twisted Chess (game + realtime backend)
     if (path === '/twistedchess' || path === '/twistedchess/' || path.startsWith('/twistedchess/')) {
       // Let real static assets (engine.js, app.js, style.css) pass through to ASSETS.
@@ -100,7 +106,11 @@ export default {
     }
 
     // Stella in the Woods countdown → serve the dedicated page
-    if (path === '/stella-in-the-woods-countdown' || path === '/stella-in-the-woods-countdown/') {
+    // Clean route /stella-in-the-woods, plus the original -countdown path.
+    if (
+      path === '/stella-in-the-woods' || path === '/stella-in-the-woods/' ||
+      path === '/stella-in-the-woods-countdown' || path === '/stella-in-the-woods-countdown/'
+    ) {
       const res = await fetchAssetFollow(env, url.origin, '/stella-in-the-woods-countdown/index.html');
       return new Response(res.body, {
         status: 200,
