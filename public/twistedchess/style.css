@@ -210,23 +210,20 @@ select {
   background: radial-gradient(circle, rgba(176,74,69,.55), rgba(176,74,69,0) 72%); pointer-events: none;
 }
 
-/* Two-tone Staunton silhouettes.
-   font-variant-emoji:text keeps the pawn (U+265F) from rendering as a dark
-   colour emoji on mobile, which would ignore our colour and look black. */
-.piece, .promo-row button, .anim-quad .ap {
-  font-variant-emoji: text;
-  -webkit-font-feature-settings: normal;
+/* Two-tone Staunton pieces, rendered as inline SVG (45x45 viewBox) so every
+   piece is identical in size on every platform. Colour via CSS variables. */
+.piece {
+  position: relative; z-index: 2; pointer-events: none;
+  width: 86%; height: 86%; display: grid; place-items: center;
+  transition: transform .12s;
 }
-.piece { position: relative; z-index: 2; pointer-events: none; transition: transform .12s; }
-.piece.w {
-  color: #f7f3ea;
-  -webkit-text-stroke: 1px rgba(46, 42, 35, 0.62);
-  text-shadow: 0 1px 1.5px rgba(0,0,0,.28);
+.piece .pc {
+  width: 100%; height: 100%; display: block;
+  filter: drop-shadow(0 1px 1.2px rgba(0,0,0,.28));
+  stroke-linejoin: round; stroke-linecap: round;
 }
-.piece.b {
-  color: #2b2926;
-  text-shadow: 0 1px 1px rgba(255,255,255,.22);
-}
+.piece.w { --pc-fill: #f6f2e9; --pc-stroke: #2b2723; }
+.piece.b { --pc-fill: #2c2a26; --pc-stroke: #e8e2d4; }
 .dest {
   position: absolute; z-index: 3; width: 26%; height: 26%; border-radius: 50%;
   background: rgba(29,29,31,.26); pointer-events: none;
@@ -363,10 +360,12 @@ select {
 .promo-modal h2 { margin-bottom: 18px; }
 .promo-row { display: flex; gap: 12px; justify-content: center; }
 .promo-row button {
-  width: 66px; height: 66px; font-size: 40px; border-radius: 14px;
-  border: 1px solid var(--hair-strong); background: var(--sq-light); color: #2b2926; cursor: pointer;
+  width: 66px; height: 66px; border-radius: 14px;
+  display: grid; place-items: center;
+  border: 1px solid var(--hair-strong); background: var(--sq-light); cursor: pointer;
   box-shadow: var(--shadow-sm); transition: transform .12s, box-shadow .2s;
 }
+.promo-row button .piece { width: 80%; height: 80%; }
 .promo-row button:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
 /* Rematch call-to-action */

@@ -2,17 +2,11 @@ import {
   legalMovesFrom, idx, rc, colorOf, squareName,
   initialState, applyPieceMove, applyTwist, legalTwists, moveStageStatus,
 } from '/twistedchess/engine.js';
+import { pieceSVG } from '/twistedchess/pieces.js';
 
-// Use the solid figurine glyphs for BOTH colours so the silhouettes are a
-// consistent Staunton set; colour is carried entirely by the .w / .b class.
-// U+FE0E (text variation selector) forces TEXT rendering: the pawn glyph
-// U+265F otherwise renders as a dark colour emoji on iOS/Android, which
-// ignores our CSS colour and makes White's pawns look black.
-const VS = '︎';
-const PIECES = {
-  K: '♚' + VS, Q: '♛' + VS, R: '♜' + VS, B: '♝' + VS, N: '♞' + VS, P: '♟' + VS,
-  k: '♚' + VS, q: '♛' + VS, r: '♜' + VS, b: '♝' + VS, n: '♞' + VS, p: '♟' + VS,
-};
+// Pieces are rendered as inline SVG (single 45x45 viewBox) so every piece is
+// pixel-identical in size on every platform — no font/emoji inconsistencies.
+// Colour comes from the .w / .b class via --pc-fill / --pc-stroke.
 
 // --- persistent identity ---
 function getPlayerId() {
@@ -241,7 +235,7 @@ function renderBoard() {
     if (p) {
       const span = document.createElement('span');
       span.className = 'piece ' + (colorOf(p) === 'w' ? 'w' : 'b');
-      span.textContent = PIECES[p];
+      span.innerHTML = pieceSVG(p);
       sq.appendChild(span);
       const mineColor = App.local ? (s.status === 'active' ? s.turn : null) : App.color;
       if (mineColor && colorOf(p) === mineColor) sq.classList.add('mine');
@@ -344,7 +338,7 @@ function choosePromotion(cb) {
   const opts = side === 'w' ? ['Q', 'R', 'B', 'N'] : ['q', 'r', 'b', 'n'];
   for (const o of opts) {
     const b = document.createElement('button');
-    b.textContent = PIECES[o];
+    b.innerHTML = `<span class="piece ${side}">${pieceSVG(o)}</span>`;
     b.onclick = () => { $('#promo').classList.add('hidden'); cb(o.toUpperCase()); };
     row.appendChild(b);
   }
@@ -423,7 +417,7 @@ function animateTwist(prevBoard, twist) {
       if (p) {
         const span = document.createElement('span');
         span.className = 'piece ' + (colorOf(p) === 'w' ? 'w' : 'b');
-        span.textContent = PIECES[p];
+        span.innerHTML = pieceSVG(p);
         cell.appendChild(span);
       }
       quad.appendChild(cell);

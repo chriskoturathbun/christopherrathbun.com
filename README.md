@@ -56,3 +56,7 @@ wrangler deploy --config ./wrangler.toml
 ## Stack
 
 Cloudflare Workers · Durable Objects (SQLite) · Workers Assets · WebSockets · vanilla JS (no build step).
+
+## Credits
+
+Chess piece graphics: the [Cburnett SVG set](https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces) by en:User:Cburnett, used under the BSD license.
