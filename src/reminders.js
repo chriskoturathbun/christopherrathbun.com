@@ -69,3 +69,76 @@ export function validateIntake(p) {
 
   return { valid, errors, normalized };
 }
+
+let schemaReady = false;
+async function ensureSchema(env) {
+  if (schemaReady) return;
+  const db = env.REMINDERS_DB;
+  await db.batch([
+    db.prepare(`CREATE TABLE IF NOT EXISTS accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      clerk_user_id TEXT, email TEXT, name TEXT,
+      approved INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS patients (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL,
+      name TEXT NOT NULL, phone_e164 TEXT NOT NULL, timezone TEXT NOT NULL,
+      relationship TEXT, is_self INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS emergency_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      name TEXT NOT NULL, phone_e164 TEXT NOT NULL, email TEXT, relationship TEXT)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS medicines (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      name TEXT NOT NULL, dose TEXT, frequency TEXT, timing_constraint TEXT,
+      preferred_times TEXT, active INTEGER NOT NULL DEFAULT 1)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS consent_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      type TEXT NOT NULL, text_version TEXT, ip TEXT, user_agent TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+  ]);
+  schemaReady = true;
+}
+
+const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
+  status, headers: { 'content-type': 'application/json' },
+});
+
+async function fetchPage(env, origin, file) {
+  const res = await env.ASSETS.fetch(new Request(new URL(file, origin).toString()));
+  return new Response(res.body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+}
+
+// Main entry, dispatched from worker.js for any /reminders* path.
+export async function handleReminders(request, env, url) {
+  const path = url.pathname;
+
+  // Static assets (css/js/img) pass through to ASSETS.
+  if (/\.(js|css|png|jpg|jpeg|svg|ico|webmanifest|map|webp)$/.test(path)) {
+    return env.ASSETS.fetch(request);
+  }
+
+  // Intake API (implemented in a later task).
+  if (path === '/reminders/api/intake' && request.method === 'POST') {
+    return handleIntakeSubmit(request, env);
+  }
+
+  // Page routes.
+  if (path === '/reminders/intake' || path === '/reminders/intake/') return fetchPage(env, url.origin, '/reminders/intake.html');
+  if (path === '/reminders/privacy' || path === '/reminders/privacy/') return fetchPage(env, url.origin, '/reminders/privacy.html');
+  if (path === '/reminders/terms' || path === '/reminders/terms/') return fetchPage(env, url.origin, '/reminders/terms.html');
+
+  // Landing (default for /reminders and unknown sub-paths).
+  return fetchPage(env, url.origin, '/reminders/index.html');
+}
+
+// Placeholder until the intake API task — keeps the module importable.
+async function handleIntakeSubmit(request, env) {
+  await ensureSchema(env);
+  return json({ ok: false, error: 'not implemented' }, 501);
+}

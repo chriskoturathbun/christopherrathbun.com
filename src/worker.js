@@ -1,5 +1,8 @@
 export { TwistedChessGame } from './twisted-chess-do.js';
 import { handleSentry } from './sentry-dashboard.js';
+import { handleVighnaa } from './vighnaa.js';
+import { handleUsers } from './users-dashboard.js';
+import { handleReminders } from './reminders.js';
 
 function newGameId() {
   // short, URL-friendly id
@@ -91,9 +94,35 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
+    // Users dashboard (Clerk-authenticated)
+    if (path === '/users' || path === '/users/' || path.startsWith('/users/') || path === '/api/users' || path.startsWith('/api/users/')) {
+      return handleUsers(request, env, url);
+    }
+
+    // Reminders — AI medication-reminder calls
+    if (path === '/reminders' || path === '/reminders/' || path.startsWith('/reminders/')) {
+      return handleReminders(request, env, url);
+    }
+
     // Sentry error dashboard (private, Google-auth gated)
     if (path === '/sentry' || path === '/sentry/' || path.startsWith('/sentry/')) {
       return handleSentry(request, env, url);
+    }
+
+    // Vighnaa Text LLM (fun text-style transformer)
+    if (path === '/vighnaatextllm' || path === '/vighnaatextllm/' || path.startsWith('/vighnaatextllm/')) {
+      // Real static assets pass through to ASSETS.
+      if (/\.(js|css|png|jpg|jpeg|svg|ico|webmanifest|map)$/.test(path)) {
+        return env.ASSETS.fetch(request);
+      }
+      const handled = await handleVighnaa(request, env, url);
+      if (handled) return handled;
+      // Serve the page for /vighnaatextllm and sub-paths.
+      const res = await fetchAssetFollow(env, url.origin, '/vighnaatextllm/index.html');
+      return new Response(res.body, {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
     }
 
     // Twisted Chess (game + realtime backend)
