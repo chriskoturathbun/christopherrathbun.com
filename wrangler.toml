@@ -15,11 +15,13 @@ routes = [
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/"]
+run_worker_first = ["/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/", "/vighnaatextllm", "/vighnaatextllm/*", "/users", "/users/*", "/api/users", "/api/users/*", "/reminders", "/reminders/*"]
 
 [vars]
 SENTRY_ORG = "lilac-impact-ventures-llc"
 ALLOWED_EMAIL = "rathbunchristopher18@gmail.com"
+# CLERK_API_KEY is set via: wrangler secret put CLERK_API_KEY
+# It's automatically available in env.CLERK_API_KEY at runtime
 
 [observability]
 enabled = true
@@ -28,6 +30,27 @@ enabled = true
 name = "TWISTED_CHESS"
 class_name = "TwistedChessGame"
 
+[[d1_databases]]
+binding = "DB"
+database_name = "christopherrathbun_users"
+database_id = "62218bf5-8dbd-4c9e-8d86-6ddd82182fb6"
+
+# NOTE: the analytics_events table is created on-demand by users-dashboard.js
+# (ensureSchema), so no D1 migration is needed here.
+
+[[d1_databases]]
+binding = "REMINDERS_DB"
+database_name = "reminders"
+database_id = "35a987be-44dc-43b3-9680-9e835cc8efa0"
+
+# NOTE: schema is created on-demand by src/reminders.js (ensureSchema),
+# so no D1 migration is needed here.
+
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["TwistedChessGame"]
+
+# v2 was previously applied (an attempted D1 table migration that wrangler
+# ignored). Kept as a no-op so the migration history stays consistent.
+[[migrations]]
+tag = "v2"
