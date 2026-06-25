@@ -137,8 +137,45 @@ export async function handleReminders(request, env, url) {
   return fetchPage(env, url.origin, '/reminders/index.html');
 }
 
-// Placeholder until the intake API task — keeps the module importable.
 async function handleIntakeSubmit(request, env) {
   await ensureSchema(env);
-  return json({ ok: false, error: 'not implemented' }, 501);
+  let payload;
+  try { payload = await request.json(); } catch { return json({ ok: false, errors: ['invalid JSON'] }, 400); }
+
+  const { valid, errors, normalized } = validateIntake(payload);
+  if (!valid) return json({ ok: false, errors }, 422);
+
+  const db = env.REMINDERS_DB;
+  const ip = request.headers.get('cf-connecting-ip') || '';
+  const ua = request.headers.get('user-agent') || '';
+  const consentText = 'reminders-consent-v1';
+
+  // Account: dedupe by purchaser email (Clerk linkage added in Phase 3).
+  let acct = await db.prepare('SELECT id FROM accounts WHERE email = ?').bind(normalized.purchaser.email).first();
+  if (!acct) {
+    const r = await db.prepare('INSERT INTO accounts (email, name, approved) VALUES (?, ?, 0) RETURNING id')
+      .bind(normalized.purchaser.email, normalized.purchaser.name).first();
+    acct = r;
+  }
+
+  const patient = await db.prepare(
+    `INSERT INTO patients (account_id, name, phone_e164, timezone, relationship, is_self, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending') RETURNING id`)
+    .bind(acct.id, normalized.patient.name, normalized.patient.phone, normalized.patient.timezone,
+          normalized.relationship, normalized.patient.is_self).first();
+
+  const stmts = [];
+  stmts.push(db.prepare('INSERT INTO emergency_contacts (patient_id, name, phone_e164, email, relationship) VALUES (?, ?, ?, ?, ?)')
+    .bind(patient.id, normalized.emergency.name, normalized.emergency.phone, normalized.emergency.email, normalized.emergency.relationship));
+  for (const m of normalized.medicines) {
+    stmts.push(db.prepare('INSERT INTO medicines (patient_id, name, dose, frequency, timing_constraint, preferred_times) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind(patient.id, m.name, m.dose, m.frequency, m.timing, JSON.stringify(m.preferred_times)));
+  }
+  for (const t of ['tcpa', 'recording', ...(normalized.consent.attestation ? ['attestation'] : [])]) {
+    stmts.push(db.prepare('INSERT INTO consent_log (patient_id, type, text_version, ip, user_agent) VALUES (?, ?, ?, ?, ?)')
+      .bind(patient.id, t, consentText, ip, ua));
+  }
+  await db.batch(stmts);
+
+  return json({ ok: true, patientId: patient.id, status: 'pending_approval' });
 }
