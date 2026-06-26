@@ -134,6 +134,10 @@ async function ensureSchema(env) {
       kind TEXT NOT NULL, severity TEXT, category TEXT, summary TEXT,
       channels_sent TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS sms_status (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      message_sid TEXT, to_number TEXT, status TEXT, error_code TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')))`),
   ]);
   schemaReady = true;
 }
@@ -169,6 +173,8 @@ export async function handleReminders(request, env, url) {
   if (path === '/reminders/api/bland-webhook' && request.method === 'POST') {
     return handleBlandWebhook(request, env, url);
   }
+
+  if (path === '/reminders/api/sms-status' && request.method === 'POST') return handleSmsStatus(request, env, url);
 
   if (path === '/reminders/api/admin/approve' && request.method === 'POST') {
     return handleApprove(request, env);
@@ -459,7 +465,8 @@ async function handleBlandWebhook(request, env, url) {
 
   const channels = [];
   for (const to of emails) { const r = await sendResendEmail({ to, subject: alert.subject, html: alert.html, text: alert.text }, env); if (r.ok) channels.push(`email:${to}`); }
-  for (const to of phones) { const r = await sendTwilioSms({ to, body: smsBody.slice(0, 320) }, env); if (r.ok) channels.push(`sms:${to}`); }
+  const smsCb = env.REMINDERS_WEBHOOK_SECRET ? `${env.PUBLIC_BASE_URL || 'https://christopherrathbun.com'}/reminders/api/sms-status?token=${env.REMINDERS_WEBHOOK_SECRET}` : undefined;
+  for (const to of phones) { const r = await sendTwilioSms({ to, body: smsBody.slice(0, 320), statusCallback: smsCb }, env); if (r.ok) channels.push(`sms:${to}`); }
 
   await db.prepare('INSERT INTO alerts (call_id, patient_id, kind, severity, category, summary, channels_sent) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .bind(call.id, patient.id, kind, detection.severity, detection.category, alert.subject, JSON.stringify(channels)).run();
@@ -486,4 +493,19 @@ async function handleAdminPending(request, env) {
   }
   const totals = out.reduce((t, a) => ({ calls: t.calls + a.usage.calls, cost_usd: Math.round((t.cost_usd + a.usage.cost_usd) * 100) / 100 }), { calls: 0, cost_usd: 0 });
   return json({ ok: true, accounts: out, totals });
+}
+
+async function handleSmsStatus(request, env, url) {
+  if (!env.REMINDERS_WEBHOOK_SECRET || url.searchParams.get('token') !== env.REMINDERS_WEBHOOK_SECRET) return new Response('unauthorized', { status: 401 });
+  await ensureSchema(env);
+  let form; try { form = await request.formData(); } catch { return new Response('bad', { status: 400 }); }
+  const sid = form.get('MessageSid') || form.get('SmsSid');
+  const status = form.get('MessageStatus') || form.get('SmsStatus');
+  const errorCode = form.get('ErrorCode') || null;
+  const to = form.get('To') || null;
+  if (sid) {
+    await env.REMINDERS_DB.prepare('INSERT INTO sms_status (message_sid, to_number, status, error_code) VALUES (?, ?, ?, ?)').bind(sid, to, status, errorCode).run();
+    if (status === 'undelivered' || status === 'failed') console.error('reminders SMS not delivered', sid, to, status, errorCode);
+  }
+  return new Response('', { status: 204 });
 }

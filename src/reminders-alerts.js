@@ -107,14 +107,17 @@ export async function sendResendEmail({ to, subject, html, text }, env) {
   return { ok: res.ok, status: res.status };
 }
 
-export async function sendTwilioSms({ to, body }, env) {
+export async function sendTwilioSms({ to, body, statusCallback }, env) {
   if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_PHONE_NUMBER || !to) return { ok: false, error: 'twilio not configured' };
   const url = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
-  const form = new URLSearchParams({ To: to, From: env.TWILIO_PHONE_NUMBER, Body: body });
+  const params = { To: to, From: env.TWILIO_PHONE_NUMBER, Body: body };
+  if (statusCallback) params.StatusCallback = statusCallback;
+  const form = new URLSearchParams(params);
   const res = await fetch(url, {
     method: 'POST',
     headers: { authorization: 'Basic ' + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`), 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
   });
-  return { ok: res.ok, status: res.status };
+  let sid = null; try { sid = (await res.json()).sid || null; } catch {}
+  return { ok: res.ok, status: res.status, sid };
 }
