@@ -330,7 +330,7 @@
       html += '<div class="patient-head">' +
         '<div>' +
           '<h3>' + esc(p.name || 'Patient') + '</h3>' +
-          '<div class="ph muted">' + esc(p.phone || '') + '</div>' +
+          '<div class="ph muted">' + esc(p.phone_e164 || p.phone || '') + '</div>' +
         '</div>' +
         '<div class="status-row">' +
           '<span class="status-pill ' + status + '"><span class="dot"></span>' + (status === 'paused' ? 'Paused' : 'Active') + '</span>' +
