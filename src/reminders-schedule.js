@@ -61,3 +61,39 @@ export function optimizeCallPlan(medicines) {
   plan.sort((a, b) => a.local_time.localeCompare(b.local_time));
   return plan;
 }
+
+// Offset (ms) of `tz` from UTC at the given instant: (wall-clock as-if-UTC) - instant.
+function tzOffsetMs(date, tz) {
+  const dtf = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const p = dtf.formatToParts(date).reduce((a, x) => { a[x.type] = x.value; return a; }, {});
+  const asUTC = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute, +p.second);
+  return asUTC - date.getTime();
+}
+
+// Convert a wall-clock time in `tz` to a UTC ISO string (DST-safe, two-pass refine).
+export function zonedWallTimeToUtc(year, month, day, hh, mm, tz) {
+  const guess = Date.UTC(year, month - 1, day, hh, mm);
+  let utc = guess - tzOffsetMs(new Date(guess), tz);
+  utc = guess - tzOffsetMs(new Date(utc), tz);
+  return new Date(utc).toISOString();
+}
+
+// For each 'HH:MM' local time, the UTC ISO occurrences strictly after `fromISO`
+// and within `horizonHours`. Scans each day in the window.
+export function nextOccurrencesUTC(localTimes, tz, fromISO, horizonHours) {
+  const from = new Date(fromISO);
+  const end = new Date(from.getTime() + horizonHours * 3600 * 1000);
+  const out = [];
+  for (let dayOffset = -1; dayOffset <= Math.ceil(horizonHours / 24) + 1; dayOffset++) {
+    const probe = new Date(from.getTime() + dayOffset * 86400000);
+    const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, year:'numeric', month:'2-digit', day:'2-digit' })
+      .formatToParts(probe).reduce((a, x) => { a[x.type] = x.value; return a; }, {});
+    for (const t of localTimes) {
+      const [hh, mm] = t.split(':').map(Number);
+      const iso = zonedWallTimeToUtc(+p.year, +p.month, +p.day, hh, mm, tz);
+      const d = new Date(iso);
+      if (d > from && d <= end) out.push(iso);
+    }
+  }
+  return [...new Set(out)].sort();
+}

@@ -1,5 +1,5 @@
 // Run: node test/reminders-schedule.test.mjs
-import { expandDoseTimes, clusterEvents, optimizeCallPlan } from '../src/reminders-schedule.js';
+import { expandDoseTimes, clusterEvents, optimizeCallPlan, zonedWallTimeToUtc, nextOccurrencesUTC } from '../src/reminders-schedule.js';
 
 let pass = 0, fail = 0;
 function ok(c, m){ if(c) pass++; else { fail++; console.error('FAIL:', m); } }
@@ -41,6 +41,25 @@ eq(plan[0].local_time, '08:00', 'first call 08:00');
 deq(plan[0].medicine_names.sort(), ['Lisinopril','Vitamin D'], 'morning meds grouped');
 eq(plan[1].local_time, '21:00', 'bedtime call 21:00');
 deq(plan[1].medicine_names, ['Melatonin'], 'melatonin alone');
+
+function hhmmInTz(iso, tz) {
+  return new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', hour: '2-digit', minute: '2-digit' }).format(new Date(iso));
+}
+
+const utc = zonedWallTimeToUtc(2026, 7, 1, 8, 0, 'America/Los_Angeles');
+eq(hhmmInTz(utc, 'America/Los_Angeles'), '08:00', 'LA 08:00 round-trips');
+
+const from = '2026-07-01T12:00:00.000Z';
+const occ = nextOccurrencesUTC(['08:00'], 'America/Los_Angeles', from, 48);
+ok(occ.length >= 1, 'at least one 08:00 occurrence in 48h');
+ok(occ.every(t => hhmmInTz(t, 'America/Los_Angeles') === '08:00'), 'all occurrences read as 08:00 local');
+ok(occ.every(t => new Date(t) > new Date(from)), 'all occurrences in the future');
+ok(occ.every(t => new Date(t) <= new Date(Date.parse(from) + 48*3600*1000)), 'within horizon');
+
+const wUtc = zonedWallTimeToUtc(2026, 1, 15, 8, 0, 'America/Los_Angeles');
+const sUtc = zonedWallTimeToUtc(2026, 7, 15, 8, 0, 'America/Los_Angeles');
+eq(new Date(wUtc).getUTCHours(), 16, 'PST 08:00 = 16:00 UTC');
+eq(new Date(sUtc).getUTCHours(), 15, 'PDT 08:00 = 15:00 UTC');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
