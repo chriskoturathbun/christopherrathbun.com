@@ -3,59 +3,246 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Reminders — a friendly voice that calls every day</title>
-  <meta name="description" content="An AI voice agent that calls your loved ones every day to remind them to take their medication — and alerts you if they need anything." />
-  <link rel="stylesheet" href="/reminders/reminders.css" />
+  <title>Reminders — a warm voice that calls every day</title>
+  <meta name="description" content="An AI voice agent calls your loved ones every day, right on time, to remind them to take their medication — and tells you the moment they need anything." />
+  <meta property="og:title" content="Reminders — never a missed dose" />
+  <meta property="og:description" content="A warm, human-sounding voice calls your loved one every day at the right time — and alerts you instantly if they need help." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root{
+      --ink:#0a0a0c; --panel:#101013; --bone:#f5f3ef;
+      --muted:rgba(245,243,239,.56); --faint:rgba(245,243,239,.34);
+      --gold:#d8a657; --line:rgba(245,243,239,.12);
+      --disp:'Space Grotesk',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{background:var(--ink);color:var(--bone);font-family:var(--body);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1240px;margin:0 auto;padding:0 32px}
+    .eyebrow{font-family:var(--disp);font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold)}
+    h1,h2,h3{font-family:var(--disp);font-weight:600;letter-spacing:-.02em;line-height:1.02}
+
+    /* Nav */
+    nav{position:fixed;top:0;left:0;right:0;z-index:50;transition:background .3s,backdrop-filter .3s,border-color .3s;border-bottom:1px solid transparent}
+    nav.scrolled{background:rgba(10,10,12,.72);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}
+    .nav-in{display:flex;align-items:center;justify-content:space-between;height:74px}
+    .brand{font-family:var(--disp);font-weight:700;letter-spacing:-.01em;font-size:19px}
+    .brand span{color:var(--gold)}
+    .nav-links{display:flex;align-items:center;gap:30px}
+    .nav-links a{font-size:14px;color:var(--muted);transition:color .2s}
+    .nav-links a:hover{color:var(--bone)}
+    .signin{border:1px solid var(--line);padding:9px 18px;border-radius:100px;color:var(--bone)!important}
+    .signin:hover{border-color:var(--bone)}
+
+    /* Buttons */
+    .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--disp);font-weight:500;font-size:15px;padding:15px 28px;border-radius:100px;transition:transform .2s,box-shadow .2s,background .2s}
+    .btn-solid{background:var(--bone);color:#0a0a0c}
+    .btn-solid:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(216,166,87,.22)}
+    .btn-ghost{border:1px solid var(--line);color:var(--bone)}
+    .btn-ghost:hover{border-color:var(--bone)}
+
+    /* Hero */
+    .hero{position:relative;min-height:100svh;display:flex;align-items:center;overflow:hidden}
+    .hero-bg{position:absolute;inset:0;z-index:0;background:#000}
+    .hero-bg img{width:100%;height:100%;object-fit:cover;object-position:30% center;animation:kenburns 26s ease-in-out infinite alternate;opacity:.96}
+    @keyframes kenburns{from{transform:scale(1)}to{transform:scale(1.07)}}
+    @media (prefers-reduced-motion:reduce){.hero-bg img{animation:none}}
+    .hero-veil{position:absolute;inset:0;z-index:1;background:
+      linear-gradient(90deg, rgba(10,10,12,0) 30%, rgba(10,10,12,.55) 62%, rgba(10,10,12,.92) 100%),
+      linear-gradient(0deg, rgba(10,10,12,.5) 0%, rgba(10,10,12,0) 30%)}
+    .hero .wrap{position:relative;z-index:2;width:100%}
+    .hero-copy{max-width:560px;margin-left:auto}
+    .hero h1{font-size:clamp(46px,6.6vw,92px);margin:18px 0 22px}
+    .hero h1 em{font-style:normal;color:var(--gold)}
+    .hero p{font-size:clamp(17px,1.5vw,20px);color:var(--muted);max-width:480px;margin-left:auto}
+    .hero-cta{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap}
+    .scroll-hint{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);z-index:2;font-family:var(--disp);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:10px}
+    .scroll-hint::before{content:"";width:34px;height:1px;background:var(--faint)}
+
+    /* Sections */
+    section{position:relative}
+    .pad{padding:120px 0}
+    .statement{font-size:clamp(28px,3.6vw,52px);font-family:var(--disp);font-weight:500;letter-spacing:-.02em;line-height:1.16;max-width:920px}
+    .statement b{color:var(--bone);font-weight:600}
+    .statement .dim{color:var(--faint)}
+
+    /* Steps */
+    .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:18px;overflow:hidden;margin-top:64px}
+    .step{background:var(--ink);padding:40px 34px;min-height:260px;display:flex;flex-direction:column}
+    .step .num{font-family:var(--disp);font-size:13px;letter-spacing:.2em;color:var(--gold)}
+    .step h3{font-size:23px;margin:16px 0 12px}
+    .step p{color:var(--muted);font-size:15.5px}
+
+    /* Split feature (image + text) */
+    .split{display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center}
+    .split-img{border-radius:18px;overflow:hidden;aspect-ratio:5/4;background:#000;border:1px solid var(--line)}
+    .split-img img{width:100%;height:100%;object-fit:cover;display:block}
+    .split h2{font-size:clamp(30px,3.4vw,46px);margin-bottom:20px}
+    .split p{color:var(--muted);font-size:17px;max-width:440px}
+    .checks{list-style:none;margin-top:26px;display:flex;flex-direction:column;gap:14px}
+    .checks li{display:flex;gap:13px;align-items:flex-start;font-size:15.5px;color:var(--bone)}
+    .checks svg{flex:none;margin-top:3px;color:var(--gold)}
+
+    /* CTA band */
+    .cta-band{text-align:center;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:radial-gradient(120% 120% at 50% 0%, rgba(216,166,87,.07), transparent 60%)}
+    .cta-band h2{font-size:clamp(34px,4.4vw,62px);margin-bottom:20px}
+    .cta-band p{color:var(--muted);max-width:520px;margin:0 auto 34px;font-size:18px}
+
+    /* Trust + footer */
+    .trust{color:var(--faint);font-size:14px;text-align:center;max-width:680px;margin:0 auto;line-height:1.7}
+    footer{border-top:1px solid var(--line);padding:46px 0}
+    .foot-in{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+    .foot-links{display:flex;gap:26px}
+    .foot-links a{color:var(--muted);font-size:14px}
+    .foot-links a:hover{color:var(--bone)}
+    .foot-brand{font-family:var(--disp);font-weight:700;font-size:16px}
+
+    /* reveal */
+    .reveal{opacity:0;transform:translateY(26px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+    .reveal.in{opacity:1;transform:none}
+
+    @media(max-width:860px){
+      .wrap{padding:0 22px}
+      .hero-copy{max-width:none;margin:0}
+      .hero h1,.hero p{margin-left:0;text-align:left}
+      .hero-bg img{object-position:34% center}
+      .hero-veil{background:linear-gradient(0deg,rgba(10,10,12,.94) 8%,rgba(10,10,12,.4) 46%,rgba(10,10,12,.2) 100%)}
+      .hero{align-items:flex-end;padding-bottom:9vh}
+      .pad{padding:84px 0}
+      .steps{grid-template-columns:1fr}
+      .split{grid-template-columns:1fr;gap:34px}
+      .split-img{order:-1}
+    }
+  </style>
 </head>
 <body>
-  <div class="fluid-bg"></div>
-  <header class="wrap" style="display:flex;align-items:center;justify-content:space-between;padding:22px 24px;">
-    <strong style="font-size:18px;letter-spacing:-0.01em;">Reminders</strong>
-    <nav style="display:flex;gap:18px;align-items:center;">
-      <a href="#how" class="muted" style="text-decoration:none;">How it works</a>
-      <a href="/reminders/dashboard" class="btn btn-ghost" style="padding:10px 18px;">Sign in</a>
-    </nav>
+  <nav id="nav">
+    <div class="wrap nav-in">
+      <a href="/reminders" class="brand">Re<span>·</span>minders</a>
+      <div class="nav-links">
+        <a href="#how">How it works</a>
+        <a href="#safety">Safety</a>
+        <a href="/reminders/dashboard" class="signin">Sign in</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="hero-bg"><img src="/reminders/img/hero-portrait.jpg" alt="An elderly woman smiling warmly on the phone in a sunlit room" /></div>
+    <div class="hero-veil"></div>
+    <div class="wrap">
+      <div class="hero-copy">
+        <span class="eyebrow">Daily medication calls</span>
+        <h1>Never a<br/><em>missed dose.</em></h1>
+        <p>A warm, human-sounding voice calls your loved one every day, right on time — and tells you the moment they need anything.</p>
+        <div class="hero-cta">
+          <a href="/reminders/intake" class="btn btn-solid">Get started
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a href="#how" class="btn btn-ghost">How it works</a>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-hint">Scroll</div>
   </header>
 
-  <main class="wrap" style="padding-top:8vh;">
-    <section style="text-align:center;max-width:760px;margin:0 auto;">
-      <h1>Never miss a dose.<br/>A friendly voice that calls every day.</h1>
-      <p class="lede muted" style="margin:0 auto 30px;">Reminders calls your loved ones at the right time, every time, in a warm human voice — and tells you the moment they need anything.</p>
-      <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
-        <a href="/reminders/intake" class="btn">Get started</a>
-        <a href="#how" class="btn btn-ghost">How it works</a>
+  <!-- STATEMENT -->
+  <section class="pad">
+    <div class="wrap">
+      <p class="statement reveal">The hardest part of caring from a distance is <span class="dim">the not knowing.</span> <b>Reminders closes that gap</b> — a dependable daily call, and an instant alert the moment something's off.</p>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="pad" id="how" style="padding-top:0">
+    <div class="wrap">
+      <span class="eyebrow reveal">How it works</span>
+      <div class="steps">
+        <div class="step reveal">
+          <div class="num">01</div>
+          <h3>Set the medicines &amp; times</h3>
+          <p>Add each medication and when it's taken. We automatically group medicines that can be taken together into the fewest calls.</p>
+        </div>
+        <div class="step reveal">
+          <div class="num">02</div>
+          <h3>We call — right on time</h3>
+          <p>A warm AI voice calls at each scheduled time: "Hi Rose, it's time to take your morning medicine." Every day, never late.</p>
+        </div>
+        <div class="step reveal">
+          <div class="num">03</div>
+          <h3>You're told instantly</h3>
+          <p>If they have a question, need help, or miss a call, we detect it and alert you and the emergency contact at once.</p>
+        </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section id="how" style="margin-top:14vh;">
-      <h2 style="text-align:center;margin-bottom:36px;">How it works</h2>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;">
-        <div class="glass" style="padding:28px;">
-          <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;" class="muted">Step 1</div>
-          <h3>Tell us the medicines &amp; times</h3>
-          <p class="muted">Add each medication and when it should be taken. We automatically group medicines that can be taken together.</p>
-        </div>
-        <div class="glass" style="padding:28px;">
-          <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;" class="muted">Step 2</div>
-          <h3>We call — on time, every time</h3>
-          <p class="muted">A warm AI voice calls at each scheduled time: "Hi Rose, it's time to take your morning medicine."</p>
-        </div>
-        <div class="glass" style="padding:28px;">
-          <div style="font-size:13px;letter-spacing:.12em;text-transform:uppercase;" class="muted">Step 3</div>
-          <h3>You're alerted to anything</h3>
-          <p class="muted">If they have a question or need help, we detect it and alert you and the emergency contact by email and text.</p>
+  <!-- SAFETY SPLIT -->
+  <section class="pad" id="safety" style="padding-top:0">
+    <div class="wrap">
+      <div class="split">
+        <div class="split-img reveal"><img src="/reminders/img/section-hands.jpg" alt="Elderly hands holding a phone in warm light" /></div>
+        <div class="reveal">
+          <span class="eyebrow">Peace of mind</span>
+          <h2>If anything's wrong,<br/>you'll know in seconds.</h2>
+          <p>Every call is understood, not just placed. The moment your loved one sounds confused, asks for help, or doesn't pick up, we reach you.</p>
+          <ul class="checks">
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg> Email + text alert to you and the emergency contact</li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg> A short summary of what they said, with the call recording</li>
+            <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg> A missed call is an alert too — silence never goes unnoticed</li>
+          </ul>
         </div>
       </div>
-    </section>
+    </div>
+  </section>
 
-    <section class="glass" style="margin-top:10vh;padding:26px 30px;text-align:center;">
-      <p class="muted" style="margin:0;">Calls are recorded for quality and safety. Reminders is a supportive tool and is <strong>not a substitute for professional medical care or emergency services</strong>.</p>
-    </section>
-  </main>
+  <!-- CTA -->
+  <section class="cta-band pad">
+    <div class="wrap">
+      <h2 class="reveal">Start with one call a day.</h2>
+      <p class="reveal">Set it up in a few minutes. Free to begin — your account is reviewed before any calls start.</p>
+      <div class="reveal" style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
+        <a href="/reminders/intake" class="btn btn-solid">Get started
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="/reminders/dashboard" class="btn btn-ghost">Sign in</a>
+      </div>
+    </div>
+  </section>
 
-  <footer class="wrap" style="padding:48px 24px;display:flex;gap:18px;justify-content:center;">
-    <a href="/reminders/privacy" class="muted" style="text-decoration:none;">Privacy</a>
-    <a href="/reminders/terms" class="muted" style="text-decoration:none;">Terms</a>
+  <!-- TRUST -->
+  <section style="padding:64px 0">
+    <div class="wrap">
+      <p class="trust reveal">Calls are recorded and transcribed for quality and safety, and analyzed only to detect if your loved one needs help. Reminders is a supportive tool and is <strong style="color:var(--muted)">not a substitute for professional medical care or emergency services</strong>. In an emergency, call 911.</p>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap foot-in">
+      <div class="foot-brand">Re·minders</div>
+      <div class="foot-links">
+        <a href="/reminders/privacy">Privacy</a>
+        <a href="/reminders/terms">Terms</a>
+        <a href="/reminders/intake">Get started</a>
+      </div>
+      <div style="color:var(--faint);font-size:13px">© 2026 Christopher Rathbun</div>
+    </div>
   </footer>
+
+  <script>
+    // Nav background on scroll
+    const nav = document.getElementById('nav');
+    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 40);
+    onScroll(); window.addEventListener('scroll', onScroll, {passive:true});
+    // Reveal on scroll
+    const io = new IntersectionObserver((entries)=>{
+      entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, {threshold:.16});
+    document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  </script>
 </body>
 </html>
