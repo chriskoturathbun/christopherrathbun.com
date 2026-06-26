@@ -2,6 +2,7 @@
 import { optimizeCallPlan } from './reminders-schedule.js';
 import { nextOccurrencesUTC } from './reminders-schedule.js';
 import { placeCall, scheduleCall } from './reminders-bland.js';
+import { verifyClerkJWT, getClerkUserEmail } from './reminders-clerk.js';
 
 // Normalize a phone string to E.164 (+ and digits). Returns null if invalid.
 export function normalizePhone(input) {
@@ -157,6 +158,11 @@ export async function handleReminders(request, env, url) {
     return handleApprove(request, env);
   }
 
+  if (path === '/reminders/api/dashboard/data' && request.method === 'GET') return handleDashboardData(request, env);
+  if (path === '/reminders/api/dashboard/medicines' && request.method === 'POST') return handleUpdateMedicines(request, env);
+  if (path === '/reminders/api/dashboard/patient-status' && request.method === 'POST') return handlePatientStatus(request, env);
+  if (path === '/reminders/dashboard' || path === '/reminders/dashboard/') return fetchPage(env, url.origin, '/reminders/dashboard.html');
+
   // Page routes.
   if (path === '/reminders/intake' || path === '/reminders/intake/') return fetchPage(env, url.origin, '/reminders/intake.html');
   if (path === '/reminders/privacy' || path === '/reminders/privacy/') return fetchPage(env, url.origin, '/reminders/privacy.html');
@@ -305,4 +311,88 @@ export async function runReconciler(env, nowISO) {
     }
   }
   return { placed };
+}
+
+// Resolve the signed-in Clerk user → their account row (linking clerk_user_id on first login).
+async function requireClerkAccount(request, env) {
+  const auth = request.headers.get('authorization') || '';
+  if (!auth.startsWith('Bearer ')) return null;
+  const payload = await verifyClerkJWT(auth.slice(7), env);
+  if (!payload?.sub) return null;
+  const db = env.REMINDERS_DB;
+  let account = await db.prepare('SELECT * FROM accounts WHERE clerk_user_id = ?').bind(payload.sub).first();
+  if (!account) {
+    const email = await getClerkUserEmail(payload.sub, env);
+    if (email) {
+      account = await db.prepare('SELECT * FROM accounts WHERE email = ?').bind(email).first();
+      if (account) {
+        await db.prepare('UPDATE accounts SET clerk_user_id = ? WHERE id = ?').bind(payload.sub, account.id).run();
+      } else {
+        account = await db.prepare('INSERT INTO accounts (clerk_user_id, email, approved) VALUES (?, ?, 0) RETURNING *').bind(payload.sub, email).first();
+      }
+    }
+  }
+  return account ? { account } : null;
+}
+
+async function handleDashboardData(request, env) {
+  await ensureSchema(env);
+  const ctx = await requireClerkAccount(request, env);
+  if (!ctx) return json({ ok: false, error: 'unauthorized' }, 401);
+  const db = env.REMINDERS_DB;
+  const patientsRes = await db.prepare('SELECT id, name, phone_e164, timezone, status FROM patients WHERE account_id = ? ORDER BY id').bind(ctx.account.id).all();
+  const patients = [];
+  for (const p of (patientsRes.results || [])) {
+    const meds = await db.prepare('SELECT id, name, dose, frequency, timing_constraint AS timing FROM medicines WHERE patient_id = ? AND active = 1').bind(p.id).all();
+    const plan = await db.prepare('SELECT local_time, medicine_names FROM call_plan WHERE patient_id = ? AND active = 1 ORDER BY local_time').bind(p.id).all();
+    const stats = await db.prepare(`SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN status IN ('placed','completed') THEN 1 ELSE 0 END) AS completed,
+        MAX(placed_at) AS last_call
+      FROM calls WHERE patient_id = ?`).bind(p.id).first();
+    const recent = await db.prepare(`SELECT scheduled_at_utc, status, placed_at, duration_sec FROM calls
+        WHERE patient_id = ? ORDER BY scheduled_at_utc DESC LIMIT 20`).bind(p.id).all();
+    patients.push({
+      ...p,
+      medicines: meds.results || [],
+      call_plan: (plan.results || []).map(r => ({ local_time: r.local_time, medicine_names: JSON.parse(r.medicine_names || '[]') })),
+      stats: { total: stats?.total || 0, completed: stats?.completed || 0, last_call: stats?.last_call || null },
+      recent_calls: recent.results || [],
+    });
+  }
+  return json({ ok: true, account: { email: ctx.account.email, approved: !!ctx.account.approved }, patients });
+}
+
+async function handleUpdateMedicines(request, env) {
+  await ensureSchema(env);
+  const ctx = await requireClerkAccount(request, env);
+  if (!ctx) return json({ ok: false, error: 'unauthorized' }, 401);
+  let body; try { body = await request.json(); } catch { return json({ ok:false, error:'bad json' }, 400); }
+  const db = env.REMINDERS_DB;
+  const patient = await db.prepare('SELECT id FROM patients WHERE id = ? AND account_id = ?').bind(body.patientId, ctx.account.id).first();
+  if (!patient) return json({ ok: false, error: 'not found' }, 404);
+  const meds = Array.isArray(body.medicines) ? body.medicines : [];
+  if (!meds.length) return json({ ok: false, error: 'at least one medicine required' }, 422);
+  await db.prepare('UPDATE medicines SET active = 0 WHERE patient_id = ?').bind(patient.id).run();
+  const stmts = meds.map(m => db.prepare('INSERT INTO medicines (patient_id, name, dose, frequency, timing_constraint, active) VALUES (?, ?, ?, ?, ?, 1)')
+    .bind(patient.id, (m.name||'').trim(), (m.dose||'').trim(), m.frequency || 'once_daily', m.timing || 'morning'));
+  await db.batch(stmts);
+  const plan = await computeAndStoreCallPlan(db, patient.id,
+    meds.map(m => ({ name: (m.name||'').trim(), dose: (m.dose||'').trim(), frequency: m.frequency || 'once_daily', timing: m.timing || 'morning', preferred_times: [] })));
+  return json({ ok: true, call_plan: plan });
+}
+
+async function handlePatientStatus(request, env) {
+  await ensureSchema(env);
+  const ctx = await requireClerkAccount(request, env);
+  if (!ctx) return json({ ok: false, error: 'unauthorized' }, 401);
+  let body; try { body = await request.json(); } catch { return json({ ok:false, error:'bad json' }, 400); }
+  const next = body.status === 'paused' ? 'paused' : (body.status === 'active' ? 'active' : null);
+  if (!next) return json({ ok: false, error: 'invalid status' }, 422);
+  const db = env.REMINDERS_DB;
+  const patient = await db.prepare('SELECT id, status FROM patients WHERE id = ? AND account_id = ?').bind(body.patientId, ctx.account.id).first();
+  if (!patient) return json({ ok: false, error: 'not found' }, 404);
+  if (next === 'active' && !ctx.account.approved) return json({ ok: false, error: 'account pending approval' }, 403);
+  await db.prepare('UPDATE patients SET status = ? WHERE id = ?').bind(next, patient.id).run();
+  return json({ ok: true, status: next });
 }
