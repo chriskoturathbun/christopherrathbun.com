@@ -436,6 +436,10 @@ async function handleBlandWebhook(request, env, url) {
   const call = await db.prepare('SELECT * FROM calls WHERE bland_call_id = ?').bind(wh.callId).first();
   if (!call) return json({ ok: true, note: 'unknown call' });
 
+  if (['completed', 'no_answer', 'failed'].includes(call.status)) {
+    return json({ ok: true, note: 'already processed' });
+  }
+
   const finalStatus = wh.answeredByHuman ? 'completed' : (wh.completed ? 'no_answer' : 'failed');
   await db.prepare(`UPDATE calls SET status=?, duration_sec=?, transcript=?, recording_url=?, cost_usd=COALESCE(?, cost_usd) WHERE id=?`)
     .bind(finalStatus, wh.durationSec || 0, wh.transcript || null, wh.recordingUrl || null, wh.costUsd, call.id).run();
