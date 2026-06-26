@@ -1,5 +1,7 @@
 // Reminders — AI medication-reminder calls. Phase 1: foundation.
 import { optimizeCallPlan } from './reminders-schedule.js';
+import { nextOccurrencesUTC } from './reminders-schedule.js';
+import { placeCall, scheduleCall } from './reminders-bland.js';
 
 // Normalize a phone string to E.164 (+ and digits). Returns null if invalid.
 export function normalizePhone(input) {
@@ -214,4 +216,72 @@ async function handleIntakeSubmit(request, env) {
   await computeAndStoreCallPlan(db, patient.id, normalized.medicines);
 
   return json({ ok: true, patientId: patient.id, status: 'pending_approval' });
+}
+
+// Hourly: materialize the next 48h of `calls` rows for active, approved patients,
+// and best-effort pre-register each with Bland. Never let a Bland error block insertion.
+export async function runPreScheduler(env, nowISO) {
+  await ensureSchema(env);
+  const db = env.REMINDERS_DB;
+  const now = nowISO || new Date().toISOString();
+  const patients = await db.prepare(
+    `SELECT p.id, p.name, p.phone_e164, p.timezone FROM patients p
+     JOIN accounts a ON a.id = p.account_id
+     WHERE p.status = 'active' AND a.approved = 1`).all();
+  let made = 0;
+  for (const p of (patients.results || [])) {
+    const plans = await db.prepare('SELECT id, local_time, medicine_names FROM call_plan WHERE patient_id = ? AND active = 1').bind(p.id).all();
+    for (const plan of (plans.results || [])) {
+      const occ = nextOccurrencesUTC([plan.local_time], p.timezone, now, 48);
+      for (const iso of occ) {
+        const r = await db.prepare(
+          `INSERT OR IGNORE INTO calls (patient_id, call_plan_id, scheduled_at_utc, status) VALUES (?, ?, ?, 'scheduled')`)
+          .bind(p.id, plan.id, iso).run();
+        if (r.meta && r.meta.changes > 0) {
+          made++;
+          try {
+            const meds = JSON.parse(plan.medicine_names || '[]');
+            const sc = await scheduleCall({ to: p.phone_e164, patientName: p.name, medicineNames: meds, startTimeISO: iso }, env);
+            if (sc.ok && sc.callId) {
+              await db.prepare(`UPDATE calls SET status='prescheduled', bland_call_id=? WHERE patient_id=? AND call_plan_id=? AND scheduled_at_utc=?`)
+                .bind(sc.callId, p.id, plan.id, iso).run();
+            }
+          } catch {}
+        }
+      }
+    }
+  }
+  return { made };
+}
+
+// Every minute: place any call that is due now and not yet handed off, immediately.
+// This is the on-time guarantee — fully within our control.
+export async function runReconciler(env, nowISO) {
+  await ensureSchema(env);
+  const db = env.REMINDERS_DB;
+  const now = new Date(nowISO || new Date().toISOString());
+  const windowStart = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
+  const dueAt = new Date(now.getTime() + 30 * 1000).toISOString();
+  const overdue = new Date(now.getTime() - 3 * 60 * 1000).toISOString();
+  const rows = await db.prepare(
+    `SELECT c.id, c.patient_id, c.call_plan_id, c.scheduled_at_utc, c.status, p.name, p.phone_e164,
+            (SELECT medicine_names FROM call_plan WHERE id = c.call_plan_id) AS medicine_names
+     FROM calls c JOIN patients p ON p.id = c.patient_id
+     WHERE c.placed_at IS NULL
+       AND c.scheduled_at_utc <= ? AND c.scheduled_at_utc >= ?
+       AND ( c.status = 'scheduled' OR (c.status = 'prescheduled' AND c.scheduled_at_utc <= ?) )`)
+    .bind(dueAt, windowStart, overdue).all();
+  let placed = 0;
+  for (const r of (rows.results || [])) {
+    const meds = JSON.parse(r.medicine_names || '[]');
+    const res = await placeCall({ to: r.phone_e164, patientName: r.name, medicineNames: meds }, env);
+    if (res.ok) {
+      await db.prepare(`UPDATE calls SET status='placed', placed_at=?, bland_call_id=COALESCE(?, bland_call_id) WHERE id=?`)
+        .bind(new Date().toISOString(), res.callId, r.id).run();
+      placed++;
+    } else {
+      await db.prepare(`UPDATE calls SET status='failed', placed_at=? WHERE id=?`).bind(new Date().toISOString(), r.id).run();
+    }
+  }
+  return { placed };
 }
