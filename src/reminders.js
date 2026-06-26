@@ -1,4 +1,5 @@
 // Reminders — AI medication-reminder calls. Phase 1: foundation.
+import { optimizeCallPlan } from './reminders-schedule.js';
 
 // Normalize a phone string to E.164 (+ and digits). Returns null if invalid.
 export function normalizePhone(input) {
@@ -101,6 +102,28 @@ async function ensureSchema(env) {
       patient_id INTEGER NOT NULL,
       type TEXT NOT NULL, text_version TEXT, ip TEXT, user_agent TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS call_plan (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      local_time TEXT NOT NULL,
+      medicine_names TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS calls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      patient_id INTEGER NOT NULL,
+      call_plan_id INTEGER,
+      scheduled_at_utc TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'scheduled',
+      bland_call_id TEXT,
+      placed_at TEXT,
+      duration_sec INTEGER,
+      transcript TEXT,
+      recording_url TEXT,
+      cost_usd REAL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_calls_sched ON calls (scheduled_at_utc, status)`),
+    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_calls_dedupe ON calls (patient_id, call_plan_id, scheduled_at_utc)`),
   ]);
   schemaReady = true;
 }
@@ -135,6 +158,17 @@ export async function handleReminders(request, env, url) {
 
   // Landing (default for /reminders and unknown sub-paths).
   return fetchPage(env, url.origin, '/reminders/index.html');
+}
+
+// Recompute and persist a patient's call_plan from their active medicines.
+export async function computeAndStoreCallPlan(db, patientId, medicines) {
+  const plan = optimizeCallPlan(medicines);
+  await db.prepare('UPDATE call_plan SET active = 0 WHERE patient_id = ?').bind(patientId).run();
+  const stmts = plan.map(p => db.prepare(
+    'INSERT INTO call_plan (patient_id, local_time, medicine_names, active) VALUES (?, ?, ?, 1)')
+    .bind(patientId, p.local_time, JSON.stringify(p.medicine_names)));
+  if (stmts.length) await db.batch(stmts);
+  return plan;
 }
 
 async function handleIntakeSubmit(request, env) {
@@ -176,6 +210,8 @@ async function handleIntakeSubmit(request, env) {
       .bind(patient.id, t, consentText, ip, ua));
   }
   await db.batch(stmts);
+
+  await computeAndStoreCallPlan(db, patient.id, normalized.medicines);
 
   return json({ ok: true, patientId: patient.id, status: 'pending_approval' });
 }
