@@ -54,3 +54,6 @@ new_sqlite_classes = ["TwistedChessGame"]
 # ignored). Kept as a no-op so the migration history stays consistent.
 [[migrations]]
 tag = "v2"
+
+[triggers]
+crons = ["* * * * *", "0 * * * *"]

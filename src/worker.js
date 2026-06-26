@@ -3,6 +3,7 @@ import { handleSentry } from './sentry-dashboard.js';
 import { handleVighnaa } from './vighnaa.js';
 import { handleUsers } from './users-dashboard.js';
 import { handleReminders } from './reminders.js';
+import { runReconciler, runPreScheduler } from './reminders.js';
 
 function newGameId() {
   // short, URL-friendly id
@@ -161,5 +162,13 @@ export default {
 
     // Everything else → landing page static assets
     return env.ASSETS.fetch(request);
+  },
+
+  async scheduled(event, env, ctx) {
+    if (event.cron === '0 * * * *') {
+      ctx.waitUntil(runPreScheduler(env));
+    } else {
+      ctx.waitUntil(runReconciler(env));
+    }
   },
 };
