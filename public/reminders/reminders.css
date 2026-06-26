@@ -17,8 +17,13 @@ body {
   min-height: 100vh; overflow-x: hidden; line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
-/* Animated fluid background */
-.fluid-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
+/* Animated fluid background — Higgsfield ambient hero under a dark veil for legibility */
+.fluid-bg {
+  position: fixed; inset: 0; z-index: -1; overflow: hidden;
+  background:
+    linear-gradient(to bottom, rgba(7,8,12,0.70) 0%, rgba(7,8,12,0.82) 55%, rgba(7,8,12,0.93) 100%),
+    url('/reminders/img/ambient-hero.jpg') center/cover no-repeat;
+}
 .fluid-bg::before, .fluid-bg::after {
   content: ""; position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%;
   filter: blur(80px); opacity: 0.55; mix-blend-mode: screen;
