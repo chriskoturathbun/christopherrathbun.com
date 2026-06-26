@@ -7,7 +7,7 @@ export function expandDoseTimes(frequency, timing) {
   switch (frequency) {
     case 'twice_daily':        return [480, 1200];
     case 'three_times_daily':  return [480, 840, 1200];
-    case 'every_8h':           return [480, 960, 0];
+    case 'every_8h':           return [480, 840, 1260];   // 08:00, 14:00, 21:00 (no midnight call)
     case 'every_12h':          return [480, 1200];
     case 'once_daily':
     case 'custom':
@@ -34,7 +34,9 @@ export function clusterEvents(events, windowMin) {
 }
 
 function minToHHMM(min) {
-  const m = ((Math.round(min / 15) * 15) % 1440 + 1440) % 1440;
+  let m = ((Math.round(min / 15) * 15) % 1440 + 1440) % 1440;
+  if (m < 420) m = 420;        // never call before 07:00
+  if (m > 1260) m = 1260;      // never call after 21:00 (TCPA / elder-care safety)
   const h = Math.floor(m / 60), mm = m % 60;
   return `${String(h).padStart(2,'0')}:${String(mm).padStart(2,'0')}`;
 }

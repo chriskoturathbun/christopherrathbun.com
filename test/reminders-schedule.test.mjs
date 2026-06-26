@@ -9,7 +9,7 @@ function deq(a, b, m){ ok(JSON.stringify(a) === JSON.stringify(b), `${m} (got ${
 deq(expandDoseTimes('once_daily','morning'), [480], 'once morning = 08:00');
 deq(expandDoseTimes('once_daily','bedtime'), [1260], 'once bedtime = 21:00');
 deq(expandDoseTimes('twice_daily','morning'), [480,1200], 'twice = 08:00,20:00');
-deq(expandDoseTimes('every_8h','morning'), [480,960,0], 'every_8h = 08:00,16:00,00:00');
+deq(expandDoseTimes('every_8h','morning'), [480,840,1260], 'every_8h = 08:00,14:00,21:00');
 deq(expandDoseTimes('every_12h','morning'), [480,1200], 'every_12h = 08:00,20:00');
 deq(expandDoseTimes('three_times_daily','noon'), [480,840,1200], '3x = 08:00,14:00,20:00');
 
@@ -60,6 +60,17 @@ const wUtc = zonedWallTimeToUtc(2026, 1, 15, 8, 0, 'America/Los_Angeles');
 const sUtc = zonedWallTimeToUtc(2026, 7, 15, 8, 0, 'America/Los_Angeles');
 eq(new Date(wUtc).getUTCHours(), 16, 'PST 08:00 = 16:00 UTC');
 eq(new Date(sUtc).getUTCHours(), 15, 'PDT 08:00 = 15:00 UTC');
+
+// every_8h must NOT produce a midnight (0) dose; all within waking minutes [420,1260]
+const e8 = expandDoseTimes('every_8h');
+ok(!e8.includes(0), 'every_8h has no midnight dose');
+ok(e8.every(m => m >= 420 && m <= 1260), 'every_8h all within 07:00-21:00');
+eq(e8.length, 3, 'every_8h still 3 doses');
+
+// optimizeCallPlan never emits a call_plan time outside 07:00-21:00
+function toMin(hhmm){ const [h,m]=hhmm.split(':').map(Number); return h*60+m; }
+const planClamp = optimizeCallPlan([{ name:'X', frequency:'every_8h', timing:'morning' }]);
+ok(planClamp.every(p => toMin(p.local_time) >= 420 && toMin(p.local_time) <= 1260), 'no call_plan time outside waking hours');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
