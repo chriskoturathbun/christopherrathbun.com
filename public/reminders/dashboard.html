@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard — Reminders</title>
+  <meta name="description" content="Manage daily medication reminder calls, review call history, and update medicines." />
+  <link rel="stylesheet" href="/reminders/reminders.css" />
+  <script
+    async crossorigin="anonymous"
+    data-clerk-publishable-key="pk_live_Y2xlcmsuY2hyaXN0b3BoZXJyYXRoYnVuLmNvbSQ"
+    src="https://clerk.christopherrathbun.com/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    type="text/javascript"></script>
+  <style>
+    .dash-main { max-width: 880px; margin: 0 auto; padding: 4vh 20px 8vh; }
+    .brand { display: flex; align-items: center; justify-content: space-between; padding: 22px 24px; max-width: 1080px; margin: 0 auto; }
+    .brand strong { font-size: 18px; letter-spacing: -0.01em; }
+
+    .center-wrap { min-height: 60vh; display: flex; align-items: center; justify-content: center; padding: 6vh 20px; }
+    .signin-card { max-width: 440px; width: 100%; padding: 38px clamp(24px, 5vw, 40px); text-align: center; }
+    .signin-card h2 { margin: 0 0 12px; }
+    .signin-card p { margin: 0 0 26px; }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      padding: 16px 20px; margin-bottom: 22px; flex-wrap: wrap;
+    }
+    .topbar .acct { font-size: 15px; }
+    .topbar .acct .em { color: var(--text); font-weight: 600; }
+    .topbar .btn { font-size: 14px; padding: 10px 18px; }
+
+    .banner {
+      padding: 16px 20px; margin-bottom: 22px;
+      border: 1px solid rgba(255,200,120,0.5); background: rgba(255,180,80,0.10);
+      border-radius: 16px;
+    }
+    .banner strong { color: #ffd9a0; }
+
+    .patient-card { padding: 26px clamp(20px, 4vw, 32px); margin-bottom: 22px; }
+    .patient-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+    .patient-head h3 { margin: 0 0 4px; font-size: 22px; letter-spacing: -0.01em; }
+    .patient-head .ph { font-size: 14px; }
+    .status-row { display: flex; align-items: center; gap: 12px; }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
+      padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.05);
+    }
+    .status-pill .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--muted); }
+    .status-pill.active .dot { background: #6ee7a8; }
+    .status-pill.paused .dot { background: #ffcf7a; }
+    .btn-sm { font-size: 13px; padding: 9px 16px; }
+
+    .sec { margin-top: 22px; }
+    .sec-title { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+    .stat-grid { display: flex; gap: 28px; flex-wrap: wrap; }
+    .stat .num { font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+    .stat .lab { font-size: 13px; color: var(--muted); }
+
+    .plan-list, .calls-list { list-style: none; margin: 0; padding: 0; }
+    .plan-list li { padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,0.07); font-size: 15px; }
+    .plan-list li:last-child { border-bottom: none; }
+    .plan-list .pt { color: var(--accent); font-weight: 600; }
+
+    .calls-table { width: 100%; border-collapse: collapse; }
+    .calls-table th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 6px 8px; }
+    .calls-table td { font-size: 14px; padding: 8px 8px; border-top: 1px solid rgba(255,255,255,0.07); }
+    .call-status { display: inline-block; font-size: 12px; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,0.07); border: 1px solid var(--border); }
+
+    .med-edit {
+      position: relative; padding: 16px; margin-bottom: 12px;
+      border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,0.035);
+    }
+    .med-edit .field { margin-bottom: 12px; }
+    .med-edit .field:last-child { margin-bottom: 0; }
+    .med-edit label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--text); }
+    .row-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 520px) { .row-grid { grid-template-columns: 1fr; } }
+    input[type=text], select {
+      width: 100%; padding: 11px 13px; font-size: 15px; font-family: var(--font);
+      color: var(--text); background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border); border-radius: 12px; outline: none;
+      -webkit-appearance: none; appearance: none;
+      transition: border-color .15s ease, background .15s ease;
+    }
+    input::placeholder { color: rgba(244,246,251,0.38); }
+    input:focus, select:focus { border-color: var(--accent); background: rgba(255,255,255,0.08); }
+    select { background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%23a9b3c9' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+      background-repeat: no-repeat; background-position: right 13px center; padding-right: 34px; }
+    select option { background: #11131b; color: var(--text); }
+    .med-remove {
+      position: absolute; top: 10px; right: 10px; width: 26px; height: 26px; border-radius: 999px;
+      background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--muted);
+      cursor: pointer; font-size: 15px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    }
+    .med-remove:hover { color: var(--text); border-color: var(--accent); }
+    .add-med {
+      width: 100%; padding: 12px; margin-top: 2px; border-radius: 12px;
+      background: rgba(255,255,255,0.05); border: 1px dashed var(--border); color: var(--text);
+      font-size: 14px; font-family: var(--font); cursor: pointer; transition: border-color .15s ease;
+    }
+    .add-med:hover { border-color: var(--accent); }
+    .med-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    .save-note { font-size: 14px; color: #9be3b4; }
+    .err-note { font-size: 14px; color: #ffb3b3; }
+
+    .empty-state { text-align: center; padding: 44px 24px; }
+    .empty-state p { margin: 0 0 18px; }
+    .msg-card { max-width: 480px; margin: 0 auto; padding: 30px; text-align: center; }
+    .muted-small { font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="fluid-bg"></div>
+
+  <header class="brand">
+    <a href="/reminders" style="text-decoration:none;color:inherit;"><strong>Reminders</strong></a>
+    <a href="/reminders/intake" class="btn btn-ghost" style="padding:10px 18px;">Set up a reminder</a>
+  </header>
+
+  <main class="dash-main">
+    <div id="root">
+      <div class="center-wrap"><p class="muted">Loading…</p></div>
+    </div>
+  </main>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var API_DATA = '/reminders/api/dashboard/data';
+    var API_STATUS = '/reminders/api/dashboard/patient-status';
+    var API_MEDS = '/reminders/api/dashboard/medicines';
+
+    var FREQUENCIES = [
+      ['once_daily', 'Once daily'],
+      ['twice_daily', 'Twice daily'],
+      ['three_times_daily', '3× daily'],
+      ['every_8h', 'Every 8 hours'],
+      ['every_12h', 'Every 12 hours'],
+      ['custom', 'Custom']
+    ];
+    var TIMINGS = [
+      ['morning', 'Morning'],
+      ['noon', 'Noon'],
+      ['evening', 'Evening'],
+      ['bedtime', 'Bedtime'],
+      ['with_food', 'With food'],
+      ['empty_stomach', 'Empty stomach'],
+      ['specific_time', 'Specific time']
+    ];
+
+    var root = document.getElementById('root');
+    // Per-patient working copy of editable medicines, keyed by patientId.
+    var medDraft = {};
+
+    /* ---- Helpers ---- */
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function optionsHtml(pairs, selected) {
+      return pairs.map(function (p) {
+        return '<option value="' + p[0] + '"' + (p[0] === selected ? ' selected' : '') + '>' + esc(p[1]) + '</option>';
+      }).join('');
+    }
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return esc(String(iso));
+      try {
+        return d.toLocaleString(undefined, {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: 'numeric', minute: '2-digit'
+        });
+      } catch (e) {
+        return d.toISOString();
+      }
+    }
+
+    /* ---- Clerk bootstrap ---- */
+
+    function whenClerkReady() {
+      return new Promise(function (resolve) {
+        if (window.Clerk) { resolve(window.Clerk); return; }
+        var tries = 0;
+        var iv = setInterval(function () {
+          tries++;
+          if (window.Clerk) { clearInterval(iv); resolve(window.Clerk); }
+          else if (tries > 200) { clearInterval(iv); resolve(null); } // ~20s cap
+        }, 100);
+      });
+    }
+
+    async function boot() {
+      var Clerk = await whenClerkReady();
+      if (!Clerk) {
+        root.innerHTML = '<div class="center-wrap"><div class="glass msg-card">' +
+          '<p class="muted">Couldn\'t load the sign-in service. Please refresh the page.</p></div></div>';
+        return;
+      }
+      try {
+        await Clerk.load();
+      } catch (e) {
+        root.innerHTML = '<div class="center-wrap"><div class="glass msg-card">' +
+          '<p class="muted">Sign-in failed to initialize. Please refresh and try again.</p></div></div>';
+        return;
+      }
+      if (!Clerk.user) { renderSignIn(Clerk); return; }
+      loadDashboard(Clerk);
+    }
+
+    /* ---- Signed-out view ---- */
+
+    function renderSignIn(Clerk) {
+      root.innerHTML =
+        '<div class="center-wrap"><div class="glass signin-card">' +
+          '<h2>Reminders — Sign in</h2>' +
+          '<p class="muted">Sign in to manage reminders and see call history.</p>' +
+          '<button class="btn" id="signin-btn">Sign in with Google</button>' +
+        '</div></div>';
+      document.getElementById('signin-btn').addEventListener('click', function () {
+        Clerk.openSignIn({ afterSignInUrl: '/reminders/dashboard', afterSignUpUrl: '/reminders/dashboard' });
+      });
+    }
+
+    function renderSessionExpired(Clerk) {
+      root.innerHTML =
+        '<div class="center-wrap"><div class="glass signin-card">' +
+          '<h2>Session expired</h2>' +
+          '<p class="muted">Session expired — please sign in again.</p>' +
+          '<button class="btn" id="resignin-btn">Sign in with Google</button>' +
+        '</div></div>';
+      document.getElementById('resignin-btn').addEventListener('click', function () {
+        Clerk.openSignIn({ afterSignInUrl: '/reminders/dashboard', afterSignUpUrl: '/reminders/dashboard' });
+      });
+    }
+
+    function renderError(msg) {
+      root.innerHTML =
+        '<div class="center-wrap"><div class="glass msg-card">' +
+          '<p class="muted">' + esc(msg) + '</p>' +
+        '</div></div>';
+    }
+
+    /* ---- Authed fetch (fresh token every call) ---- */
+
+    async function authFetch(Clerk, url, opts) {
+      var token = await Clerk.session.getToken();
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      opts.headers['authorization'] = 'Bearer ' + token;
+      return fetch(url, opts);
+    }
+
+    /* ---- Load + render dashboard ---- */
+
+    async function loadDashboard(Clerk) {
+      root.innerHTML = '<div class="center-wrap"><p class="muted">Loading your dashboard…</p></div>';
+      var res;
+      try {
+        res = await authFetch(Clerk, API_DATA, { method: 'GET' });
+      } catch (e) {
+        renderError('Network error — please check your connection and try again.');
+        return;
+      }
+      if (res.status === 401) { renderSessionExpired(Clerk); return; }
+      if (!res.ok) { renderError('Something went wrong loading your dashboard (' + res.status + '). Please try again.'); return; }
+      var data;
+      try { data = await res.json(); } catch (e) { renderError('Received an unexpected response. Please try again.'); return; }
+      renderDashboard(Clerk, data);
+    }
+
+    function renderDashboard(Clerk, data) {
+      data = data || {};
+      var account = data.account || {};
+      var patients = Array.isArray(data.patients) ? data.patients : [];
+
+      var html = '';
+
+      // Top bar
+      html += '<div class="glass topbar">' +
+        '<div class="acct muted">Signed in as <span class="em">' + esc(account.email || '') + '</span></div>' +
+        '<button class="btn btn-ghost btn-sm" id="signout-btn">Sign out</button>' +
+        '</div>';
+
+      // Pending approval banner
+      if (account.approved === false) {
+        html += '<div class="glass banner">' +
+          '<strong>Your account is pending approval</strong> — calls will begin once it\'s approved.' +
+          '</div>';
+      }
+
+      if (!patients.length) {
+        html += '<div class="glass patient-card empty-state">' +
+          '<p class="muted">No one set up yet. Start at <a href="/reminders/intake" style="color:var(--accent)">/reminders/intake</a>.</p>' +
+          '<a href="/reminders/intake" class="btn">Set up a reminder</a>' +
+          '</div>';
+      } else {
+        for (var i = 0; i < patients.length; i++) {
+          html += patientCardHtml(patients[i]);
+        }
+      }
+
+      root.innerHTML = html;
+      wireDashboard(Clerk, data);
+    }
+
+    function patientCardHtml(p) {
+      var pid = p.id;
+      var status = p.status === 'paused' ? 'paused' : 'active';
+      var stats = p.stats || {};
+      var plan = Array.isArray(p.call_plan) ? p.call_plan : [];
+      var calls = Array.isArray(p.recent_calls) ? p.recent_calls : [];
+
+      // Initialize the editable draft once per patient.
+      if (!medDraft[pid]) {
+        medDraft[pid] = (Array.isArray(p.medicines) ? p.medicines : []).map(function (m) {
+          return { name: m.name || '', dose: m.dose || '', frequency: m.frequency || 'once_daily', timing: m.timing || 'morning' };
+        });
+      }
+
+      var pauseLabel = status === 'paused' ? 'Resume' : 'Pause';
+      var pauseTarget = status === 'paused' ? 'active' : 'paused';
+
+      var html = '<div class="glass patient-card" data-patient="' + esc(pid) + '">';
+
+      // Head
+      html += '<div class="patient-head">' +
+        '<div>' +
+          '<h3>' + esc(p.name || 'Patient') + '</h3>' +
+          '<div class="ph muted">' + esc(p.phone || '') + '</div>' +
+        '</div>' +
+        '<div class="status-row">' +
+          '<span class="status-pill ' + status + '"><span class="dot"></span>' + (status === 'paused' ? 'Paused' : 'Active') + '</span>' +
+          '<button class="btn btn-ghost btn-sm" data-act="toggle-status" data-target="' + pauseTarget + '">' + pauseLabel + '</button>' +
+        '</div>' +
+        '</div>';
+
+      // Stats
+      html += '<div class="sec stat-grid">' +
+        '<div class="stat"><div class="num">' + esc(String(stats.completed != null ? stats.completed : 0)) + '</div><div class="lab">calls placed</div></div>' +
+        '<div class="stat"><div class="num" style="font-size:16px;font-weight:600;">' + esc(fmtDate(stats.last_call)) + '</div><div class="lab">last call</div></div>' +
+        '</div>';
+
+      // Call schedule
+      html += '<div class="sec"><div class="sec-title">Call schedule</div>';
+      if (plan.length) {
+        html += '<ul class="plan-list" data-role="plan">';
+        for (var s = 0; s < plan.length; s++) {
+          var names = Array.isArray(plan[s].medicine_names) ? plan[s].medicine_names.join(', ') : '';
+          html += '<li><span class="pt">' + esc(plan[s].local_time || '') + '</span> — ' + esc(names) + '</li>';
+        }
+        html += '</ul>';
+      } else {
+        html += '<p class="muted" data-role="plan">No schedule yet.</p>';
+      }
+      html += '</div>';
+
+      // Recent calls
+      html += '<div class="sec"><div class="sec-title">Recent calls</div>';
+      if (calls.length) {
+        html += '<table class="calls-table"><thead><tr><th>When</th><th>Status</th></tr></thead><tbody>';
+        for (var c = 0; c < calls.length && c < 10; c++) {
+          html += '<tr><td>' + esc(fmtDate(calls[c].scheduled_at_utc)) + '</td>' +
+            '<td><span class="call-status">' + esc(calls[c].status || '—') + '</span></td></tr>';
+        }
+        html += '</tbody></table>';
+      } else {
+        html += '<p class="muted">No calls yet.</p>';
+      }
+      html += '</div>';
+
+      // Medicines (editable)
+      html += '<div class="sec"><div class="sec-title">Medicines</div>';
+      html += '<div data-role="med-rows">' + medRowsHtml(medDraft[pid]) + '</div>';
+      html += '<button class="add-med" data-act="add-med">+ Add medicine</button>';
+      html += '<div class="med-actions">' +
+        '<button class="btn btn-sm" data-act="save-meds">Save medicines</button>' +
+        '<span class="save-note" data-role="med-note" style="display:none;"></span>' +
+        '</div>';
+      html += '</div>';
+
+      html += '</div>';
+      return html;
+    }
+
+    function medRowsHtml(meds) {
+      if (!meds.length) {
+        return '<p class="muted muted-small" data-role="med-empty">No medicines yet. Add one below.</p>';
+      }
+      return meds.map(function (m, i) {
+        return '<div class="med-edit" data-med-row="' + i + '">' +
+          '<button class="med-remove" data-act="rm-med" data-idx="' + i + '" title="Remove">&times;</button>' +
+          '<div class="field"><label>Name</label>' +
+            '<input type="text" data-med-key="name" value="' + esc(m.name) + '" placeholder="e.g. Lisinopril" /></div>' +
+          '<div class="row-grid">' +
+            '<div class="field"><label>Dose</label>' +
+              '<input type="text" data-med-key="dose" value="' + esc(m.dose) + '" placeholder="10mg" /></div>' +
+            '<div class="field"><label>Frequency</label>' +
+              '<select data-med-key="frequency">' + optionsHtml(FREQUENCIES, m.frequency) + '</select></div>' +
+          '</div>' +
+          '<div class="field"><label>Timing</label>' +
+            '<select data-med-key="timing">' + optionsHtml(TIMINGS, m.timing) + '</select></div>' +
+        '</div>';
+      }).join('');
+    }
+
+    /* ---- Wiring ---- */
+
+    function wireDashboard(Clerk, data) {
+      var so = document.getElementById('signout-btn');
+      if (so) so.addEventListener('click', async function () {
+        try { await Clerk.signOut(); } catch (e) {}
+        location.reload();
+      });
+
+      var cards = root.querySelectorAll('[data-patient]');
+      for (var i = 0; i < cards.length; i++) {
+        wirePatientCard(Clerk, cards[i]);
+      }
+    }
+
+    function syncMedDraftFromDom(card) {
+      var pid = card.getAttribute('data-patient');
+      var rows = card.querySelectorAll('[data-med-row]');
+      var out = [];
+      for (var r = 0; r < rows.length; r++) {
+        var row = rows[r];
+        var obj = { name: '', dose: '', frequency: 'once_daily', timing: 'morning' };
+        var inputs = row.querySelectorAll('[data-med-key]');
+        for (var k = 0; k < inputs.length; k++) {
+          obj[inputs[k].getAttribute('data-med-key')] = inputs[k].value;
+        }
+        out.push(obj);
+      }
+      medDraft[pid] = out;
+      return out;
+    }
+
+    function rerenderMedRows(card) {
+      var pid = card.getAttribute('data-patient');
+      var holder = card.querySelector('[data-role="med-rows"]');
+      holder.innerHTML = medRowsHtml(medDraft[pid]);
+    }
+
+    function wirePatientCard(Clerk, card) {
+      var pid = card.getAttribute('data-patient');
+
+      card.addEventListener('click', async function (ev) {
+        var t = ev.target.closest ? ev.target.closest('[data-act]') : null;
+        if (!t || !card.contains(t)) return;
+        var act = t.getAttribute('data-act');
+
+        if (act === 'toggle-status') {
+          await toggleStatus(Clerk, card, pid, t.getAttribute('data-target'), t);
+        } else if (act === 'add-med') {
+          syncMedDraftFromDom(card);
+          medDraft[pid].push({ name: '', dose: '', frequency: 'once_daily', timing: 'morning' });
+          rerenderMedRows(card);
+        } else if (act === 'rm-med') {
+          syncMedDraftFromDom(card);
+          var idx = parseInt(t.getAttribute('data-idx'), 10);
+          medDraft[pid].splice(idx, 1);
+          rerenderMedRows(card);
+        } else if (act === 'save-meds') {
+          await saveMeds(Clerk, card, pid, t);
+        }
+      });
+    }
+
+    async function toggleStatus(Clerk, card, pid, target, btn) {
+      btn.disabled = true;
+      var prev = btn.textContent;
+      btn.textContent = '…';
+      var res;
+      try {
+        res = await authFetch(Clerk, API_STATUS, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ patientId: pid, status: target })
+        });
+      } catch (e) {
+        btn.disabled = false; btn.textContent = prev;
+        flashErr(card, 'Network error — please try again.');
+        return;
+      }
+      if (res.status === 401) { renderSessionExpired(Clerk); return; }
+      if (res.status === 403) {
+        var body403 = await safeJson(res);
+        btn.disabled = false; btn.textContent = prev;
+        flashErr(card, (body403 && body403.error) ? body403.error : 'Your account is pending approval.');
+        return;
+      }
+      if (!res.ok) {
+        btn.disabled = false; btn.textContent = prev;
+        flashErr(card, 'Could not update status. Please try again.');
+        return;
+      }
+      // Re-render the whole dashboard to reflect new status everywhere.
+      loadDashboard(Clerk);
+    }
+
+    async function saveMeds(Clerk, card, pid, btn) {
+      var meds = syncMedDraftFromDom(card)
+        .map(function (m) {
+          return { name: (m.name || '').trim(), dose: (m.dose || '').trim(), frequency: m.frequency, timing: m.timing };
+        })
+        .filter(function (m) { return m.name; });
+
+      var note = card.querySelector('[data-role="med-note"]');
+      btn.disabled = true;
+      var prev = btn.textContent;
+      btn.textContent = 'Saving…';
+
+      var res;
+      try {
+        res = await authFetch(Clerk, API_MEDS, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ patientId: pid, medicines: meds })
+        });
+      } catch (e) {
+        btn.disabled = false; btn.textContent = prev;
+        showNote(note, 'Network error — please try again.', true);
+        return;
+      }
+      if (res.status === 401) { renderSessionExpired(Clerk); return; }
+      if (res.status === 403) {
+        var b = await safeJson(res);
+        btn.disabled = false; btn.textContent = prev;
+        showNote(note, (b && b.error) ? b.error : 'Your account is pending approval.', true);
+        return;
+      }
+      if (!res.ok) {
+        btn.disabled = false; btn.textContent = prev;
+        showNote(note, 'Could not save. Please try again.', true);
+        return;
+      }
+      var data = await safeJson(res);
+      btn.disabled = false; btn.textContent = prev;
+      updatePlanFromResponse(card, data && data.call_plan);
+      showNote(note, 'Saved — new schedule below', false);
+    }
+
+    function updatePlanFromResponse(card, plan) {
+      plan = Array.isArray(plan) ? plan : [];
+      // The schedule section is the first .sec containing a [data-role="plan"].
+      var planEl = card.querySelector('[data-role="plan"]');
+      if (!planEl) return;
+      var html;
+      if (plan.length) {
+        html = '<ul class="plan-list" data-role="plan">';
+        for (var s = 0; s < plan.length; s++) {
+          var names = Array.isArray(plan[s].medicine_names) ? plan[s].medicine_names.join(', ') : '';
+          html += '<li><span class="pt">' + esc(plan[s].local_time || '') + '</span> — ' + esc(names) + '</li>';
+        }
+        html += '</ul>';
+      } else {
+        html = '<p class="muted" data-role="plan">No schedule yet.</p>';
+      }
+      planEl.outerHTML = html;
+    }
+
+    function showNote(note, msg, isErr) {
+      if (!note) return;
+      note.textContent = msg;
+      note.className = isErr ? 'err-note' : 'save-note';
+      note.style.display = '';
+      if (!isErr) {
+        setTimeout(function () { note.style.display = 'none'; }, 5000);
+      }
+    }
+
+    function flashErr(card, msg) {
+      var note = card.querySelector('[data-role="med-note"]');
+      // Reuse a transient note at the top of the card if med-note isn't ideal; use med-note for simplicity.
+      showNote(note, msg, true);
+    }
+
+    async function safeJson(res) {
+      try { return await res.json(); } catch (e) { return null; }
+    }
+
+    /* ---- Go ---- */
+
+    window.addEventListener('load', boot);
+  })();
+  </script>
+</body>
+</html>
