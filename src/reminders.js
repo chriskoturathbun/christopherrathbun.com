@@ -174,6 +174,9 @@ export async function handleReminders(request, env, url) {
     return handleApprove(request, env);
   }
 
+  if (path === '/reminders/api/admin/pending' && request.method === 'GET') return handleAdminPending(request, env);
+  if (path === '/reminders/admin' || path === '/reminders/admin/') return fetchPage(env, url.origin, '/reminders/admin.html');
+
   if (path === '/reminders/api/dashboard/data' && request.method === 'GET') return handleDashboardData(request, env);
   if (path === '/reminders/api/dashboard/medicines' && request.method === 'POST') return handleUpdateMedicines(request, env);
   if (path === '/reminders/api/dashboard/patient-status' && request.method === 'POST') return handlePatientStatus(request, env);
@@ -462,4 +465,25 @@ async function handleBlandWebhook(request, env, url) {
     .bind(call.id, patient.id, kind, detection.severity, detection.category, alert.subject, JSON.stringify(channels)).run();
 
   return json({ ok: true, alerted: true, kind, channels });
+}
+
+function requireAdmin(request, env) {
+  const auth = request.headers.get('authorization') || '';
+  return !!env.REMINDERS_ADMIN_PASSCODE && auth === `Bearer ${env.REMINDERS_ADMIN_PASSCODE}`;
+}
+
+async function handleAdminPending(request, env) {
+  await ensureSchema(env);
+  if (!requireAdmin(request, env)) return json({ ok: false, error: 'unauthorized' }, 401);
+  const db = env.REMINDERS_DB;
+  const accounts = (await db.prepare('SELECT id, email, name, approved, created_at FROM accounts ORDER BY approved ASC, id DESC').all()).results || [];
+  const out = [];
+  for (const a of accounts) {
+    const patients = (await db.prepare('SELECT id, name, phone_e164, timezone, status FROM patients WHERE account_id = ? ORDER BY id').bind(a.id).all()).results || [];
+    const usage = await db.prepare(`SELECT COUNT(*) AS calls, COALESCE(SUM(cost_usd),0) AS cost_usd
+      FROM calls WHERE patient_id IN (SELECT id FROM patients WHERE account_id = ?) AND status IN ('placed','completed','no_answer')`).bind(a.id).first();
+    out.push({ ...a, patients, usage: { calls: usage?.calls || 0, cost_usd: Math.round((usage?.cost_usd || 0) * 100) / 100 } });
+  }
+  const totals = out.reduce((t, a) => ({ calls: t.calls + a.usage.calls, cost_usd: Math.round((t.cost_usd + a.usage.cost_usd) * 100) / 100 }), { calls: 0, cost_usd: 0 });
+  return json({ ok: true, accounts: out, totals });
 }
