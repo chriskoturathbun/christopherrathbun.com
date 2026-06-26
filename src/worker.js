@@ -165,10 +165,14 @@ export default {
   },
 
   async scheduled(event, env, ctx) {
-    if (event.cron === '0 * * * *') {
-      ctx.waitUntil(runPreScheduler(env));
-    } else {
-      ctx.waitUntil(runReconciler(env));
+    // '0 * * * *' (hourly) materializes the next 48h of calls; every other tick
+    // (every minute) places any call that is due now. A failed tick is logged,
+    // not thrown — the next minute's tick recovers.
+    const job = event.cron === '0 * * * *' ? runPreScheduler : runReconciler;
+    try {
+      await job(env);
+    } catch (e) {
+      console.error('reminders scheduled error', (e && e.stack) || String(e));
     }
   },
 };
