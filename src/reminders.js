@@ -143,8 +143,14 @@ async function ensureSchema(env) {
 }
 
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
-  status, headers: { 'content-type': 'application/json' },
+  status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
 });
+
+// Dynamic/auth pages (dashboard, admin) must never be edge-cached.
+async function fetchPageNoStore(env, origin, file) {
+  const res = await env.ASSETS.fetch(new Request(new URL(file, origin).toString()));
+  return new Response(res.body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
+}
 
 function blandWebhookUrl(env) {
   const base = env.PUBLIC_BASE_URL || 'https://christopherrathbun.com';
@@ -181,12 +187,12 @@ export async function handleReminders(request, env, url) {
   }
 
   if (path === '/reminders/api/admin/pending' && request.method === 'GET') return handleAdminPending(request, env);
-  if (path === '/reminders/admin' || path === '/reminders/admin/') return fetchPage(env, url.origin, '/reminders/admin.html');
+  if (path === '/reminders/admin' || path === '/reminders/admin/') return fetchPageNoStore(env, url.origin, '/reminders/admin.html');
 
   if (path === '/reminders/api/dashboard/data' && request.method === 'GET') return handleDashboardData(request, env);
   if (path === '/reminders/api/dashboard/medicines' && request.method === 'POST') return handleUpdateMedicines(request, env);
   if (path === '/reminders/api/dashboard/patient-status' && request.method === 'POST') return handlePatientStatus(request, env);
-  if (path === '/reminders/dashboard' || path === '/reminders/dashboard/') return fetchPage(env, url.origin, '/reminders/dashboard.html');
+  if (path === '/reminders/dashboard' || path === '/reminders/dashboard/') return fetchPageNoStore(env, url.origin, '/reminders/dashboard.html');
 
   // Page routes.
   if (path === '/reminders/intake' || path === '/reminders/intake/') return fetchPage(env, url.origin, '/reminders/intake.html');
