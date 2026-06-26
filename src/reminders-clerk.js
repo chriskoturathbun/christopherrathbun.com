@@ -21,9 +21,9 @@ export function decodeJwtParts(token) {
 }
 
 let _jwksCache = null, _jwksAt = 0;
-async function getJwks(issuer) {
+async function getJwks(issuer, force) {
   const now = Date.now();
-  if (_jwksCache && now - _jwksAt < 3600_000) return _jwksCache;
+  if (!force && _jwksCache && now - _jwksAt < 3600_000) return _jwksCache;
   const res = await fetch(`${issuer}/.well-known/jwks.json`);
   if (!res.ok) throw new Error(`jwks ${res.status}`);
   _jwksCache = (await res.json()).keys || [];
@@ -43,9 +43,18 @@ export async function verifyClerkJWT(token, env) {
   if (payload.exp && payload.exp < now - 5) return null;
   if (payload.nbf && payload.nbf > now + 5) return null;
 
+  // Authorized-party check: on a shared Clerk instance, reject tokens minted for other apps/origins.
+  const allowedAzp = (env.CLERK_ALLOWED_AZP || 'https://christopherrathbun.com,https://www.christopherrathbun.com')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  if (payload.azp && allowedAzp.length && !allowedAzp.includes(payload.azp)) return null;
+
   let jwks;
   try { jwks = await getJwks(issuer); } catch { return null; }
-  const jwk = jwks.find(k => k.kid === header.kid);
+  let jwk = jwks.find(k => k.kid === header.kid);
+  if (!jwk) {
+    try { jwks = await getJwks(issuer, true); } catch { return null; }
+    jwk = jwks.find(k => k.kid === header.kid);
+  }
   if (!jwk) return null;
 
   try {
