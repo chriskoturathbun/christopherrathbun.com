@@ -3,6 +3,7 @@ import { optimizeCallPlan } from './reminders-schedule.js';
 import { nextOccurrencesUTC } from './reminders-schedule.js';
 import { placeCall, scheduleCall } from './reminders-bland.js';
 import { verifyClerkJWT, getClerkUserEmail } from './reminders-clerk.js';
+import { normalizeBlandWebhook, detectConcern, formatAlert, sendResendEmail, sendTwilioSms } from './reminders-alerts.js';
 
 // Normalize a phone string to E.164 (+ and digits). Returns null if invalid.
 export function normalizePhone(input) {
@@ -127,6 +128,12 @@ async function ensureSchema(env) {
       created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
     db.prepare(`CREATE INDEX IF NOT EXISTS idx_calls_sched ON calls (scheduled_at_utc, status)`),
     db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_calls_dedupe ON calls (patient_id, call_plan_id, scheduled_at_utc)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS alerts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      call_id INTEGER, patient_id INTEGER NOT NULL,
+      kind TEXT NOT NULL, severity TEXT, category TEXT, summary TEXT,
+      channels_sent TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
   ]);
   schemaReady = true;
 }
@@ -157,6 +164,10 @@ export async function handleReminders(request, env, url) {
   // Intake API (implemented in a later task).
   if (path === '/reminders/api/intake' && request.method === 'POST') {
     return handleIntakeSubmit(request, env);
+  }
+
+  if (path === '/reminders/api/bland-webhook' && request.method === 'POST') {
+    return handleBlandWebhook(request, env, url);
   }
 
   if (path === '/reminders/api/admin/approve' && request.method === 'POST') {
@@ -400,4 +411,55 @@ async function handlePatientStatus(request, env) {
   if (next === 'active' && !ctx.account.approved) return json({ ok: false, error: 'account pending approval' }, 403);
   await db.prepare('UPDATE patients SET status = ? WHERE id = ?').bind(next, patient.id).run();
   return json({ ok: true, status: next });
+}
+
+async function handleBlandWebhook(request, env, url) {
+  if (!env.REMINDERS_WEBHOOK_SECRET || url.searchParams.get('token') !== env.REMINDERS_WEBHOOK_SECRET) {
+    return json({ ok: false, error: 'unauthorized' }, 401);
+  }
+  await ensureSchema(env);
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+  const wh = normalizeBlandWebhook(body);
+  if (!wh.callId) return json({ ok: true, note: 'no call id' });
+
+  const db = env.REMINDERS_DB;
+  const call = await db.prepare('SELECT * FROM calls WHERE bland_call_id = ?').bind(wh.callId).first();
+  if (!call) return json({ ok: true, note: 'unknown call' });
+
+  const finalStatus = wh.answeredByHuman ? 'completed' : (wh.completed ? 'no_answer' : 'failed');
+  await db.prepare(`UPDATE calls SET status=?, duration_sec=?, transcript=?, recording_url=?, cost_usd=COALESCE(?, cost_usd) WHERE id=?`)
+    .bind(finalStatus, wh.durationSec || 0, wh.transcript || null, wh.recordingUrl || null, wh.costUsd, call.id).run();
+
+  const patient = await db.prepare('SELECT * FROM patients WHERE id = ?').bind(call.patient_id).first();
+  if (!patient) return json({ ok: true });
+
+  let kind = null, detection = { concern: false, severity: 'none', category: 'none', summary: '' };
+  if (finalStatus === 'no_answer') kind = 'no_answer';
+  else if (finalStatus === 'failed') kind = 'failed';
+  else {
+    detection = await detectConcern(patient.name, wh.transcript, env);
+    if (detection.concern) kind = 'concern';
+  }
+  if (!kind) return json({ ok: true, alerted: false });
+
+  const account = await db.prepare('SELECT email FROM accounts WHERE id = ?').bind(patient.account_id).first();
+  const ec = await db.prepare('SELECT name, phone_e164, email FROM emergency_contacts WHERE patient_id = ? LIMIT 1').bind(patient.id).first();
+  const emails = [...new Set([account?.email, ec?.email].filter(Boolean))];
+  const phones = [...new Set([ec?.phone_e164].filter(Boolean))];
+
+  const alert = formatAlert({
+    patientName: patient.name, kind,
+    summary: detection.summary || (kind === 'no_answer' ? 'No answer on the scheduled reminder call.' : kind === 'failed' ? 'The call could not be completed.' : ''),
+    transcript: wh.transcript, recordingUrl: wh.recordingUrl, detectedAtISO: new Date().toISOString(),
+  });
+  const smsBody = `${alert.subject}.${detection.summary ? ' ' + detection.summary : ''} — Reminders`;
+
+  const channels = [];
+  for (const to of emails) { const r = await sendResendEmail({ to, subject: alert.subject, html: alert.html, text: alert.text }, env); if (r.ok) channels.push(`email:${to}`); }
+  for (const to of phones) { const r = await sendTwilioSms({ to, body: smsBody.slice(0, 320) }, env); if (r.ok) channels.push(`sms:${to}`); }
+
+  await db.prepare('INSERT INTO alerts (call_id, patient_id, kind, severity, category, summary, channels_sent) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .bind(call.id, patient.id, kind, detection.severity, detection.category, alert.subject, JSON.stringify(channels)).run();
+
+  return json({ ok: true, alerted: true, kind, channels });
 }
