@@ -12,13 +12,13 @@ function buildTask(patientName, medicineNames) {
 }
 
 // Place an outbound call NOW. Returns { ok, callId } or { ok:false, error }.
-export async function placeCall({ to, patientName, medicineNames, voice = 'june', from }, env) {
-  return _post({ phone_number: to, task: buildTask(patientName, medicineNames), voice, record: true, max_duration: 5, wait_for_greeting: true, ...(from ? { from } : {}) }, env);
+export async function placeCall({ to, patientName, medicineNames, voice = 'june', from, webhook }, env) {
+  return _post({ phone_number: to, task: buildTask(patientName, medicineNames), voice, record: true, max_duration: 5, wait_for_greeting: true, ...(from ? { from } : {}), ...(webhook ? { webhook } : {}) }, env);
 }
 
 // Schedule an outbound call for a future UTC ISO time (best-effort redundancy).
-export async function scheduleCall({ to, patientName, medicineNames, startTimeISO, voice = 'june', from }, env) {
-  return _post({ phone_number: to, task: buildTask(patientName, medicineNames), voice, record: true, max_duration: 5, start_time: startTimeISO, ...(from ? { from } : {}) }, env);
+export async function scheduleCall({ to, patientName, medicineNames, startTimeISO, voice = 'june', from, webhook }, env) {
+  return _post({ phone_number: to, task: buildTask(patientName, medicineNames), voice, record: true, max_duration: 5, start_time: startTimeISO, ...(from ? { from } : {}), ...(webhook ? { webhook } : {}) }, env);
 }
 
 export async function getCall(callId, env) {

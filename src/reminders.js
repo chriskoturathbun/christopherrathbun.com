@@ -135,6 +135,11 @@ const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status, headers: { 'content-type': 'application/json' },
 });
 
+function blandWebhookUrl(env) {
+  const base = env.PUBLIC_BASE_URL || 'https://christopherrathbun.com';
+  return env.REMINDERS_WEBHOOK_SECRET ? `${base}/reminders/api/bland-webhook?token=${env.REMINDERS_WEBHOOK_SECRET}` : undefined;
+}
+
 async function fetchPage(env, origin, file) {
   const res = await env.ASSETS.fetch(new Request(new URL(file, origin).toString()));
   return new Response(res.body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
@@ -251,7 +256,7 @@ export async function runPreScheduler(env, nowISO) {
           made++;
           try {
             const meds = JSON.parse(plan.medicine_names || '[]');
-            const sc = await scheduleCall({ to: p.phone_e164, patientName: p.name, medicineNames: meds, startTimeISO: iso }, env);
+            const sc = await scheduleCall({ to: p.phone_e164, patientName: p.name, medicineNames: meds, startTimeISO: iso, webhook: blandWebhookUrl(env) }, env);
             if (sc.ok && sc.callId) {
               await db.prepare(`UPDATE calls SET status='prescheduled', bland_call_id=? WHERE patient_id=? AND call_plan_id=? AND scheduled_at_utc=?`)
                 .bind(sc.callId, p.id, plan.id, iso).run();
@@ -301,7 +306,7 @@ export async function runReconciler(env, nowISO) {
   let placed = 0;
   for (const r of (rows.results || [])) {
     const meds = JSON.parse(r.medicine_names || '[]');
-    const res = await placeCall({ to: r.phone_e164, patientName: r.name, medicineNames: meds }, env);
+    const res = await placeCall({ to: r.phone_e164, patientName: r.name, medicineNames: meds, webhook: blandWebhookUrl(env) }, env);
     if (res.ok) {
       await db.prepare(`UPDATE calls SET status='placed', placed_at=?, bland_call_id=COALESCE(?, bland_call_id) WHERE id=?`)
         .bind(new Date().toISOString(), res.callId, r.id).run();

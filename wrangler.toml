@@ -22,6 +22,7 @@ SENTRY_ORG = "lilac-impact-ventures-llc"
 ALLOWED_EMAIL = "rathbunchristopher18@gmail.com"
 CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuY2hyaXN0b3BoZXJyYXRoYnVuLmNvbSQ"
 CLERK_ISSUER = "https://clerk.christopherrathbun.com"
+PUBLIC_BASE_URL = "https://christopherrathbun.com"
 # CLERK_API_KEY is set via: wrangler secret put CLERK_API_KEY
 # It's automatically available in env.CLERK_API_KEY at runtime
 
