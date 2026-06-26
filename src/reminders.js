@@ -278,17 +278,7 @@ export async function runPreScheduler(env, nowISO) {
         const r = await db.prepare(
           `INSERT OR IGNORE INTO calls (patient_id, call_plan_id, scheduled_at_utc, status) VALUES (?, ?, ?, 'scheduled')`)
           .bind(p.id, plan.id, iso).run();
-        if (r.meta && r.meta.changes > 0) {
-          made++;
-          try {
-            const meds = JSON.parse(plan.medicine_names || '[]');
-            const sc = await scheduleCall({ to: p.phone_e164, patientName: p.name, medicineNames: meds, startTimeISO: iso, webhook: blandWebhookUrl(env) }, env);
-            if (sc.ok && sc.callId) {
-              await db.prepare(`UPDATE calls SET status='prescheduled', bland_call_id=? WHERE patient_id=? AND call_plan_id=? AND scheduled_at_utc=?`)
-                .bind(sc.callId, p.id, plan.id, iso).run();
-            }
-          } catch {}
-        }
+        if (r.meta && r.meta.changes > 0) made++;
       }
     }
   }
@@ -320,15 +310,17 @@ export async function runReconciler(env, nowISO) {
   const now = new Date(nowISO || new Date().toISOString());
   const windowStart = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
   const dueAt = new Date(now.getTime() + 30 * 1000).toISOString();
-  const overdue = new Date(now.getTime() - 3 * 60 * 1000).toISOString();
   const rows = await db.prepare(
     `SELECT c.id, c.patient_id, c.call_plan_id, c.scheduled_at_utc, c.status, p.name, p.phone_e164,
             (SELECT medicine_names FROM call_plan WHERE id = c.call_plan_id) AS medicine_names
-     FROM calls c JOIN patients p ON p.id = c.patient_id
+     FROM calls c
+       JOIN patients p ON p.id = c.patient_id
+       JOIN accounts a ON a.id = p.account_id
      WHERE c.placed_at IS NULL
-       AND c.scheduled_at_utc <= ? AND c.scheduled_at_utc >= ?
-       AND ( c.status = 'scheduled' OR (c.status = 'prescheduled' AND c.scheduled_at_utc <= ?) )`)
-    .bind(dueAt, windowStart, overdue).all();
+       AND c.status = 'scheduled'
+       AND p.status = 'active' AND a.approved = 1
+       AND c.scheduled_at_utc <= ? AND c.scheduled_at_utc >= ?`)
+    .bind(dueAt, windowStart).all();
   let placed = 0;
   for (const r of (rows.results || [])) {
     const meds = JSON.parse(r.medicine_names || '[]');
@@ -425,6 +417,9 @@ async function handlePatientStatus(request, env) {
   if (!patient) return json({ ok: false, error: 'not found' }, 404);
   if (next === 'active' && !ctx.account.approved) return json({ ok: false, error: 'account pending approval' }, 403);
   await db.prepare('UPDATE patients SET status = ? WHERE id = ?').bind(next, patient.id).run();
+  if (next === 'paused') {
+    await db.prepare("DELETE FROM calls WHERE patient_id = ? AND status = 'scheduled' AND placed_at IS NULL").bind(patient.id).run();
+  }
   return json({ ok: true, status: next });
 }
 
