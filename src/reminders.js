@@ -153,6 +153,10 @@ export async function handleReminders(request, env, url) {
     return handleIntakeSubmit(request, env);
   }
 
+  if (path === '/reminders/api/admin/approve' && request.method === 'POST') {
+    return handleApprove(request, env);
+  }
+
   // Page routes.
   if (path === '/reminders/intake' || path === '/reminders/intake/') return fetchPage(env, url.origin, '/reminders/intake.html');
   if (path === '/reminders/privacy' || path === '/reminders/privacy/') return fetchPage(env, url.origin, '/reminders/privacy.html');
@@ -252,6 +256,23 @@ export async function runPreScheduler(env, nowISO) {
     }
   }
   return { made };
+}
+
+async function handleApprove(request, env) {
+  await ensureSchema(env);
+  const auth = request.headers.get('authorization') || '';
+  if (!env.REMINDERS_ADMIN_PASSCODE || auth !== `Bearer ${env.REMINDERS_ADMIN_PASSCODE}`) {
+    return json({ ok: false, error: 'unauthorized' }, 401);
+  }
+  let body; try { body = await request.json(); } catch { return json({ ok:false, error:'bad json' }, 400); }
+  const db = env.REMINDERS_DB;
+  if (body.accountEmail) {
+    await db.prepare('UPDATE accounts SET approved = 1 WHERE email = ?').bind(String(body.accountEmail).toLowerCase()).run();
+  }
+  if (body.activatePatientId) {
+    await db.prepare("UPDATE patients SET status = 'active' WHERE id = ?").bind(body.activatePatientId).run();
+  }
+  return json({ ok: true });
 }
 
 // Every minute: place any call that is due now and not yet handed off, immediately.
