@@ -74,6 +74,14 @@
     }
     .add-med:hover { border-color: var(--accent); }
 
+    .demo-call { padding: 16px; border: 1px solid var(--border); border-radius: 16px; background: rgba(255,255,255,0.035); }
+    .demo-row { display: flex; gap: 10px; align-items: stretch; }
+    .demo-row input { flex: 1 1 auto; }
+    .demo-row .btn { flex: 0 0 auto; font-size: 14px; padding: 0 18px; white-space: nowrap; }
+    @media (max-width: 520px) { .demo-row { flex-direction: column; } .demo-row .btn { padding: 13px 18px; } }
+    .demo-msg.is-error { color: #ffc2c2; }
+    .demo-msg.is-ok { color: var(--accent); }
+
     .nav-row { display: flex; gap: 12px; justify-content: space-between; margin-top: 26px; }
     .nav-row .btn { font-size: 15px; padding: 13px 24px; }
     .btn[disabled] { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
@@ -137,6 +145,15 @@
       ['specific_time', 'Specific time']
     ];
 
+    var VOICES = [
+      ['june', 'June — warm & friendly (default)'],
+      ['17a0eab8-d7d5-4304-bb41-7a7b6bda96d3', 'Grace — warm, Southern'],
+      ['bbeabae6-ec8d-444f-92ad-c8e620d3de8d', 'Tina — gentle'],
+      ['aec18940-3d5a-4454-acd2-66f685e83b67', 'Martha — casual & friendly'],
+      ['ff2c405b-3dba-41e0-9261-bc8ee3f91f46', 'David — reassuring'],
+      ['17e8f694-d230-4b64-b040-6108088d9e6c', 'Dorothy — British']
+    ];
+
     var STEPS = ['flow', 'patient', 'purchaser', 'emergency', 'consent', 'medicines', 'review'];
     var TOTAL = STEPS.length;
 
@@ -152,7 +169,8 @@
       step: 0,
       flow: '',
       relationship: '',
-      patient: { name: '', phone: '', timezone: detectTz() },
+      patient: { name: '', phone: '', timezone: detectTz(), preferred_name: '', voice: 'june' },
+      demoPhone: '',
       purchaser: { name: '', email: '', phone: '' },
       emergency: { name: '', phone: '', email: '', relationship: '' },
       consent: { tcpa: false, recording: false, attestation: false },
@@ -231,11 +249,24 @@
       var relField = loved ?
         '<div class="field"><label>Your relationship to them (e.g. grandmother)</label>' +
         '<input type="text" data-bind="relationship" value="' + esc(state.relationship) + '" placeholder="grandmother" /></div>' : '';
+      var demoPhone = state.demoPhone || p.phone;
       return '<h2 class="step-head">' + (loved ? 'Their details' : 'Your details') + '</h2>' +
         '<p class="step-sub muted">Who should we call, and when?</p>' +
         '<div class="field"><label>Name</label><input type="text" data-bind="patient.name" value="' + esc(p.name) + '" placeholder="Rose Miller" /></div>' +
         '<div class="field"><label>Phone</label><input type="tel" data-bind="patient.phone" value="' + esc(p.phone) + '" placeholder="(555) 123-4567" /></div>' +
         '<div class="field"><label>Time zone</label><select data-bind="patient.timezone">' + tzOptionsHtml(p.timezone) + '</select></div>' +
+        '<div class="field"><label>What should the agent call them on the call?</label>' +
+          '<input type="text" data-bind="patient.preferred_name" value="' + esc(p.preferred_name) + '" placeholder="Grandma Rose, Rose, Mom…" />' +
+          '<p class="step-sub muted" style="margin:7px 0 0;font-size:13px;">Leave blank to use their name.</p></div>' +
+        '<div class="field"><label>Voice</label><select data-bind="patient.voice">' + optionsHtml(VOICES, p.voice) + '</select></div>' +
+        '<div class="field demo-call">' +
+          '<label>Hear this voice — call my phone</label>' +
+          '<div class="demo-row">' +
+            '<input type="tel" id="demo-phone" value="' + esc(demoPhone) + '" placeholder="(555) 123-4567" />' +
+            '<button type="button" class="btn" id="demo-btn">🔊 Hear this voice</button>' +
+          '</div>' +
+          '<p class="demo-msg muted" id="demo-msg" style="margin:9px 0 0;font-size:13px;"></p>' +
+        '</div>' +
         relField +
         navHtml('Next', false);
     }
@@ -401,7 +432,9 @@
         patient: {
           name: state.patient.name.trim(),
           phone: state.patient.phone.trim(),
-          timezone: state.patient.timezone.trim()
+          timezone: state.patient.timezone.trim(),
+          preferred_name: (state.patient.preferred_name || '').trim(),
+          voice: state.patient.voice || 'june'
         },
         purchaser: {
           name: state.purchaser.name.trim(),
@@ -510,6 +543,52 @@
       if (nextBtn) nextBtn.addEventListener('click', goNext);
       var submitBtn = card.querySelector('[data-act="submit"]');
       if (submitBtn) submitBtn.addEventListener('click', function () { submit(this); });
+
+      // Demo-call control (patient step)
+      var demoPhoneEl = card.querySelector('#demo-phone');
+      if (demoPhoneEl) {
+        demoPhoneEl.addEventListener('input', function () { state.demoPhone = this.value; });
+      }
+      var demoBtn = card.querySelector('#demo-btn');
+      if (demoBtn) demoBtn.addEventListener('click', function () { placeDemoCall(this); });
+    }
+
+    function placeDemoCall(btn) {
+      var phoneEl = card.querySelector('#demo-phone');
+      var msgEl = card.querySelector('#demo-msg');
+      var phone = phoneEl ? phoneEl.value.trim() : '';
+      function showMsg(text, ok) {
+        if (!msgEl) return;
+        msgEl.textContent = text;
+        msgEl.className = 'demo-msg ' + (ok ? 'is-ok' : 'is-error');
+      }
+      if (!phone) { showMsg('Enter a phone number to call.', false); return; }
+      var origText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Calling…';
+      showMsg('', true);
+      var payload = {
+        phone: phone,
+        voice: state.patient.voice || 'june',
+        callName: (state.patient.preferred_name || '').trim() || state.patient.name
+      };
+      fetch('/reminders/api/demo-call', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (r) {
+          var d = r.data || {};
+          if (r.ok && d.ok) showMsg(d.message || 'Calling you now — answer to hear it.', true);
+          else showMsg(d.error || 'Could not place the demo call right now.', false);
+        })
+        .catch(function () {
+          showMsg('Network error. Please check your connection and try again.', false);
+        });
+      // Re-enable after ~20s to prevent double-taps.
+      setTimeout(function () {
+        if (btn && card.contains(btn)) { btn.disabled = false; btn.textContent = origText; }
+      }, 20000);
     }
 
     render();
