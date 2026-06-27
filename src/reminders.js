@@ -1,7 +1,7 @@
 // Reminders — AI medication-reminder calls. Phase 1: foundation.
 import { optimizeCallPlan } from './reminders-schedule.js';
 import { nextOccurrencesUTC } from './reminders-schedule.js';
-import { placeCall, scheduleCall } from './reminders-bland.js';
+import { placeCall, scheduleCall, getCall } from './reminders-bland.js';
 import { verifyClerkJWT, getClerkUserEmail } from './reminders-clerk.js';
 import { normalizeBlandWebhook, detectConcern, formatAlert, sendResendEmail, sendTwilioSms } from './reminders-alerts.js';
 
@@ -482,6 +482,28 @@ export async function processCallOutcome(env, call, wh) {
     .bind(call.id, patient.id, kind, detection.severity, detection.category, alert.subject, JSON.stringify(channels)).run();
 
   return { ok: true, alerted: !!kind, kind, channels };
+}
+
+// Safety net: if Bland's post-call webhook never arrives, poll for completed calls
+// we haven't processed and run the same outcome logic. Guarantees alerts aren't missed.
+export async function runWebhookFallback(env, nowISO) {
+  await ensureSchema(env);
+  const db = env.REMINDERS_DB;
+  const cutoff = new Date(new Date(nowISO || new Date().toISOString()).getTime() - 3 * 60 * 1000).toISOString();
+  const rows = (await db.prepare(
+    `SELECT * FROM calls WHERE status = 'placed' AND bland_call_id IS NOT NULL AND placed_at IS NOT NULL AND placed_at <= ? LIMIT 25`)
+    .bind(cutoff).all()).results || [];
+  let processed = 0;
+  for (const call of rows) {
+    const res = await getCall(call.bland_call_id, env);
+    if (!res.ok || !res.data) continue;
+    const d = res.data;
+    if (!(d.completed || ['completed', 'no-answer', 'failed'].includes(d.status))) continue; // not done yet
+    const wh = normalizeBlandWebhook(d);
+    await processCallOutcome(env, call, wh);
+    processed++;
+  }
+  return { processed };
 }
 
 function requireAdmin(request, env) {

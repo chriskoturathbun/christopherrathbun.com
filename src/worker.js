@@ -3,7 +3,7 @@ import { handleSentry } from './sentry-dashboard.js';
 import { handleVighnaa } from './vighnaa.js';
 import { handleUsers } from './users-dashboard.js';
 import { handleReminders } from './reminders.js';
-import { runReconciler, runPreScheduler } from './reminders.js';
+import { runReconciler, runPreScheduler, runWebhookFallback } from './reminders.js';
 
 function newGameId() {
   // short, URL-friendly id
@@ -168,7 +168,9 @@ export default {
     // '0 * * * *' (hourly) materializes the next 48h of calls; every other tick
     // (every minute) places any call that is due now. A failed tick is logged,
     // not thrown — the next minute's tick recovers.
-    const job = event.cron === '0 * * * *' ? runPreScheduler : runReconciler;
+    const job = event.cron === '0 * * * *'
+      ? runPreScheduler
+      : async (env) => { await runReconciler(env); await runWebhookFallback(env); };
     try {
       await job(env);
     } catch (e) {
