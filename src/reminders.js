@@ -432,12 +432,17 @@ async function handleBlandWebhook(request, env, url) {
   const wh = normalizeBlandWebhook(body);
   if (!wh.callId) return json({ ok: true, note: 'no call id' });
 
-  const db = env.REMINDERS_DB;
-  const call = await db.prepare('SELECT * FROM calls WHERE bland_call_id = ?').bind(wh.callId).first();
+  const call = await env.REMINDERS_DB.prepare('SELECT * FROM calls WHERE bland_call_id = ?').bind(wh.callId).first();
   if (!call) return json({ ok: true, note: 'unknown call' });
 
+  return json(await processCallOutcome(env, call, wh));
+}
+
+// Shared by the webhook AND the fallback poller. Idempotent (skips terminal calls).
+export async function processCallOutcome(env, call, wh) {
+  const db = env.REMINDERS_DB;
   if (['completed', 'no_answer', 'failed'].includes(call.status)) {
-    return json({ ok: true, note: 'already processed' });
+    return { ok: true, alerted: false, note: 'already processed' };
   }
 
   const finalStatus = wh.answeredByHuman ? 'completed' : (wh.completed ? 'no_answer' : 'failed');
@@ -445,7 +450,7 @@ async function handleBlandWebhook(request, env, url) {
     .bind(finalStatus, wh.durationSec || 0, wh.transcript || null, wh.recordingUrl || null, wh.costUsd, call.id).run();
 
   const patient = await db.prepare('SELECT * FROM patients WHERE id = ?').bind(call.patient_id).first();
-  if (!patient) return json({ ok: true });
+  if (!patient) return { ok: true };
 
   let kind = null, detection = { concern: false, severity: 'none', category: 'none', summary: '' };
   if (finalStatus === 'no_answer') kind = 'no_answer';
@@ -454,7 +459,7 @@ async function handleBlandWebhook(request, env, url) {
     detection = await detectConcern(patient.name, wh.transcript, env);
     if (detection.concern) kind = 'concern';
   }
-  if (!kind) return json({ ok: true, alerted: false });
+  if (!kind) return { ok: true, alerted: false };
 
   const account = await db.prepare('SELECT email FROM accounts WHERE id = ?').bind(patient.account_id).first();
   const ec = await db.prepare('SELECT name, phone_e164, email FROM emergency_contacts WHERE patient_id = ? LIMIT 1').bind(patient.id).first();
@@ -476,7 +481,7 @@ async function handleBlandWebhook(request, env, url) {
   await db.prepare('INSERT INTO alerts (call_id, patient_id, kind, severity, category, summary, channels_sent) VALUES (?, ?, ?, ?, ?, ?, ?)')
     .bind(call.id, patient.id, kind, detection.severity, detection.category, alert.subject, JSON.stringify(channels)).run();
 
-  return json({ ok: true, alerted: true, kind, channels });
+  return { ok: true, alerted: !!kind, kind, channels };
 }
 
 function requireAdmin(request, env) {
