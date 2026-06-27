@@ -139,6 +139,11 @@ async function ensureSchema(env) {
       message_sid TEXT, to_number TEXT, status TEXT, error_code TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')))`),
   ]);
+  // Additive columns (idempotent — ignore "duplicate column" on re-run).
+  for (const stmt of [
+    "ALTER TABLE patients ADD COLUMN preferred_name TEXT",
+    "ALTER TABLE patients ADD COLUMN voice TEXT",
+  ]) { try { await db.prepare(stmt).run(); } catch (e) { /* column exists */ } }
   schemaReady = true;
 }
 
