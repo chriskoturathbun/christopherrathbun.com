@@ -161,6 +161,12 @@ async function fetchPageNoStore(env, origin, file) {
   return new Response(res.body, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });
 }
 
+// Consistent caller ID so the patient sees the same recognizable number every day
+// (not Bland's rotating pool, which reads as a scam call to an elderly person).
+function callerId(env) {
+  return env.REMINDERS_CALLER_ID || '+13466844017';
+}
+
 function blandWebhookUrl(env) {
   const base = env.PUBLIC_BASE_URL || 'https://christopherrathbun.com';
   return env.REMINDERS_WEBHOOK_SECRET ? `${base}/reminders/api/bland-webhook?token=${env.REMINDERS_WEBHOOK_SECRET}` : undefined;
@@ -241,7 +247,7 @@ async function handleDemoCall(request, env) {
   if ((perDay?.n || 0) >= 30) return json({ ok:false, error:'Demo calls are busy right now — please try again later.' }, 429);
   const callName = (body.callName || 'there').toString().slice(0, 40);
   const voice = typeof body.voice === 'string' && body.voice.trim() ? body.voice.trim() : 'june';
-  const res = await placeCall({ to, patientName: callName, medicineNames: ['your morning medicine (this is just a quick demo)'], voice }, env);
+  const res = await placeCall({ to, patientName: callName, medicineNames: ['your morning medicine (this is just a quick demo)'], voice, from: callerId(env) }, env);
   await db.prepare('INSERT INTO demo_calls (phone) VALUES (?)').bind(to).run();
   if (!res.ok) return json({ ok:false, error:'Could not place the demo call right now.' }, 502);
   return json({ ok:true, message:'Calling you now — answer to hear it.' });
@@ -357,7 +363,7 @@ export async function runReconciler(env, nowISO) {
   let placed = 0;
   for (const r of (rows.results || [])) {
     const meds = JSON.parse(r.medicine_names || '[]');
-    const res = await placeCall({ to: r.phone_e164, patientName: (r.preferred_name || r.name), medicineNames: meds, voice: r.voice || undefined, webhook: blandWebhookUrl(env) }, env);
+    const res = await placeCall({ to: r.phone_e164, patientName: (r.preferred_name || r.name), medicineNames: meds, voice: r.voice || undefined, from: callerId(env), webhook: blandWebhookUrl(env) }, env);
     if (res.ok) {
       await db.prepare(`UPDATE calls SET status='placed', placed_at=?, bland_call_id=COALESCE(?, bland_call_id) WHERE id=?`)
         .bind(new Date().toISOString(), res.callId, r.id).run();
