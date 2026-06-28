@@ -65,7 +65,9 @@ export function validateIntake(p) {
   const normalized = valid ? {
     flow,
     relationship: (p.relationship || '').trim(),
-    patient: { name: p.patient.name.trim(), phone: patientPhone, timezone: p.patient.timezone.trim(), is_self: flow === 'self' ? 1 : 0 },
+    patient: { name: p.patient.name.trim(), phone: patientPhone, timezone: p.patient.timezone.trim(), is_self: flow === 'self' ? 1 : 0,
+               preferred_name: (p.patient.preferred_name || '').trim() || null,
+               voice: typeof p.patient.voice === 'string' && p.patient.voice.trim() ? p.patient.voice.trim() : null },
     purchaser: { name: p.purchaser.name.trim(), email: p.purchaser.email.trim().toLowerCase(), phone: purchaserPhone },
     emergency: { name: p.emergency.name.trim(), phone: emergencyPhone, email: isEmail(p.emergency?.email) ? p.emergency.email.trim().toLowerCase() : null, relationship: (p.emergency?.relationship || '').trim() },
     consent: { tcpa: true, recording: true, attestation: flow === 'loved_one' },
@@ -241,10 +243,10 @@ async function handleIntakeSubmit(request, env) {
   }
 
   const patient = await db.prepare(
-    `INSERT INTO patients (account_id, name, phone_e164, timezone, relationship, is_self, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'pending') RETURNING id`)
+    `INSERT INTO patients (account_id, name, phone_e164, timezone, relationship, is_self, status, preferred_name, voice)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?) RETURNING id`)
     .bind(acct.id, normalized.patient.name, normalized.patient.phone, normalized.patient.timezone,
-          normalized.relationship, normalized.patient.is_self).first();
+          normalized.relationship, normalized.patient.is_self, normalized.patient.preferred_name, normalized.patient.voice).first();
 
   const stmts = [];
   stmts.push(db.prepare('INSERT INTO emergency_contacts (patient_id, name, phone_e164, email, relationship) VALUES (?, ?, ?, ?, ?)')
@@ -316,7 +318,7 @@ export async function runReconciler(env, nowISO) {
   const windowStart = new Date(now.getTime() - 10 * 60 * 1000).toISOString();
   const dueAt = new Date(now.getTime() + 30 * 1000).toISOString();
   const rows = await db.prepare(
-    `SELECT c.id, c.patient_id, c.call_plan_id, c.scheduled_at_utc, c.status, p.name, p.phone_e164,
+    `SELECT c.id, c.patient_id, c.call_plan_id, c.scheduled_at_utc, c.status, p.name, p.phone_e164, p.preferred_name, p.voice,
             (SELECT medicine_names FROM call_plan WHERE id = c.call_plan_id) AS medicine_names
      FROM calls c
        JOIN patients p ON p.id = c.patient_id
@@ -329,7 +331,7 @@ export async function runReconciler(env, nowISO) {
   let placed = 0;
   for (const r of (rows.results || [])) {
     const meds = JSON.parse(r.medicine_names || '[]');
-    const res = await placeCall({ to: r.phone_e164, patientName: r.name, medicineNames: meds, webhook: blandWebhookUrl(env) }, env);
+    const res = await placeCall({ to: r.phone_e164, patientName: (r.preferred_name || r.name), medicineNames: meds, voice: r.voice || undefined, webhook: blandWebhookUrl(env) }, env);
     if (res.ok) {
       await db.prepare(`UPDATE calls SET status='placed', placed_at=?, bland_call_id=COALESCE(?, bland_call_id) WHERE id=?`)
         .bind(new Date().toISOString(), res.callId, r.id).run();
