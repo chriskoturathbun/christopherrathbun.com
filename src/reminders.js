@@ -140,6 +140,8 @@ async function ensureSchema(env) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       message_sid TEXT, to_number TEXT, status TEXT, error_code TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS demo_calls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
   ]);
   // Additive columns (idempotent — ignore "duplicate column" on re-run).
   for (const stmt of [
@@ -183,6 +185,10 @@ export async function handleReminders(request, env, url) {
     return handleIntakeSubmit(request, env);
   }
 
+  if (path === '/reminders/api/demo-call' && request.method === 'POST') {
+    return handleDemoCall(request, env);
+  }
+
   if (path === '/reminders/api/bland-webhook' && request.method === 'POST') {
     return handleBlandWebhook(request, env, url);
   }
@@ -219,6 +225,26 @@ export async function computeAndStoreCallPlan(db, patientId, medicines) {
     .bind(patientId, p.local_time, JSON.stringify(p.medicine_names)));
   if (stmts.length) await db.batch(stmts);
   return plan;
+}
+
+// Place an immediate one-off demo call so a prospect can hear the agent (and preview a voice).
+// Throttled per-phone (3/hour) and globally (30/day) to bound cost/abuse.
+async function handleDemoCall(request, env) {
+  await ensureSchema(env);
+  let body; try { body = await request.json(); } catch { return json({ ok:false, error:'bad json' }, 400); }
+  const to = normalizePhone(body.phone);
+  if (!to) return json({ ok:false, error:'Enter a valid phone number.' }, 422);
+  const db = env.REMINDERS_DB;
+  const perPhone = await db.prepare("SELECT COUNT(*) AS n FROM demo_calls WHERE phone = ? AND created_at >= datetime('now','-1 hour')").bind(to).first();
+  if ((perPhone?.n || 0) >= 3) return json({ ok:false, error:"That number has had several demo calls recently — please try again later." }, 429);
+  const perDay = await db.prepare("SELECT COUNT(*) AS n FROM demo_calls WHERE created_at >= datetime('now','-1 day')").first();
+  if ((perDay?.n || 0) >= 30) return json({ ok:false, error:'Demo calls are busy right now — please try again later.' }, 429);
+  const callName = (body.callName || 'there').toString().slice(0, 40);
+  const voice = typeof body.voice === 'string' && body.voice.trim() ? body.voice.trim() : 'june';
+  const res = await placeCall({ to, patientName: callName, medicineNames: ['your morning medicine (this is just a quick demo)'], voice }, env);
+  await db.prepare('INSERT INTO demo_calls (phone) VALUES (?)').bind(to).run();
+  if (!res.ok) return json({ ok:false, error:'Could not place the demo call right now.' }, 502);
+  return json({ ok:true, message:'Calling you now — answer to hear it.' });
 }
 
 async function handleIntakeSubmit(request, env) {
