@@ -126,9 +126,12 @@ def wait_for_response(cfg, request_id, started_at, timeout_seconds):
             if event.get("event") != "message":
                 continue
             msg = (event.get("message") or "").strip()
-            if msg == f"approve {request_id}":
+            # Exact-ID match (notification buttons) or a bare approve/deny
+            # (e.g. from an Apple Watch Shortcut). Bare messages only count
+            # because the poll window starts at this request's start time.
+            if msg in (f"approve {request_id}", "approve"):
                 return "approve"
-            if msg == f"deny {request_id}":
+            if msg in (f"deny {request_id}", "deny"):
                 return "deny"
         time.sleep(POLL_INTERVAL_SECONDS)
     return None

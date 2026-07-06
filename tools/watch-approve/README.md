@@ -99,6 +99,38 @@ If you raise `timeout_seconds`, also raise the hook `timeout` in
 To change **which tools** ping your watch, edit the `matcher` regex on the
 hook entry in `~/.claude/settings.json`. Add `|mcp__.*` to cover MCP tools.
 
+## If the Approve/Deny buttons don't show on the Watch
+
+watchOS doesn't always mirror ntfy's dynamic action buttons. The reliable
+alternative is a **Shortcuts app** approver — Shortcuts run natively on the
+Apple Watch. The hook accepts a bare `approve` or `deny` posted to the
+response topic while a request is pending (messages from before the
+request started are ignored).
+
+Get your response topic:
+
+```bash
+python3 -c "import json,os;print(json.load(open(os.path.expanduser('~/.claude/watch-approve/config.json')))['response_topic'])"
+```
+
+On your **iPhone**, in the Shortcuts app:
+
+1. **+** → **Add Action** → search **Get Contents of URL**
+2. URL: `https://ntfy.sh/<your-response-topic>`
+3. Expand **Show More**: Method **POST**, Request Body **File**, and set
+   the file field to a **Text** action containing exactly `approve`
+4. Name it **Approve Claude**. In the shortcut's settings (ⓘ), enable
+   **Show on Apple Watch**.
+5. Duplicate it, change the text to `deny`, name it **Deny Claude**.
+
+On the Watch: when the approval notification buzzes, open the
+**Shortcuts** app (add it as a complication/widget for one-tap access) and
+tap **Approve Claude**. Claude proceeds within a few seconds.
+
+Note: a bare approve OKs whatever request is currently pending — if you
+run several Claude sessions at once, prefer the notification buttons when
+available (they carry a per-request ID).
+
 ## Security notes
 
 - The topic names are the only secret. They're 16 random hex chars each —
