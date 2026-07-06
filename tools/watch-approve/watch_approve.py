@@ -155,19 +155,26 @@ def worker_create_request(cfg, tool_name, detail, cwd):
 
 
 def worker_wait_for_response(cfg, request_id, started_at, timeout_seconds):
-    """Poll the request on the Worker until it's approved/denied."""
-    url = f"{cfg['worker_url']}/requests/{request_id}"
+    """Long-poll the request on the Worker until it's approved/denied.
+
+    ?wait=1 makes the Worker hold each poll open until a decision lands
+    (or ~25s), so a tap on the watch unblocks Claude immediately.
+    """
+    url = f"{cfg['worker_url']}/requests/{request_id}?wait=1"
     deadline = started_at + timeout_seconds
     while time.time() < deadline:
         try:
-            status = json.loads(http_json(url, bearer=cfg["worker_secret"])).get("status")
+            body = http_json(url, bearer=cfg["worker_secret"], timeout=35)
+            status = json.loads(body).get("status")
         except (urllib.error.URLError, OSError, json.JSONDecodeError, ValueError):
             status = None
+            time.sleep(POLL_INTERVAL_SECONDS)  # back off only on errors
         if status == "approved":
             return "approve"
-        if status in ("denied", "expired"):
-            return "deny" if status == "denied" else None
-        time.sleep(POLL_INTERVAL_SECONDS)
+        if status == "denied":
+            return "deny"
+        if status == "expired":
+            return None
     return None
 
 

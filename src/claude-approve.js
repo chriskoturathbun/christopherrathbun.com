@@ -52,6 +52,7 @@ export class ClaudeApprovals {
     this.ctx = ctx;
     this.env = env;
     this.apnsJwt = null; // {token, issuedAt}
+    this.waiters = new Map(); // request id -> [resolve, ...] for long-polls
     this.ctx.storage.sql.exec(`
       CREATE TABLE IF NOT EXISTS requests (
         id TEXT PRIMARY KEY,
@@ -118,8 +119,20 @@ export class ClaudeApprovals {
 
     let m = path.match(/^\/requests\/([a-z0-9]+)$/);
     if (m && method === 'GET') {
-      const rows = this.sql(`SELECT * FROM requests WHERE id = ?`, m[1]);
+      let rows = this.sql(`SELECT * FROM requests WHERE id = ?`, m[1]);
       if (!rows.length) return json({ error: 'not found' }, 404);
+      // Long-poll: ?wait=1 holds the request open until a decision arrives
+      // (or ~25s), so the hook unblocks the instant you tap Approve.
+      if (url.searchParams.get('wait') === '1' && rows[0].status === 'pending') {
+        await new Promise((resolve) => {
+          const list = this.waiters.get(m[1]) || [];
+          list.push(resolve);
+          this.waiters.set(m[1], list);
+          setTimeout(resolve, 25000);
+        });
+        rows = this.sql(`SELECT * FROM requests WHERE id = ?`, m[1]);
+        if (!rows.length) return json({ error: 'not found' }, 404);
+      }
       return json(rows[0]);
     }
 
@@ -139,6 +152,9 @@ export class ClaudeApprovals {
         `UPDATE requests SET status = ?, responded_at = ?, responded_by = ? WHERE id = ?`,
         decision, Date.now(), String(body.device || ''), m[1]
       );
+      // Wake any long-polling hook immediately.
+      for (const resolve of this.waiters.get(m[1]) || []) resolve();
+      this.waiters.delete(m[1]);
       return json({ ok: true, status: decision });
     }
 
