@@ -62,6 +62,26 @@ path, the URL). On the watch, tap the notification to reveal the buttons:
 With away mode **off**, the hook exits instantly and Claude Code behaves
 completely normally.
 
+## Easier toggling
+
+**Shell alias** — add to `~/.zshrc`:
+
+```bash
+alias away="$HOME/.claude/watch-approve/away"
+```
+
+**Fully automatic (macOS)** — away mode follows your screen lock:
+
+```bash
+./setup-auto-away.sh            # install; ./setup-auto-away.sh uninstall to remove
+```
+
+This installs a LaunchAgent that polls the lock state every 10 s: lock the
+Mac → away mode turns on; unlock → it turns off. If you set away mode on
+*manually*, unlocking won't turn it off — the agent only clears what it
+set itself. Expect up to ~10 s after locking before approvals start
+routing to the watch.
+
 ## Configuration
 
 `~/.claude/watch-approve/config.json`:
