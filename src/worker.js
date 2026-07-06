@@ -1,4 +1,6 @@
 export { TwistedChessGame } from './twisted-chess-do.js';
+export { ClaudeApprovals } from './claude-approve.js';
+import { handleClaudeApprove } from './claude-approve.js';
 import { handleSentry } from './sentry-dashboard.js';
 import { handleVighnaa } from './vighnaa.js';
 import { handleUsers } from './users-dashboard.js';
@@ -93,6 +95,11 @@ export default {
     if (url.hostname === 'www.christopherrathbun.com') {
       url.hostname = 'christopherrathbun.com';
       return Response.redirect(url.toString(), 301);
+    }
+
+    // Claude Code approval bridge (iPhone/Watch app backend)
+    if (path === '/api/claude-approve' || path.startsWith('/api/claude-approve/')) {
+      return handleClaudeApprove(request, env, url);
     }
 
     // Users dashboard (Clerk-authenticated)

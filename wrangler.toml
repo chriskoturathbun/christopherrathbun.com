@@ -15,7 +15,7 @@ routes = [
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/", "/vighnaatextllm", "/vighnaatextllm/*", "/users", "/users/*", "/api/users", "/api/users/*", "/reminders", "/reminders/*"]
+run_worker_first = ["/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/", "/vighnaatextllm", "/vighnaatextllm/*", "/users", "/users/*", "/api/users", "/api/users/*", "/reminders", "/reminders/*", "/api/claude-approve", "/api/claude-approve/*"]
 
 [vars]
 SENTRY_ORG = "lilac-impact-ventures-llc"
@@ -23,6 +23,9 @@ ALLOWED_EMAIL = "rathbunchristopher18@gmail.com"
 CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuY2hyaXN0b3BoZXJyYXRoYnVuLmNvbSQ"
 CLERK_ISSUER = "https://clerk.christopherrathbun.com"
 PUBLIC_BASE_URL = "https://christopherrathbun.com"
+# APNs environment for the ClaudeApprove app: "sandbox" for Xcode dev builds,
+# "production" for TestFlight/App Store builds.
+APNS_ENV = "sandbox"
 # CLERK_API_KEY is set via: wrangler secret put CLERK_API_KEY
 # It's automatically available in env.CLERK_API_KEY at runtime
 
@@ -32,6 +35,10 @@ enabled = true
 [[durable_objects.bindings]]
 name = "TWISTED_CHESS"
 class_name = "TwistedChessGame"
+
+[[durable_objects.bindings]]
+name = "CLAUDE_APPROVALS"
+class_name = "ClaudeApprovals"
 
 [[d1_databases]]
 binding = "DB"
@@ -57,6 +64,10 @@ new_sqlite_classes = ["TwistedChessGame"]
 # ignored). Kept as a no-op so the migration history stays consistent.
 [[migrations]]
 tag = "v2"
+
+[[migrations]]
+tag = "v3"
+new_sqlite_classes = ["ClaudeApprovals"]
 
 [triggers]
 crons = ["* * * * *", "0 * * * *"]

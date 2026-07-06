@@ -131,6 +131,22 @@ Note: a bare approve OKs whatever request is currently pending — if you
 run several Claude sessions at once, prefer the notification buttons when
 available (they carry a per-request ID).
 
+## Native app backend (no ntfy)
+
+The hook also supports a `worker` backend that talks to this repo's
+Cloudflare Worker and the **ClaudeApprove** iPhone/Watch app — native
+Approve/Deny buttons on the Watch via your own APNs push. See
+`apps/ClaudeApprove/SETUP.md`. Config:
+
+```json
+{
+  "backend": "worker",
+  "worker_url": "https://christopherrathbun.com/api/claude-approve",
+  "worker_secret": "<APPROVE_SECRET>",
+  "timeout_seconds": 240
+}
+```
+
 ## Security notes
 
 - The topic names are the only secret. They're 16 random hex chars each —

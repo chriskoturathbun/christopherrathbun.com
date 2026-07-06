@@ -38,10 +38,17 @@ MAX_DETAIL_CHARS = 400
 def load_config():
     with open(CONFIG_PATH, encoding="utf-8") as f:
         cfg = json.load(f)
-    for key in ("server", "topic", "response_topic"):
+    if cfg.get("backend") == "worker":
+        required = ("worker_url", "worker_secret")
+    else:
+        required = ("server", "topic", "response_topic")
+    for key in required:
         if not cfg.get(key):
             raise ValueError(f"config missing {key!r}")
-    cfg["server"] = cfg["server"].rstrip("/")
+    if "server" in cfg:
+        cfg["server"] = cfg["server"].rstrip("/")
+    if "worker_url" in cfg:
+        cfg["worker_url"] = cfg["worker_url"].rstrip("/")
     return cfg
 
 
@@ -66,11 +73,12 @@ def summarize_tool(tool_name, tool_input):
     return detail
 
 
-def http_json(url, payload=None, timeout=15):
+def http_json(url, payload=None, timeout=15, bearer=None):
     data = json.dumps(payload).encode("utf-8") if payload is not None else None
-    req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"} if data else {}
-    )
+    headers = {"Content-Type": "application/json"} if data else {}
+    if bearer:
+        headers["Authorization"] = f"Bearer {bearer}"
+    req = urllib.request.Request(url, data=data, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8", errors="replace")
 
@@ -137,6 +145,32 @@ def wait_for_response(cfg, request_id, started_at, timeout_seconds):
     return None
 
 
+def worker_create_request(cfg, tool_name, detail, cwd):
+    body = http_json(
+        cfg["worker_url"] + "/requests",
+        {"tool": tool_name, "detail": detail, "cwd": cwd},
+        bearer=cfg["worker_secret"],
+    )
+    return json.loads(body)["id"]
+
+
+def worker_wait_for_response(cfg, request_id, started_at, timeout_seconds):
+    """Poll the request on the Worker until it's approved/denied."""
+    url = f"{cfg['worker_url']}/requests/{request_id}"
+    deadline = started_at + timeout_seconds
+    while time.time() < deadline:
+        try:
+            status = json.loads(http_json(url, bearer=cfg["worker_secret"])).get("status")
+        except (urllib.error.URLError, OSError, json.JSONDecodeError, ValueError):
+            status = None
+        if status == "approved":
+            return "approve"
+        if status in ("denied", "expired"):
+            return "deny" if status == "denied" else None
+        time.sleep(POLL_INTERVAL_SECONDS)
+    return None
+
+
 def emit_decision(decision, reason):
     print(
         json.dumps(
@@ -167,16 +201,22 @@ def main():
 
     tool_name = payload.get("tool_name", "a tool")
     detail = summarize_tool(tool_name, payload.get("tool_input"))
-    request_id = uuid.uuid4().hex[:12]
     started_at = time.time()
-
-    try:
-        send_request_notification(cfg, request_id, tool_name, detail, payload.get("cwd", ""))
-    except (urllib.error.URLError, OSError):
-        return  # can't reach ntfy: fall back to the normal prompt
-
     timeout_seconds = int(cfg.get("timeout_seconds", 240))
-    decision = wait_for_response(cfg, request_id, started_at, timeout_seconds)
+
+    if cfg.get("backend") == "worker":
+        try:
+            request_id = worker_create_request(cfg, tool_name, detail, payload.get("cwd", ""))
+        except (urllib.error.URLError, OSError, json.JSONDecodeError, KeyError, ValueError):
+            return  # can't reach the Worker: fall back to the normal prompt
+        decision = worker_wait_for_response(cfg, request_id, started_at, timeout_seconds)
+    else:
+        request_id = uuid.uuid4().hex[:12]
+        try:
+            send_request_notification(cfg, request_id, tool_name, detail, payload.get("cwd", ""))
+        except (urllib.error.URLError, OSError):
+            return  # can't reach ntfy: fall back to the normal prompt
+        decision = wait_for_response(cfg, request_id, started_at, timeout_seconds)
 
     if decision == "approve":
         emit_decision("allow", "Approved from Apple Watch")
