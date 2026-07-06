@@ -1,109 +1,106 @@
 # ClaudeApprove — approve Claude Code from your Apple Watch
 
-Native iPhone + Watch app: when Claude Code needs permission, your Watch
-buzzes with **real Approve/Deny buttons on the notification**. A tap
-unblocks Claude **instantly** — the hook long-polls your Worker, so the
-decision lands in ~100 ms, not on a polling delay.
+A product anyone can use: download the iPhone + Watch app, tap **Set Up**,
+run one command on the Mac, done. No Cloudflare account, no secrets to
+copy, no Shortcuts.
 
 ```
-Claude Code hook ──▶ christopherrathbun.com/api/claude-approve (Worker + DO)
-                                   │ APNs push (instant)
-                                   ▼
-                     iPhone app  +  Watch app  ── tap Approve ──▶ Worker
-                                   ▲                                │
-                     hook long-polls (?wait=1) ◀── resolves instantly
+                          you (the operator)
+                    host the backend + ship the app
+                                  │
+   user's Mac                     ▼                    user's iPhone/Watch
+ Claude Code hook ──▶ /api/claude-approve (Worker+DO) ◀── ClaudeApprove app
+   POST /requests          multi-tenant, paired           APNs push, native
+   long-poll ?wait=1       by one-time codes              Approve/Deny buttons
 ```
 
-## One-time prerequisites (~20 min, mostly Apple)
+## The user experience (what "anyone" does)
 
-1. **Apple Developer Program** ($99/yr): https://developer.apple.com/programs/enroll/
-   — push notifications require it. Note your **Team ID** (Account → Membership).
-2. **APNs key**: developer.apple.com → Certificates, Identifiers & Profiles →
-   **Keys** → **+** → check **APNs** → Register → **Download the .p8**
-   (one-time download) and note the **Key ID**.
-3. Xcode installed and signed in (Xcode → Settings → Accounts).
-4. `brew install xcodegen qrencode` (bootstrap.sh installs xcodegen for you
-   if you skip this; qrencode is optional but gives you a scannable QR).
+1. Install **ClaudeApprove** from the App Store (iPhone; the Watch app
+   installs alongside).
+2. Open it, tap **Set Up** → it shows a pairing code like `MKT4-P7XW`.
+3. On their Mac:
+   ```bash
+   curl -fsSL https://christopherrathbun.com/claude-approve/install.sh | bash
+   ```
+   …enter the code. The installer claims it, installs the Claude Code hook,
+   and wires `~/.claude/settings.json` (with a backup).
+4. Restart Claude Code, then `~/.claude/watch-approve/away on` when leaving.
+5. Watch buzzes → tap **Approve** on the notification → Claude proceeds in
+   ~100 ms.
 
-## The fast path
+Accounts are anonymous random tokens; pairing codes are single-use and
+expire in 10 minutes; each user only ever sees their own requests
+(tenant-isolation is enforced server-side and covered by tests).
 
-From the repo root on your Mac (`git pull` first):
+## Operator guide (you)
+
+### Backend
 
 ```bash
-# 1 — backend + hook + config QR, one command (asks for Team ID, Key ID, .p8):
-./apps/ClaudeApprove/setup-backend.sh
-
-# 2 — generate + open the Xcode project, fully wired (targets, entitlements,
-#     watch embedding, URL scheme):
-./apps/ClaudeApprove/bootstrap.sh
+./apps/ClaudeApprove/setup-backend.sh     # APNs secrets + deploy
+./apps/ClaudeApprove/setup-backend.sh --deploy-only   # redeploys
 ```
 
-Then the five taps:
+Secrets: `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_P8` (the .p8 contents).
+`APNS_ENV` in wrangler.toml: `"sandbox"` for Xcode-installed builds,
+`"production"` for TestFlight/App Store. Deploy from the Mac that has the
+uncommitted `users-dashboard.js`/`vighnaa.js` files.
 
-1. **Tap your Team** in Xcode's Signing & Capabilities (both targets), then
-2. **Tap Run** with your iPhone as destination (allow notifications),
-3. **Tap Run** on the ClaudeApproveWatch scheme with your Watch as destination,
-4. **Scan the QR** that setup-backend.sh printed (or tap the link it shows) —
-   the app configures itself and syncs the settings to your Watch,
-5. **Tap Approve** on your wrist when the test request comes in:
+Public pages (served from `public/claude-approve/`):
+- `/claude-approve/` — landing page
+- `/claude-approve/privacy.html` — privacy policy (App Store requires this URL)
+- `/claude-approve/install.sh` + hook files — the one-line installer
+
+### Build the app
 
 ```bash
-~/.claude/watch-approve/away on
-# then ask Claude Code to create a test file
+./apps/ClaudeApprove/bootstrap.sh   # XcodeGen -> ClaudeApprove.xcodeproj
 ```
 
-Restart Claude Code once after step 4 if it was running (hooks load at startup).
+Set your Team on both targets, Run on iPhone, Run on Watch. For
+distribution: Product → Archive → App Store Connect.
 
-## Verify
+### App Store submission checklist
 
-```bash
-SECRET=$(cat ~/.claude/watch-approve/.approve-secret)
-# both devices registered?
-curl -s https://christopherrathbun.com/api/claude-approve/devices \
-  -H "Authorization: Bearer $SECRET"
-# fire a fake approval request end-to-end (watch should buzz):
-curl -s -X POST https://christopherrathbun.com/api/claude-approve/requests \
-  -H "Authorization: Bearer $SECRET" -H "Content-Type: application/json" \
-  -d '{"tool":"Bash","detail":"echo hello from setup","cwd":"/tmp"}'
-```
+1. App Store Connect → New App: name **ClaudeApprove** (or your pick),
+   bundle id `com.christopherrathbun.ClaudeApprove`.
+2. Privacy policy URL: `https://christopherrathbun.com/claude-approve/privacy.html`.
+3. App Privacy questionnaire: collects **Identifiers** (anonymous account
+   token, push tokens) and **User Content** (approval request summaries),
+   not linked to identity, not used for tracking.
+4. Flip `APNS_ENV` to `"production"` and redeploy **before** TestFlight.
+5. Review notes: explain the pairing flow and include a demo pairing code
+   you generate right before submitting (codes last 10 min — better: attach
+   a screen recording of the full flow).
+6. Export compliance: standard HTTPS only → "uses exempt encryption".
 
-## Day to day
+### API quick reference
 
-- `away on` when you leave (or install `tools/watch-approve/setup-auto-away.sh`
-  to follow your Mac's screen lock automatically), `away off` when back.
-- Approve from the notification buttons (phone or watch), or open either app
-  for the pending list.
-- No answer within 4 minutes → Claude falls back to the normal terminal prompt.
+All under `/api/claude-approve`. Auth: `Authorization: Bearer <ca_ token>`
+except the pairing endpoints.
 
-## Configuration notes
+| Route | Auth | Purpose |
+|-------|------|---------|
+| `POST /pair/new` | none | create account + first pairing code (app) |
+| `POST /pair/claim {code}` | none | exchange code for account token (installer) |
+| `POST /pair/code` | token | extra pairing code (more Macs) |
+| `POST /devices` | token | register APNs device token |
+| `POST /requests` | token | hook creates an approval request (pushes) |
+| `GET /requests/:id?wait=1` | token | hook long-polls the decision |
+| `POST /requests/:id/respond` | token | app approves/denies |
+| `GET /requests?status=pending` | token | app's pending list |
 
-- `APNS_ENV` in wrangler.toml is `"sandbox"` — correct for apps installed by
-  Xcode. Flip to `"production"` when you distribute via TestFlight/App Store.
-- The hook config lives at `~/.claude/watch-approve/config.json`
-  (`backend: "worker"`); switch `backend` to `"ntfy"` to go back to ntfy.
-- Bundle IDs are set in `project.yml` (`com.christopherrathbun.ClaudeApprove`
-  and `.watchkitapp`). If Xcode says the ID is taken, change the prefix there
-  and re-run bootstrap.sh.
+### Scaling notes
 
-## Troubleshooting
+Everything lives in one Durable Object ("hub") — simple and fine into the
+thousands of users. If it ever becomes hot, shard by account: route
+`idFromName(accountToken)` and move pair-code lookup to its own directory
+DO. The schema already keys everything by `account_token`.
 
-- **No push**: `APNS_ENV` must match the install method (Xcode = sandbox);
-  re-check both devices show up in the `devices` curl above; launch each app
-  once manually so it registers.
-- **401s**: the same secret must be in Cloudflare (`APPROVE_SECRET`), the Mac
-  (`~/.claude/watch-approve/config.json`), and the app (via the QR link).
-  Re-running setup-backend.sh keeps the secret stable and re-syncs everything.
-- **Buttons missing on the notification**: launch the app once (categories
-  register at first launch), then send the fake request again.
-- **`wrangler deploy` fails on users-dashboard.js/vighnaa.js**: deploy from
-  the Mac that has those files — they were never committed to git.
+### Self-hosters
 
-## Manual Xcode setup (fallback if you'd rather not use XcodeGen)
-
-1. File → New → Project → iOS App, SwiftUI, name `ClaudeApprove`.
-2. File → New → Target → watchOS → App, check "Watch App for Existing iOS
-   App", name `ClaudeApproveWatch`.
-3. Delete the template swift files in both targets; drag in `Shared/` (both
-   targets), `iOSApp/` (iOS), `WatchApp/` (watch).
-4. Both targets: Signing & Capabilities → + Capability → Push Notifications.
-5. iOS target → Info → URL Types → add scheme `claudeapprove`.
+Power users can run their own Worker and point the app at it via
+`claudeapprove://config?url=https://their.domain/api/claude-approve`
+(open the link before tapping Set Up), and set `CLAUDE_APPROVE_URL` /
+`CLAUDE_APPROVE_ASSETS` when running the installer.

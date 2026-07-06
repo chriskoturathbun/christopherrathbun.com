@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Toggle away mode for the Claude Code -> Apple Watch approval bridge.
+# When ON, permission prompts are pushed to your watch instead of only
+# appearing at the terminal.
+set -euo pipefail
+
+DIR="${CLAUDE_WATCH_DIR:-$HOME/.claude/watch-approve}"
+FLAG="$DIR/away-mode-on"
+
+case "${1:-status}" in
+  on)
+    mkdir -p "$DIR"
+    touch "$FLAG"
+    echo "Away mode ON — Claude Code approvals will be sent to your watch."
+    ;;
+  off)
+    rm -f "$FLAG"
+    echo "Away mode OFF — approvals prompt at the terminal as usual."
+    ;;
+  status)
+    if [ -f "$FLAG" ]; then echo "Away mode: on"; else echo "Away mode: off"; fi
+    ;;
+  *)
+    echo "usage: away [on|off|status]" >&2
+    exit 2
+    ;;
+esac

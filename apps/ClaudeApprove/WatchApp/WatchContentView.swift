@@ -1,12 +1,21 @@
 import SwiftUI
 
 struct WatchContentView: View {
+    @AppStorage("accountToken") private var accountToken = ""
     @StateObject private var model = PendingModel()
 
     var body: some View {
         NavigationStack {
             Group {
-                if model.requests.isEmpty {
+                if accountToken.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "iphone")
+                            .font(.title2)
+                        Text("Open ClaudeApprove on your iPhone and tap Set Up")
+                            .font(.caption)
+                            .multilineTextAlignment(.center)
+                    }
+                } else if model.requests.isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "checkmark.seal")
                             .font(.title2)
@@ -39,7 +48,10 @@ struct WatchContentView: View {
                 }
             }
             .navigationTitle("Claude")
-            .task { await model.autoRefresh() }
+            .task {
+                NotificationManager.registerSavedToken()
+                await model.autoRefresh()
+            }
         }
     }
 }

@@ -29,8 +29,8 @@ struct ClaudeApproveApp: App {
         WindowGroup {
             ContentView()
                 .onOpenURL { url in
-                    // claudeapprove://config?url=...&secret=... — one-tap setup
-                    // from the QR/link that setup-backend.sh prints.
+                    // claudeapprove://config?url=... — advanced: point the app
+                    // at a self-hosted backend before onboarding.
                     guard url.scheme == "claudeapprove", url.host == "config",
                           let comps = URLComponents(url: url,
                                                     resolvingAgainstBaseURL: false)
@@ -38,9 +38,6 @@ struct ClaudeApproveApp: App {
                     for item in comps.queryItems ?? [] {
                         if item.name == "url", let v = item.value, !v.isEmpty {
                             UserDefaults.standard.set(v, forKey: "serverURL")
-                        }
-                        if item.name == "secret", let v = item.value, !v.isEmpty {
-                            UserDefaults.standard.set(v, forKey: "secret")
                         }
                     }
                     SettingsSync.shared.pushSettings()

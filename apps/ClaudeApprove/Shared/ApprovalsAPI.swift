@@ -5,25 +5,41 @@ enum APIError: Error {
     case badStatus(Int)
 }
 
-/// Client for the /api/claude-approve endpoints on the Cloudflare Worker.
-/// Server URL and secret live in UserDefaults ("serverURL", "secret");
-/// the iPhone app edits them and syncs them to the watch (SettingsSync).
+struct PairResponse: Codable {
+    let account_token: String
+    let pair_code: String
+    let expires_in_seconds: Int
+}
+
+struct PairCodeResponse: Codable {
+    let pair_code: String
+    let expires_in_seconds: Int
+}
+
+/// Client for the multi-tenant /api/claude-approve backend. The account
+/// token is created at onboarding (POST /pair/new) and stored in
+/// UserDefaults ("accountToken"); the iPhone syncs it to the Watch.
 struct ApprovalsAPI {
+    static let defaultBaseURL = "https://christopherrathbun.com/api/claude-approve"
+
     static var baseURL: String {
         let stored = UserDefaults.standard.string(forKey: "serverURL") ?? ""
-        return stored.isEmpty ? "https://christopherrathbun.com/api/claude-approve" : stored
+        return stored.isEmpty ? defaultBaseURL : stored
     }
 
-    static var secret: String {
-        UserDefaults.standard.string(forKey: "secret") ?? ""
+    static var accountToken: String {
+        UserDefaults.standard.string(forKey: "accountToken") ?? ""
     }
 
     private static func send(_ path: String, method: String = "GET",
-                             body: [String: String]? = nil) async throws -> Data {
+                             body: [String: String]? = nil,
+                             authorized: Bool = true) async throws -> Data {
         guard let url = URL(string: baseURL + path) else { throw APIError.badURL }
         var req = URLRequest(url: url)
         req.httpMethod = method
-        req.setValue("Bearer \(secret)", forHTTPHeaderField: "Authorization")
+        if authorized {
+            req.setValue("Bearer \(accountToken)", forHTTPHeaderField: "Authorization")
+        }
         if let body {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONEncoder().encode(body)
@@ -33,6 +49,22 @@ struct ApprovalsAPI {
         guard (200..<300).contains(code) else { throw APIError.badStatus(code) }
         return data
     }
+
+    // ---- pairing ----
+
+    /// Create a new account and the first pairing code (onboarding).
+    static func pairNew() async throws -> PairResponse {
+        let data = try await send("/pair/new", method: "POST", authorized: false)
+        return try JSONDecoder().decode(PairResponse.self, from: data)
+    }
+
+    /// Issue another pairing code for the existing account (extra Macs).
+    static func pairCode() async throws -> PairCodeResponse {
+        let data = try await send("/pair/code", method: "POST")
+        return try JSONDecoder().decode(PairCodeResponse.self, from: data)
+    }
+
+    // ---- approvals ----
 
     static func pending() async throws -> [ApprovalRequest] {
         let data = try await send("/requests?status=pending")

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ClaudeApprove — approve Claude Code from your Apple Watch</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         max-width: 640px; margin: 0 auto; padding: 48px 20px; }
+  h1 { font-size: 1.9rem; line-height: 1.2; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+              background: rgba(127,127,127,.15); border-radius: 6px; }
+  code { padding: 2px 6px; }
+  pre { padding: 14px 16px; overflow-x: auto; }
+  .steps li { margin-bottom: 12px; }
+  .muted { opacity: .7; font-size: .9rem; }
+  a { color: inherit; }
+</style>
+</head>
+<body>
+<h1>⌚ ClaudeApprove</h1>
+<p><strong>Approve Claude Code permission prompts from your Apple Watch.</strong>
+When Claude needs your OK to run a command, your wrist buzzes with real
+Approve/Deny buttons. A tap unblocks Claude instantly — from the next room
+or the next city.</p>
+
+<h2>Get started</h2>
+<ol class="steps">
+  <li>Get the <strong>ClaudeApprove</strong> app for iPhone + Apple Watch
+      <span class="muted">(App Store link coming soon — currently in beta)</span>.</li>
+  <li>Open it and tap <strong>Set Up</strong> — it shows a pairing code.</li>
+  <li>On the Mac where you run Claude Code:
+    <pre>curl -fsSL https://christopherrathbun.com/claude-approve/install.sh | bash</pre>
+    and enter the code.</li>
+  <li>Run <code>~/.claude/watch-approve/away on</code> when you step away.
+      That's it.</li>
+</ol>
+
+<h2>How it works</h2>
+<p>A Claude Code <a href="https://code.claude.com/docs/en/hooks">hook</a>
+intercepts permission prompts and sends them to this site's backend, which
+pushes a notification to your devices. Your tap resolves the request in
+about 100&nbsp;ms via long-polling. If you don't respond within a few
+minutes, Claude falls back to the normal terminal prompt — the hook fails
+safe in every error case.</p>
+
+<h2>Privacy &amp; security</h2>
+<ul>
+  <li>Pairing uses a one-time code; your account is an anonymous random
+      token — no email, no sign-up.</li>
+  <li>Approval requests (tool name, a one-line summary, working directory)
+      are stored only until resolved and pruned within minutes.</li>
+  <li>An approval grants that <em>single</em> tool call — nothing is
+      allowlisted.</li>
+  <li>Full policy: <a href="/claude-approve/privacy.html">privacy.html</a></li>
+</ul>
+
+<p class="muted">Built by <a href="https://christopherrathbun.com">Christopher
+Rathbun</a>. Not affiliated with Anthropic.</p>
+</body>
+</html>

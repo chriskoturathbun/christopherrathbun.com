@@ -25,7 +25,7 @@ final class SettingsSync: NSObject, WCSessionDelegate {
     func pushSettings() {
         let ctx: [String: Any] = [
             "serverURL": UserDefaults.standard.string(forKey: "serverURL") ?? "",
-            "secret": UserDefaults.standard.string(forKey: "secret") ?? "",
+            "accountToken": UserDefaults.standard.string(forKey: "accountToken") ?? "",
         ]
         try? WCSession.default.updateApplicationContext(ctx)
     }
@@ -40,8 +40,10 @@ final class SettingsSync: NSObject, WCSessionDelegate {
         if let s = applicationContext["serverURL"] as? String, !s.isEmpty {
             UserDefaults.standard.set(s, forKey: "serverURL")
         }
-        if let s = applicationContext["secret"] as? String, !s.isEmpty {
-            UserDefaults.standard.set(s, forKey: "secret")
+        if let s = applicationContext["accountToken"] as? String, !s.isEmpty {
+            UserDefaults.standard.set(s, forKey: "accountToken")
+            // Now that the account exists, register this watch for pushes.
+            NotificationManager.registerSavedToken()
         }
     }
     #endif

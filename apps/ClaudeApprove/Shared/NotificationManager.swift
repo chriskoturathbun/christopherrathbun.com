@@ -42,6 +42,17 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 
     func handleDeviceToken(_ deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02x", $0) }.joined()
+        // Keep the push token around: at first launch there's no account yet,
+        // so registration re-runs after pairing (registerSavedToken).
+        UserDefaults.standard.set(token, forKey: "apnsToken")
+        Self.registerSavedToken()
+    }
+
+    /// Register this device's saved push token under the current account.
+    /// Safe to call any time; no-ops until both token and account exist.
+    static func registerSavedToken() {
+        let token = UserDefaults.standard.string(forKey: "apnsToken") ?? ""
+        guard !token.isEmpty, !ApprovalsAPI.accountToken.isEmpty else { return }
         let topic = Bundle.main.bundleIdentifier ?? ""
         #if os(iOS)
         let platform = "ios"
