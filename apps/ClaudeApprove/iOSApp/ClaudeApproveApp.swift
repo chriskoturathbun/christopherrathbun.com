@@ -41,6 +41,7 @@ struct ClaudeApproveApp: App {
                         }
                     }
                     SettingsSync.shared.pushSettings()
+                    NotificationManager.registerSavedToken()
                 }
         }
     }

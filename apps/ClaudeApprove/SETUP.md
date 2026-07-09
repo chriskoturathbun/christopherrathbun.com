@@ -43,9 +43,10 @@ expire in 10 minutes; each user only ever sees their own requests
 ```
 
 Secrets: `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_P8` (the .p8 contents).
-`APNS_ENV` in wrangler.toml: `"sandbox"` for Xcode-installed builds,
-`"production"` for TestFlight/App Store. Deploy from the Mac that has the
-uncommitted `users-dashboard.js`/`vighnaa.js` files.
+APNs environment is per device — each app install reports `sandbox`
+(Debug/Xcode) or `production` (Release) at registration and the backend
+routes accordingly, so dev and public builds coexist. Deploy from the Mac
+that has the uncommitted `users-dashboard.js`/`vighnaa.js` files.
 
 Public pages (served from `public/claude-approve/`):
 - `/claude-approve/` — landing page
@@ -69,11 +70,10 @@ distribution: Product → Archive → App Store Connect.
 3. App Privacy questionnaire: collects **Identifiers** (anonymous account
    token, push tokens) and **User Content** (approval request summaries),
    not linked to identity, not used for tracking.
-4. Flip `APNS_ENV` to `"production"` and redeploy **before** TestFlight.
-5. Review notes: explain the pairing flow and include a demo pairing code
+4. Review notes: explain the pairing flow and include a demo pairing code
    you generate right before submitting (codes last 10 min — better: attach
    a screen recording of the full flow).
-6. Export compliance: standard HTTPS only → "uses exempt encryption".
+5. Export compliance: standard HTTPS only → "uses exempt encryption".
 
 ### API quick reference
 

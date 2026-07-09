@@ -135,17 +135,17 @@ available (they carry a per-request ID).
 
 The hook also supports a `worker` backend that talks to this repo's
 Cloudflare Worker and the **ClaudeApprove** iPhone/Watch app — native
-Approve/Deny buttons on the Watch via your own APNs push. See
-`apps/ClaudeApprove/SETUP.md`. Config:
+Approve/Deny buttons on the Watch via APNs push. Don't hand-write this
+config: install the app, tap **Set Up**, then run
 
-```json
-{
-  "backend": "worker",
-  "worker_url": "https://christopherrathbun.com/api/claude-approve",
-  "worker_secret": "<APPROVE_SECRET>",
-  "timeout_seconds": 240
-}
+```bash
+curl -fsSL https://christopherrathbun.com/claude-approve/install.sh | bash
 ```
+
+which claims your pairing code and writes `backend`, `worker_url`, and
+`worker_secret` (your anonymous `ca_` account token) into
+`~/.claude/watch-approve/config.json` automatically. See
+`apps/ClaudeApprove/SETUP.md`.
 
 ## Security notes
 

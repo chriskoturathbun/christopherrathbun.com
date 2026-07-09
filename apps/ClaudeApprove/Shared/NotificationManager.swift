@@ -61,9 +61,18 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
         let platform = "watchos"
         let name = "Apple Watch"
         #endif
+        // Xcode (Debug) installs get sandbox APNs tokens; TestFlight/App Store
+        // (Release) get production. Report ours so the server picks the right
+        // APNs host per device — a mixed fleet just works.
+        #if DEBUG
+        let env = "sandbox"
+        #else
+        let env = "production"
+        #endif
         Task {
             await ApprovalsAPI.registerDevice(token: token, topic: topic,
-                                              platform: platform, name: name)
+                                              platform: platform, name: name,
+                                              env: env)
         }
     }
 

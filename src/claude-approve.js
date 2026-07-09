@@ -18,8 +18,13 @@
 
 const PENDING_TTL_MS = 10 * 60 * 1000;   // pending requests expire after 10 min
 const PAIR_CODE_TTL_MS = 10 * 60 * 1000; // pairing codes live 10 min
-const KEEP_ROWS = 5000;                  // global cap on stored requests
+const KEEP_ROWS = 5000;                  // backstop cap on resolved/expired rows
+const RESOLVED_TTL_MS = 7 * 24 * 60 * 60 * 1000; // keep resolved requests 7 days
+const SWEEP_INTERVAL_MS = 60 * 1000;     // run housekeeping at most once a minute
 const MAX_PENDING_PER_ACCOUNT = 20;
+const PAIR_RATE_WINDOW_MS = 60 * 60 * 1000; // /pair/new: per-IP window
+const PAIR_RATE_MAX = 20;                   // ...max new accounts per window
+const UNPAIRED_ACCOUNT_TTL_MS = 24 * 60 * 60 * 1000; // prune never-paired accounts
 // Unambiguous alphabet for pairing codes (no 0/O/1/I/L).
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 
@@ -52,6 +57,7 @@ export class ClaudeApprovals {
     this.env = env;
     this.apnsJwt = null;      // {token, issuedAt}
     this.waiters = new Map(); // request id -> [resolve, ...] for long-polls
+    this.lastSweep = 0;
     this.ctx.storage.sql.exec(`
       CREATE TABLE IF NOT EXISTS accounts (
         token TEXT PRIMARY KEY,
@@ -63,13 +69,22 @@ export class ClaudeApprovals {
         account_token TEXT NOT NULL,
         expires_at INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS pair_rate (
+        ip TEXT PRIMARY KEY,
+        window_start INTEGER NOT NULL,
+        count INTEGER NOT NULL
+      );
+      -- Keyed by (account, token): a device token registered by two accounts
+      -- gets two rows, so no account can steal or delete another's channel.
       CREATE TABLE IF NOT EXISTS devices (
-        token TEXT PRIMARY KEY,
         account_token TEXT NOT NULL,
+        token TEXT NOT NULL,
         topic TEXT NOT NULL,
         platform TEXT NOT NULL DEFAULT '',
         name TEXT NOT NULL DEFAULT '',
-        last_seen INTEGER NOT NULL
+        env TEXT NOT NULL DEFAULT '',
+        last_seen INTEGER NOT NULL,
+        PRIMARY KEY (account_token, token)
       );
       CREATE TABLE IF NOT EXISTS requests (
         id TEXT PRIMARY KEY,
@@ -93,14 +108,29 @@ export class ClaudeApprovals {
 
   expireStale() {
     const now = Date.now();
+    if (now - this.lastSweep < SWEEP_INTERVAL_MS) return;
+    this.lastSweep = now;
     this.sql(
       `UPDATE requests SET status = 'expired' WHERE status = 'pending' AND created_at < ?`,
       now - PENDING_TTL_MS
     );
     this.sql(`DELETE FROM pair_codes WHERE expires_at < ?`, now);
+    this.sql(`DELETE FROM pair_rate WHERE window_start < ?`, now - 2 * PAIR_RATE_WINDOW_MS);
+    // Retention only ever touches resolved/expired rows — a pending request
+    // can never be swept out from under a tenant's long-poll.
     this.sql(
-      `DELETE FROM requests WHERE id NOT IN
+      `DELETE FROM requests WHERE status != 'pending' AND created_at < ?`,
+      now - RESOLVED_TTL_MS
+    );
+    this.sql(
+      `DELETE FROM requests WHERE status != 'pending' AND id NOT IN
          (SELECT id FROM requests ORDER BY created_at DESC LIMIT ${KEEP_ROWS})`
+    );
+    // Accounts that never paired a device and have gone idle.
+    this.sql(
+      `DELETE FROM accounts WHERE last_seen < ?
+         AND token NOT IN (SELECT DISTINCT account_token FROM devices)`,
+      now - UNPAIRED_ACCOUNT_TTL_MS
     );
   }
 
@@ -132,8 +162,23 @@ export class ClaudeApprovals {
     // ---- pairing (no auth) ----
 
     if (path === '/pair/new' && method === 'POST') {
-      const token = randomToken();
+      // Rate-limit anonymous account creation per client IP.
+      const ip = request.headers.get('cf-connecting-ip') || 'unknown';
       const now = Date.now();
+      const rate = this.sql(`SELECT window_start, count FROM pair_rate WHERE ip = ?`, ip);
+      if (rate.length && now - rate[0].window_start < PAIR_RATE_WINDOW_MS) {
+        if (rate[0].count >= PAIR_RATE_MAX) {
+          return json({ error: 'rate limited — try again later' }, 429);
+        }
+        this.sql(`UPDATE pair_rate SET count = count + 1 WHERE ip = ?`, ip);
+      } else {
+        this.sql(
+          `INSERT INTO pair_rate (ip, window_start, count) VALUES (?, ?, 1)
+           ON CONFLICT(ip) DO UPDATE SET window_start = excluded.window_start, count = 1`,
+          ip, now
+        );
+      }
+      const token = randomToken();
       this.sql(
         `INSERT INTO accounts (token, created_at, last_seen) VALUES (?, ?, ?)`,
         token, now, now
@@ -168,21 +213,23 @@ export class ClaudeApprovals {
       let body = {};
       try { body = await request.json(); } catch {}
       if (!body.token || !body.topic) return json({ error: 'missing token or topic' }, 400);
+      const env = body.env === 'sandbox' ? 'sandbox'
+                : body.env === 'production' ? 'production' : '';
       this.sql(
-        `INSERT INTO devices (token, account_token, topic, platform, name, last_seen)
-         VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(token) DO UPDATE SET account_token = excluded.account_token,
+        `INSERT INTO devices (account_token, token, topic, platform, name, env, last_seen)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(account_token, token) DO UPDATE SET
            topic = excluded.topic, platform = excluded.platform,
-           name = excluded.name, last_seen = excluded.last_seen`,
-        String(body.token), account, String(body.topic),
-        String(body.platform || ''), String(body.name || ''), Date.now()
+           name = excluded.name, env = excluded.env, last_seen = excluded.last_seen`,
+        account, String(body.token), String(body.topic),
+        String(body.platform || ''), String(body.name || ''), env, Date.now()
       );
       return json({ ok: true });
     }
 
     if (path === '/devices' && method === 'GET') {
       const rows = this.sql(
-        `SELECT topic, platform, name, last_seen FROM devices WHERE account_token = ?`,
+        `SELECT topic, platform, name, env, last_seen FROM devices WHERE account_token = ?`,
         account
       );
       return json({ devices: rows });
@@ -234,11 +281,20 @@ export class ClaudeApprovals {
       // Long-poll: hold until the decision arrives (or ~25s), so the hook
       // unblocks the instant the user taps Approve.
       if (url.searchParams.get('wait') === '1' && rows[0].status === 'pending') {
+        const id = m[1];
         await new Promise((resolve) => {
-          const list = this.waiters.get(m[1]) || [];
-          list.push(resolve);
-          this.waiters.set(m[1], list);
-          setTimeout(resolve, 25000);
+          const waiter = () => { clearTimeout(timer); resolve(); };
+          // On timeout, remove this waiter so abandoned polls don't leak.
+          const timer = setTimeout(() => {
+            const list = this.waiters.get(id) || [];
+            const i = list.indexOf(waiter);
+            if (i !== -1) list.splice(i, 1);
+            if (!list.length) this.waiters.delete(id);
+            resolve();
+          }, 25000);
+          const list = this.waiters.get(id) || [];
+          list.push(waiter);
+          this.waiters.set(id, list);
         });
         rows = load();
         if (!rows.length) return json({ error: 'not found' }, 404);
@@ -262,10 +318,11 @@ export class ClaudeApprovals {
         return json({ error: `already ${rows[0].status}`, status: rows[0].status }, 409);
       }
       this.sql(
-        `UPDATE requests SET status = ?, responded_at = ?, responded_by = ? WHERE id = ?`,
-        decision, Date.now(), String(body.device || ''), m[1]
+        `UPDATE requests SET status = ?, responded_at = ?, responded_by = ?
+         WHERE id = ? AND account_token = ?`,
+        decision, Date.now(), String(body.device || ''), m[1], account
       );
-      for (const resolve of this.waiters.get(m[1]) || []) resolve();
+      for (const waiter of this.waiters.get(m[1]) || []) waiter();
       this.waiters.delete(m[1]);
       return json({ ok: true, status: decision });
     }
@@ -310,12 +367,9 @@ export class ClaudeApprovals {
   async pushToDevices(account, requestId, tool, detail) {
     if (!this.apnsConfigured()) return 0;
     const devices = this.sql(
-      `SELECT token, topic FROM devices WHERE account_token = ?`, account
+      `SELECT token, topic, env FROM devices WHERE account_token = ?`, account
     );
     if (!devices.length) return 0;
-    const host = (this.env.APNS_ENV || 'production') === 'sandbox'
-      ? 'https://api.sandbox.push.apple.com'
-      : 'https://api.push.apple.com';
     const jwt = await this.apnsToken();
     const payload = JSON.stringify({
       aps: {
@@ -330,30 +384,44 @@ export class ClaudeApprovals {
       },
       requestId,
     });
-    let pushed = 0;
-    for (const d of devices) {
-      try {
-        const res = await fetch(`${host}/3/device/${d.token}`, {
-          method: 'POST',
-          headers: {
-            authorization: `bearer ${jwt}`,
-            'apns-topic': d.topic,
-            'apns-push-type': 'alert',
-            'apns-priority': '10',
-            'apns-expiration': String(Math.floor(Date.now() / 1000) + PENDING_TTL_MS / 1000),
-          },
-          body: payload,
-        });
-        if (res.ok) pushed++;
-        else if (res.status === 410) {
-          this.sql(`DELETE FROM devices WHERE token = ?`, d.token);
-        } else {
-          console.log('apns error', res.status, await res.text());
-        }
-      } catch (e) {
-        console.log('apns fetch failed', String(e));
+    const results = await Promise.allSettled(
+      devices.map((d) => this.pushOne(account, d, jwt, payload))
+    );
+    return results.filter((r) => r.status === 'fulfilled' && r.value).length;
+  }
+
+  async pushOne(account, device, jwt, payload) {
+    // Each device registers with the APNs environment its own build uses
+    // (Xcode = sandbox, TestFlight/App Store = production), so a mixed fleet
+    // works; APNS_ENV is only the fallback for rows that didn't report one.
+    const env = device.env || this.env.APNS_ENV || 'production';
+    const host = env === 'sandbox'
+      ? 'https://api.sandbox.push.apple.com'
+      : 'https://api.push.apple.com';
+    try {
+      const res = await fetch(`${host}/3/device/${device.token}`, {
+        method: 'POST',
+        headers: {
+          authorization: `bearer ${jwt}`,
+          'apns-topic': device.topic,
+          'apns-push-type': 'alert',
+          'apns-priority': '10',
+          'apns-expiration': String(Math.floor(Date.now() / 1000) + PENDING_TTL_MS / 1000),
+        },
+        body: payload,
+      });
+      if (res.ok) return true;
+      if (res.status === 410) {
+        this.sql(
+          `DELETE FROM devices WHERE account_token = ? AND token = ?`,
+          account, device.token
+        );
+      } else {
+        console.log('apns error', res.status, await res.text());
       }
+    } catch (e) {
+      console.log('apns fetch failed', String(e));
     }
-    return pushed;
+    return false;
   }
 }

@@ -31,9 +31,8 @@ wrangler deploy
 
 echo
 echo "Backend deployed. Reminders:"
-echo "- wrangler.toml APNS_ENV is currently: $(grep '^APNS_ENV' wrangler.toml || echo '(default: production)')"
-echo "  Use 'sandbox' while running the app from Xcode; 'production' for"
-echo "  TestFlight/App Store builds."
+echo "- APNs env is per device (app reports sandbox/production at registration);"
+echo "  no global toggle to manage."
 echo "- Landing page: https://christopherrathbun.com/claude-approve/"
 echo "- Installer:    https://christopherrathbun.com/claude-approve/install.sh"
 echo "- Re-run with --deploy-only to skip the APNs prompts."

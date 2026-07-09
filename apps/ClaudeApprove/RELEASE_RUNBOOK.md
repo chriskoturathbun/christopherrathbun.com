@@ -66,9 +66,11 @@ available, so expect possibly a few. Likely candidates:
 👤 Run on the real iPhone, then the real Watch (scheme:
 ClaudeApproveWatch). Accept notification permissions on both.
 
-## Phase 3 — Live end-to-end test (sandbox)
+## Phase 3 — Live end-to-end test
 
-`wrangler.toml` should still have `APNS_ENV = "sandbox"` for Xcode builds.
+APNs environment is automatic: Xcode (Debug) builds register as `sandbox`,
+TestFlight/App Store (Release) builds as `production`, and the backend picks
+the right APNs host per device. No toggle to flip.
 
 1. 👤 In the app: tap **Set Up**, note the pairing code.
 2. On this Mac: `curl -fsSL https://christopherrathbun.com/claude-approve/install.sh | bash`
@@ -89,9 +91,9 @@ ClaudeApproveWatch). Accept notification permissions on both.
 6. Full loop: `~/.claude/watch-approve/away on`, restart Claude Code, ask it
    to create a file, approve from the wrist, confirm it proceeds.
 
-**Gate:** all of the above. If push doesn't arrive: APNS_ENV must be
-`sandbox` for Xcode-installed builds; check `wrangler tail` for `apns error`
-lines (403 = bad key/team id; 400 BadDeviceToken = env mismatch).
+**Gate:** all of the above. If push doesn't arrive: check the devices curl
+shows `"env":"sandbox"` for Xcode-installed builds, and `wrangler tail` for
+`apns error` lines (403 = bad key/team id; 400 BadDeviceToken = env mismatch).
 
 ## Phase 4 — App Store
 
@@ -105,13 +107,11 @@ lines (403 = bad key/team id; 400 BadDeviceToken = env mismatch).
 Then:
 
 ```bash
-# flip push env to production
-sed -i '' 's/APNS_ENV = "sandbox"/APNS_ENV = "production"/' wrangler.toml
-./apps/ClaudeApprove/setup-backend.sh --deploy-only
-git checkout wrangler.toml   # or commit the flip — human's call
-
 ./apps/ClaudeApprove/release.sh   # archive + upload to App Store Connect
 ```
+
+(No APNs env flip needed — Release builds register as production devices
+automatically.)
 
 👤 In App Store Connect: TestFlight → install via TestFlight on the phone,
 re-verify Phase 3 (now on production APNs). Then App Store tab → select
@@ -125,7 +125,5 @@ https://christopherrathbun.com/claude-approve/."
 
 ## Known post-launch tasks
 
-- Sandbox + production users can coexist only on one APNS_ENV — once on
-  production, use TestFlight builds for your own testing too.
 - Watch the DO: `wrangler tail` during the first external signups.
 - Update the landing page's "App Store link coming soon" once approved.

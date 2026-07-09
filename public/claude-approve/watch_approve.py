@@ -151,7 +151,8 @@ def worker_create_request(cfg, tool_name, detail, cwd):
         {"tool": tool_name, "detail": detail, "cwd": cwd},
         bearer=cfg["worker_secret"],
     )
-    return json.loads(body)["id"]
+    data = json.loads(body)
+    return data["id"], int(data.get("pushed", 0))
 
 
 def worker_wait_for_response(cfg, request_id, started_at, timeout_seconds):
@@ -167,14 +168,17 @@ def worker_wait_for_response(cfg, request_id, started_at, timeout_seconds):
             body = http_json(url, bearer=cfg["worker_secret"], timeout=35)
             status = json.loads(body).get("status")
         except (urllib.error.URLError, OSError, json.JSONDecodeError, ValueError):
-            status = None
-            time.sleep(POLL_INTERVAL_SECONDS)  # back off only on errors
+            time.sleep(POLL_INTERVAL_SECONDS)  # back off on errors
+            continue
         if status == "approved":
             return "approve"
         if status == "denied":
             return "deny"
         if status == "expired":
             return None
+        # Still pending: normally the server held us ~25s, but guard against
+        # fast returns (proxies, buffering) so this never becomes a tight loop.
+        time.sleep(1)
     return None
 
 
@@ -213,9 +217,13 @@ def main():
 
     if cfg.get("backend") == "worker":
         try:
-            request_id = worker_create_request(cfg, tool_name, detail, payload.get("cwd", ""))
+            request_id, pushed = worker_create_request(
+                cfg, tool_name, detail, payload.get("cwd", "")
+            )
         except (urllib.error.URLError, OSError, json.JSONDecodeError, KeyError, ValueError):
             return  # can't reach the Worker: fall back to the normal prompt
+        if pushed == 0:
+            return  # no device can receive the push — don't block for nothing
         decision = worker_wait_for_response(cfg, request_id, started_at, timeout_seconds)
     else:
         request_id = uuid.uuid4().hex[:12]

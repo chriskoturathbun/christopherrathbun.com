@@ -13,11 +13,8 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 
 [ -d ClaudeApprove.xcodeproj ] || { echo "Run ./bootstrap.sh first." >&2; exit 1; }
 
-if grep -q 'APNS_ENV = "sandbox"' ../../wrangler.toml; then
-  echo "⚠️  wrangler.toml still has APNS_ENV=\"sandbox\" — App Store builds" >&2
-  echo "   need \"production\" pushes. Flip it, redeploy, then re-run." >&2
-  exit 1
-fi
+# No APNs env flip needed: each device reports sandbox/production when it
+# registers, and the backend picks the right APNs host per device.
 
 ARCHIVE="build/ClaudeApprove.xcarchive"
 rm -rf build

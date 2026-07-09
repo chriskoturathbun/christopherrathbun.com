@@ -24,7 +24,9 @@ step; deploy with `wrangler deploy` (see gotcha below).
 - ClaudeApprove backend (`/api/claude-approve`) is multi-tenant: anonymous
   `ca_` account tokens, single-use pairing codes. Tenant isolation is
   enforced in the DO — keep `account_token` scoping on every query.
-- `APNS_ENV` in wrangler.toml: `sandbox` for Xcode-installed app builds,
-  `production` for TestFlight/App Store. Mismatch = silent push failures.
-- `setup-backend.sh` copies `tools/watch-approve/{watch_approve.py,away}`
-  into `public/claude-approve/` — edit the `tools/` copies, not `public/`.
+- APNs environment is per device: the app reports `sandbox` (Debug/Xcode) or
+  `production` (Release) when registering, and the backend picks the host per
+  device. `APNS_ENV` in wrangler.toml is only the fallback for old rows.
+- `public/claude-approve/{watch_approve.py,away}` are copies of the
+  `tools/watch-approve/` originals — edit the `tools/` copies. The
+  wrangler `[build]` command re-syncs them on every deploy.

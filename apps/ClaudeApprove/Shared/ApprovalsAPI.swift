@@ -24,7 +24,9 @@ struct ApprovalsAPI {
 
     static var baseURL: String {
         let stored = UserDefaults.standard.string(forKey: "serverURL") ?? ""
-        return stored.isEmpty ? defaultBaseURL : stored
+        var url = stored.isEmpty ? defaultBaseURL : stored
+        while url.hasSuffix("/") { url.removeLast() }  // exact-match routes 404 on "//"
+        return url
     }
 
     static var accountToken: String {
@@ -77,9 +79,9 @@ struct ApprovalsAPI {
     }
 
     static func registerDevice(token: String, topic: String,
-                               platform: String, name: String) async {
+                               platform: String, name: String, env: String) async {
         _ = try? await send("/devices", method: "POST",
                             body: ["token": token, "topic": topic,
-                                   "platform": platform, "name": name])
+                                   "platform": platform, "name": name, "env": env])
     }
 }

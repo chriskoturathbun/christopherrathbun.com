@@ -17,6 +17,19 @@ command -v python3 >/dev/null || {
   echo "python3 is required (macOS: xcode-select --install)" >&2; exit 1; }
 command -v curl >/dev/null || { echo "curl is required" >&2; exit 1; }
 
+# Validate settings.json up front — pairing codes are single-use, so we must
+# never claim one and then die on a malformed settings file.
+SETTINGS="$SETTINGS" python3 <<'PY'
+import json, os, sys
+p = os.environ["SETTINGS"]
+if os.path.exists(p):
+    try:
+        with open(p) as f:
+            json.load(f)
+    except Exception as e:
+        sys.exit(f"error: {p} is not valid JSON ({e}).\nFix or remove it, then re-run this installer.")
+PY
+
 echo "ClaudeApprove — approve Claude Code from your Apple Watch"
 echo
 echo "Open the ClaudeApprove app on your iPhone. It shows a pairing code"
@@ -71,7 +84,13 @@ with open(cfg_path, "w") as f:
     json.dump(cfg, f, indent=2)
 os.chmod(cfg_path, 0o600)
 
-command = f'python3 "{install_dir}/watch_approve.py"'
+# Fast path: a shell file-existence test decides whether to boot python at
+# all, so tool calls with away mode off pay ~0ms. CLAUDE_WATCH_DIR is baked
+# in so custom install dirs keep working at hook runtime.
+command = (
+    f'[ -f "{install_dir}/away-mode-on" ] || [ "$CLAUDE_WATCH_ALWAYS" = "1" ] '
+    f'&& CLAUDE_WATCH_DIR="{install_dir}" python3 "{install_dir}/watch_approve.py" || true'
+)
 entry = {"matcher": "Bash|Write|Edit|NotebookEdit|WebFetch|WebSearch",
          "hooks": [{"type": "command", "command": command, "timeout": 300}]}
 settings = {}
@@ -81,13 +100,21 @@ if os.path.exists(settings_path):
     with open(settings_path) as f:
         settings = json.load(f)
 pre = settings.setdefault("hooks", {}).setdefault("PreToolUse", [])
-if not any(h.get("command") == command
-           for g in pre for h in g.get("hooks", [])):
+# Update any existing watch-approve hook in place (covers older command
+# formats); append a fresh entry otherwise.
+updated = False
+for g in pre:
+    for h in g.get("hooks", []):
+        if "watch_approve.py" in h.get("command", ""):
+            h["command"] = command
+            h["timeout"] = 300
+            updated = True
+if not updated:
     pre.append(entry)
-    os.makedirs(os.path.dirname(settings_path), exist_ok=True)
-    with open(settings_path, "w") as f:
-        json.dump(settings, f, indent=2)
-        f.write("\n")
+os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+with open(settings_path, "w") as f:
+    json.dump(settings, f, indent=2)
+    f.write("\n")
 PY
 
 echo

@@ -2,12 +2,52 @@ import SwiftUI
 
 struct ContentView: View {
     @AppStorage("onboardingDone") private var onboardingDone = false
+    @AppStorage("accountToken") private var accountToken = ""
 
     var body: some View {
-        if onboardingDone {
+        // Both must hold: if the token is ever cleared, fall back to
+        // onboarding instead of showing a list where every call 401s.
+        if onboardingDone && !accountToken.isEmpty {
             PendingListView()
         } else {
             OnboardingView()
+        }
+    }
+}
+
+/// Single source of truth for the Mac-side install command.
+enum Installer {
+    static let command =
+        "curl -fsSL https://christopherrathbun.com/claude-approve/install.sh | bash"
+}
+
+/// Shared pairing-code panel: install command + code + expiry.
+struct PairCodePanel: View {
+    let code: String
+    let expiresSeconds: Int
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text("On the Mac where you run Claude Code, paste this in Terminal:")
+                .font(.footnote)
+                .multilineTextAlignment(.center)
+            Text(Installer.command)
+                .font(.system(.caption2, design: .monospaced))
+                .padding(10)
+                .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
+                .textSelection(.enabled)
+            ShareLink(item: Installer.command) {
+                Label("Send command to my Mac", systemImage: "square.and.arrow.up")
+                    .font(.footnote)
+            }
+            Text("…and enter this pairing code:")
+                .font(.footnote)
+            Text(code)
+                .font(.system(.largeTitle, design: .monospaced)).bold()
+                .textSelection(.enabled)
+            Text("Code expires in \(max(1, expiresSeconds / 60)) minutes — generate another from the menu anytime.")
+                .font(.caption2).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
         }
     }
 }
@@ -17,12 +57,9 @@ struct ContentView: View {
 struct OnboardingView: View {
     @AppStorage("accountToken") private var accountToken = ""
     @AppStorage("onboardingDone") private var onboardingDone = false
-    @State private var pairCode: String?
+    @State private var pair: PairCodeResponse?
     @State private var busy = false
     @State private var errorText: String?
-
-    private let installCommand =
-        "curl -fsSL https://christopherrathbun.com/claude-approve/install.sh | bash"
 
     var body: some View {
         VStack(spacing: 24) {
@@ -34,28 +71,10 @@ struct OnboardingView: View {
                 .font(.title2).bold()
                 .multilineTextAlignment(.center)
 
-            if let pairCode {
+            if let pair {
                 VStack(spacing: 14) {
-                    Text("On the Mac where you run Claude Code, paste this in Terminal:")
-                        .font(.footnote)
-                        .multilineTextAlignment(.center)
-                    Text(installCommand)
-                        .font(.system(.caption2, design: .monospaced))
-                        .padding(10)
-                        .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-                        .textSelection(.enabled)
-                    ShareLink(item: installCommand) {
-                        Label("Send command to my Mac", systemImage: "square.and.arrow.up")
-                            .font(.footnote)
-                    }
-                    Text("…and enter this pairing code:")
-                        .font(.footnote)
-                    Text(pairCode)
-                        .font(.system(.largeTitle, design: .monospaced)).bold()
-                        .textSelection(.enabled)
-                    Text("Code expires in 10 minutes — generate another from the menu anytime.")
-                        .font(.caption2).foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                    PairCodePanel(code: pair.pair_code,
+                                  expiresSeconds: pair.expires_in_seconds)
                     Button("Done — take me to approvals") {
                         onboardingDone = true
                     }
@@ -93,9 +112,10 @@ struct OnboardingView: View {
             if accountToken.isEmpty {
                 let p = try await ApprovalsAPI.pairNew()
                 accountToken = p.account_token
-                pairCode = p.pair_code
+                pair = PairCodeResponse(pair_code: p.pair_code,
+                                        expires_in_seconds: p.expires_in_seconds)
             } else {
-                pairCode = try await ApprovalsAPI.pairCode().pair_code
+                pair = try await ApprovalsAPI.pairCode()
             }
             errorText = nil
             NotificationManager.registerSavedToken()
@@ -173,25 +193,13 @@ struct PairCodeSheet: View {
     var body: some View {
         VStack(spacing: 16) {
             Text("Pair a Computer").font(.headline)
-            Text("On that Mac, run:")
-                .font(.footnote)
-            Text("curl -fsSL https://christopherrathbun.com/claude-approve/install.sh | bash")
-                .font(.system(.caption2, design: .monospaced))
-                .padding(10)
-                .background(.quaternary, in: RoundedRectangle(cornerRadius: 8))
-                .textSelection(.enabled)
-            Text("and enter:")
-                .font(.footnote)
-            Text(code.pair_code)
-                .font(.system(.largeTitle, design: .monospaced)).bold()
-                .textSelection(.enabled)
-            Text("Expires in \(code.expires_in_seconds / 60) minutes.")
-                .font(.caption2).foregroundStyle(.secondary)
+            PairCodePanel(code: code.pair_code,
+                          expiresSeconds: code.expires_in_seconds)
             Button("Done") { dismiss() }
                 .buttonStyle(.borderedProminent)
         }
         .padding(24)
-        .presentationDetents([.medium])
+        .presentationDetents([.large])
     }
 }
 
@@ -240,6 +248,9 @@ struct AdvancedView: View {
             .toolbar {
                 Button("Done") {
                     SettingsSync.shared.pushSettings()
+                    // The device row lives on the (possibly new) backend —
+                    // re-register there or pushes silently go nowhere.
+                    NotificationManager.registerSavedToken()
                     dismiss()
                 }
             }

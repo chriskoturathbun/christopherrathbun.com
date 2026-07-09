@@ -48,9 +48,12 @@ struct WatchContentView: View {
                 }
             }
             .navigationTitle("Claude")
-            .task {
+            .task(id: accountToken) {
                 NotificationManager.registerSavedToken()
-                await model.autoRefresh()
+                // Don't poll (guaranteed 401s) until pairing has synced over.
+                if !accountToken.isEmpty {
+                    await model.autoRefresh()
+                }
             }
         }
     }

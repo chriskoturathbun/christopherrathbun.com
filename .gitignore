@@ -16,3 +16,6 @@ dist/
 
 # Local editor/agent config
 .claude/
+
+# Python
+__pycache__/

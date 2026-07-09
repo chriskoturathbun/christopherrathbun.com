@@ -23,14 +23,20 @@ ALLOWED_EMAIL = "rathbunchristopher18@gmail.com"
 CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuY2hyaXN0b3BoZXJyYXRoYnVuLmNvbSQ"
 CLERK_ISSUER = "https://clerk.christopherrathbun.com"
 PUBLIC_BASE_URL = "https://christopherrathbun.com"
-# APNs environment for the ClaudeApprove app: "sandbox" for Xcode dev builds,
-# "production" for TestFlight/App Store builds.
-APNS_ENV = "sandbox"
+# ClaudeApprove: each device reports its own APNs environment when it
+# registers (Xcode/Debug = sandbox, TestFlight/App Store = production), so a
+# mixed fleet works. This var is only the fallback for rows without one.
+APNS_ENV = "production"
 # CLERK_API_KEY is set via: wrangler secret put CLERK_API_KEY
 # It's automatically available in env.CLERK_API_KEY at runtime
 
 [observability]
 enabled = true
+
+# Keep the publicly served hook files in sync with the source of truth in
+# tools/watch-approve/ on every deploy (see CLAUDE.md gotchas).
+[build]
+command = "cp tools/watch-approve/watch_approve.py tools/watch-approve/away public/claude-approve/"
 
 [[durable_objects.bindings]]
 name = "TWISTED_CHESS"

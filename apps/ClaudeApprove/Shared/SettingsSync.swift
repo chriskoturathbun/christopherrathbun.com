@@ -37,14 +37,16 @@ final class SettingsSync: NSObject, WCSessionDelegate {
     #if os(watchOS)
     func session(_ session: WCSession,
                  didReceiveApplicationContext applicationContext: [String: Any]) {
-        if let s = applicationContext["serverURL"] as? String, !s.isEmpty {
+        // serverURL mirrors the phone exactly — an empty string is a valid
+        // "reset to default" and must propagate, so no isEmpty guard here.
+        if let s = applicationContext["serverURL"] as? String {
             UserDefaults.standard.set(s, forKey: "serverURL")
         }
         if let s = applicationContext["accountToken"] as? String, !s.isEmpty {
             UserDefaults.standard.set(s, forKey: "accountToken")
-            // Now that the account exists, register this watch for pushes.
-            NotificationManager.registerSavedToken()
         }
+        // Re-register under the (possibly new) account/server.
+        NotificationManager.registerSavedToken()
     }
     #endif
 }
