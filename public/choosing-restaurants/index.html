@@ -59,6 +59,107 @@
     font-size: 0.95rem;
   }
 
+  /* ── Mode tabs ── */
+  .mode-tabs {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    z-index: 2;
+  }
+  .mode-tabs button {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .mode-tabs button:hover { color: var(--text); }
+  .mode-tabs button.active {
+    color: var(--gold);
+    border-color: var(--gold-deep);
+    background: var(--panel);
+    box-shadow: 0 2px 18px rgba(245,166,35,0.18);
+  }
+
+  /* ── Nearby controls ── */
+  .nearby-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin: 16px 0 2px;
+    padding: 0 16px;
+    width: min(92vw, 620px);
+    z-index: 2;
+  }
+  .nearby-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+  }
+  .nearby-row .or {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-family: 'Space Mono', monospace;
+  }
+  .nearby-row input[type="text"] {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.92rem;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    width: min(58vw, 240px);
+  }
+  .nearby-row input[type="text"]:focus { outline: none; border-color: var(--gold-deep); }
+  .nearby-row select {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.9rem;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+  }
+  .btn {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+  }
+  .btn:hover { border-color: var(--gold-deep); box-shadow: 0 2px 14px rgba(245,166,35,0.18); }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+  .btn.primary {
+    color: #1a1205;
+    background: linear-gradient(180deg, #ffe29a, #f5a623);
+    border-color: transparent;
+  }
+  .nearby-status {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+    min-height: 1.3em;
+    line-height: 1.5;
+  }
+  .nearby-status.err { color: #ff8a8a; }
+
   /* ── Meal toggle ── */
   .meal-toggle {
     display: flex;
@@ -322,11 +423,35 @@
   <p>Spin the wheel — the odds already know what you want.</p>
 </header>
 
+<div class="mode-tabs" role="tablist" aria-label="Wheel mode">
+  <button id="tab-mine"   class="active" role="tab">🎯 My Wheel</button>
+  <button id="tab-nearby" role="tab">📍 Nearby</button>
+</div>
+
 <div class="meal-toggle" role="tablist" aria-label="Meal">
   <button id="btn-lunch"  role="tab">☀️ Lunch</button>
   <button id="btn-dinner" role="tab">🌙 Dinner</button>
 </div>
 <div class="meal-hint" id="meal-hint"></div>
+
+<div class="nearby-controls" id="nearby-controls" hidden>
+  <div class="nearby-row">
+    <button class="btn primary" id="geo-btn">📍 Use my location</button>
+    <span class="or">or</span>
+    <input type="text" id="addr-input" placeholder="City or address…" aria-label="Location">
+  </div>
+  <div class="nearby-row">
+    <label class="or" for="radius">within</label>
+    <select id="radius">
+      <option value="500">0.5 km</option>
+      <option value="1000" selected>1 km</option>
+      <option value="2000">2 km</option>
+      <option value="5000">5 km</option>
+    </select>
+    <button class="btn" id="find-btn">Find restaurants</button>
+  </div>
+  <div class="nearby-status" id="nearby-status">Share your location or type one — the wheel builds itself from real restaurants nearby.</div>
+</div>
 
 <div class="stage">
   <canvas id="wheel"></canvas>
@@ -355,16 +480,16 @@
 <details class="panel" id="panel">
   <summary>Odds &amp; Restaurants</summary>
   <table class="odds-table">
-    <thead>
+    <thead id="odds-head">
       <tr><th>Restaurant</th><th>Lunch wt</th><th>Dinner wt</th><th>Chance</th><th></th></tr>
     </thead>
     <tbody id="odds-body"></tbody>
   </table>
-  <div class="panel-actions">
+  <div class="panel-actions" id="panel-actions">
     <button id="add-row">+ Add restaurant</button>
     <button id="reset">Reset to defaults</button>
   </div>
-  <div class="panel-note">
+  <div class="panel-note" id="panel-note">
     Weights don't have to add to 100 — they're normalized automatically. The
     "Chance" column shows the live probability for the selected meal, and the
     wheel's slice sizes match it. Changes are saved in your browser.
@@ -424,14 +549,31 @@
 
   let items = loadItems();
 
+  // 'mine' = the saved lunch/dinner wheel; 'nearby' = auto-built from
+  // real restaurants around a location.
+  let mode = 'mine';
+  let nearbyItems = [];
+
+  function currentItems() {
+    return mode === 'nearby' ? nearbyItems : items;
+  }
+
   // 11:00–15:00 counts as lunchtime.
   const hour = new Date().getHours();
   let meal = (hour >= 11 && hour < 15) ? 'lunch' : 'dinner';
 
   function weights() {
-    const w = items.map(x => Math.max(0, +x[meal] || 0));
+    const list = currentItems();
+    if (!list.length) return [];
+    let w;
+    if (mode === 'nearby') {
+      // closer restaurants get bigger slices
+      w = list.map(x => 1 / ((x.dist || 0) + 150));
+    } else {
+      w = list.map(x => Math.max(0, +x[meal] || 0));
+    }
     const total = w.reduce((a, b) => a + b, 0);
-    if (total <= 0) return items.map(() => 1 / items.length);
+    if (total <= 0) return list.map(() => 1 / list.length);
     return w.map(x => x / total);
   }
 
@@ -495,12 +637,17 @@
 
     // slices
     ctx.rotate(rotation);
-    const angles = sliceAngles();
-    const w = weights();
+    const placeholder = currentItems().length === 0;
+    const list = placeholder
+      ? Array.from({ length: 8 }, () => ({ name: '', emoji: '❓' }))
+      : currentItems();
+    const w = placeholder ? list.map(() => 1 / 8) : weights();
+    const angles = [];
+    { let a = 0; for (const wi of w) { angles.push([a, a + wi * Math.PI * 2]); a += wi * Math.PI * 2; } }
 
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       const [a0, a1] = angles[i];
-      const col = COLORS[i % COLORS.length];
+      const col = placeholder ? (i % 2 ? '#2a2a3c' : '#343450') : COLORS[i % COLORS.length];
       const grad = ctx.createRadialGradient(0, 0, innerR * 0.15, 0, 0, innerR);
       grad.addColorStop(0, shade(col, 34));
       grad.addColorStop(0.75, col);
@@ -517,7 +664,7 @@
     }
 
     // labels
-    for (let i = 0; i < items.length; i++) {
+    for (let i = 0; i < list.length; i++) {
       const [a0, a1] = angles[i];
       const mid = (a0 + a1) / 2;
       const frac = w[i];
@@ -527,10 +674,10 @@
       ctx.font = `600 ${fs}px 'Space Grotesk', sans-serif`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = placeholder ? 'rgba(255,255,255,0.35)' : '#fff';
       ctx.shadowColor = 'rgba(0,0,0,0.6)';
       ctx.shadowBlur = 4;
-      const label = `${items[i].emoji} ${items[i].name}`;
+      const label = `${list[i].emoji} ${list[i].name}`.trim();
       ctx.fillText(label, innerR * 0.93, 0, innerR * 0.72);
       ctx.restore();
     }
@@ -642,7 +789,7 @@
   const POINTER_ANGLE = -Math.PI / 2; // top of the wheel
 
   function spin() {
-    if (spinning || items.length === 0) return;
+    if (spinning || currentItems().length === 0) return;
     spinning = true;
     spinBtn.disabled = true;
     resultEl.classList.remove('show');
@@ -698,7 +845,7 @@
         requestAnimationFrame(frame);
       } else {
         spinning = false;
-        spinBtn.disabled = false;
+        spinBtn.disabled = currentItems().length === 0;
         announce(winner);
       }
     }
@@ -715,7 +862,8 @@
   }
 
   function announce(winner) {
-    const it = items[winner];
+    const it = currentItems()[winner];
+    if (!it) return;
     resultName.textContent = `${it.emoji} ${it.name}`;
     resultName.style.color = COLORS[winner % COLORS.length];
     resultEl.classList.add('show');
@@ -811,8 +959,15 @@
   /* ───────────────────────── odds editor ───────────────────────── */
 
   const oddsBody = document.getElementById('odds-body');
+  const oddsHead = document.getElementById('odds-head');
+  const panelActions = document.getElementById('panel-actions');
+  const panelNote = document.getElementById('panel-note');
 
   function renderOdds() {
+    if (mode === 'nearby') { renderNearbyOdds(); return; }
+    oddsHead.innerHTML = '<tr><th>Restaurant</th><th>Lunch wt</th><th>Dinner wt</th><th>Chance</th><th></th></tr>';
+    panelActions.style.display = '';
+    panelNote.textContent = 'Weights don’t have to add to 100 — they’re normalized automatically. The "Chance" column shows the live probability for the selected meal, and the wheel’s slice sizes match it. Changes are saved in your browser.';
     const w = weights();
     oddsBody.innerHTML = '';
     items.forEach((it, i) => {
@@ -881,6 +1036,227 @@
     items = DEFAULTS.map(x => ({ ...x }));
     saveItems(); drawWheel(); renderOdds();
   });
+
+  /* ───────────────────────── nearby mode ───────────────────────── */
+
+  const tabMine = document.getElementById('tab-mine');
+  const tabNearby = document.getElementById('tab-nearby');
+  const mealToggleEl = document.querySelector('.meal-toggle');
+  const nearbyControls = document.getElementById('nearby-controls');
+  const nearbyStatus = document.getElementById('nearby-status');
+  const geoBtn = document.getElementById('geo-btn');
+  const addrInput = document.getElementById('addr-input');
+  const radiusSel = document.getElementById('radius');
+  const findBtn = document.getElementById('find-btn');
+
+  function setMode(m) {
+    mode = m;
+    tabMine.classList.toggle('active', m === 'mine');
+    tabNearby.classList.toggle('active', m === 'nearby');
+    mealToggleEl.style.display = m === 'mine' ? 'flex' : 'none';
+    mealHint.style.display = m === 'mine' ? 'block' : 'none';
+    nearbyControls.hidden = m !== 'nearby';
+    if (!spinning) spinBtn.disabled = currentItems().length === 0;
+    resultEl.classList.remove('show');
+    drawWheel();
+    renderOdds();
+  }
+  tabMine.addEventListener('click', () => setMode('mine'));
+  tabNearby.addEventListener('click', () => setMode('nearby'));
+
+  function status(msg, isErr) {
+    nearbyStatus.textContent = msg;
+    nearbyStatus.classList.toggle('err', !!isErr);
+  }
+
+  const CUISINE_EMOJI = [
+    [/thai/, '🌶️'], [/chinese|dim_sum|cantonese|szechuan|noodle/, '🥡'],
+    [/pizza/, '🍕'], [/japanese|sushi|ramen/, '🍣'], [/burger/, '🍔'],
+    [/mexican|taco|burrito/, '🌮'], [/indian|nepalese/, '🍛'],
+    [/greek|kebab|mediterranean|middle_eastern|lebanese|turkish/, '🥙'],
+    [/italian|pasta/, '🍝'], [/korean/, '🍲'], [/vietnamese|pho/, '🍜'],
+    [/seafood|fish/, '🦞'], [/breakfast|brunch|cafe|coffee/, '☕'],
+    [/chicken|wings/, '🍗'], [/bbq|barbecue|steak/, '🥩'],
+    [/sandwich|deli|sub/, '🥪'], [/american|diner/, '🍟'],
+  ];
+  function cuisineEmoji(c) {
+    if (!c) return '🍽️';
+    const s = String(c).toLowerCase();
+    for (const [re, e] of CUISINE_EMOJI) if (re.test(s)) return e;
+    return '🍽️';
+  }
+
+  function distMeters(aLat, aLon, bLat, bLon) {
+    const R = 6371000, toR = Math.PI / 180;
+    const dLat = (bLat - aLat) * toR, dLon = (bLon - aLon) * toR;
+    const s = Math.sin(dLat / 2) ** 2 +
+      Math.cos(aLat * toR) * Math.cos(bLat * toR) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(s));
+  }
+
+  const OVERPASS_ENDPOINTS = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+  ];
+
+  async function fetchOverpass(lat, lon, radius) {
+    const filter = `["amenity"~"^(restaurant|fast_food)$"]["name"](around:${radius},${lat},${lon})`;
+    const q = `[out:json][timeout:25];(node${filter};way${filter};);out center 120;`;
+    let lastErr = new Error('No Overpass endpoint reachable');
+    for (const ep of OVERPASS_ENDPOINTS) {
+      try {
+        const res = await fetch(ep, {
+          method: 'POST',
+          headers: { 'content-type': 'application/x-www-form-urlencoded' },
+          body: 'data=' + encodeURIComponent(q),
+        });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return await res.json();
+      } catch (e) { lastErr = e; }
+    }
+    throw lastErr;
+  }
+
+  async function geocode(query) {
+    const res = await fetch(
+      'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query),
+      { headers: { accept: 'application/json' } }
+    );
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const arr = await res.json();
+    if (!Array.isArray(arr) || !arr.length) throw new Error('location not found');
+    return {
+      lat: +arr[0].lat,
+      lon: +arr[0].lon,
+      label: (arr[0].display_name || query).split(',').slice(0, 2).join(','),
+    };
+  }
+
+  function buildNearbyItems(overpassJson, lat, lon) {
+    const seen = new Set();
+    const out = [];
+    for (const el of overpassJson.elements || []) {
+      const name = el.tags && el.tags.name;
+      if (!name) continue;
+      const key = name.trim().toLowerCase();
+      if (seen.has(key)) continue;
+      const eLat = el.lat != null ? el.lat : el.center && el.center.lat;
+      const eLon = el.lon != null ? el.lon : el.center && el.center.lon;
+      if (eLat == null || eLon == null) continue;
+      seen.add(key);
+      out.push({
+        name: name.trim(),
+        emoji: cuisineEmoji(el.tags.cuisine),
+        cuisine: (el.tags.cuisine || '').split(';')[0].replace(/_/g, ' '),
+        dist: Math.round(distMeters(lat, lon, eLat, eLon)),
+      });
+    }
+    out.sort((a, b) => a.dist - b.dist);
+    return { items: out.slice(0, 10), total: out.length };
+  }
+
+  let finding = false;
+  async function findNearby(lat, lon, label) {
+    if (finding) return;
+    finding = true;
+    findBtn.disabled = true; geoBtn.disabled = true;
+    try {
+      status(`Searching for restaurants near ${label}…`);
+      const json = await fetchOverpass(lat, lon, +radiusSel.value);
+      const { items: found, total } = buildNearbyItems(json, lat, lon);
+      if (found.length < 2) {
+        status(found.length === 0
+          ? 'No restaurants found there — try a bigger radius or a different spot.'
+          : 'Only found one restaurant — try a bigger radius.', true);
+        return;
+      }
+      nearbyItems = found;
+      spinBtn.disabled = spinning;
+      resultEl.classList.remove('show');
+      status(total > found.length
+        ? `Found ${total} restaurants near ${label} — wheel built from the ${found.length} closest. Spin it!`
+        : `Found ${found.length} restaurants near ${label}. Spin it!`);
+      drawWheel();
+      renderOdds();
+    } catch (e) {
+      status('Couldn’t load restaurants (' + (e && e.message ? e.message : 'network error') + '). Try again in a moment.', true);
+    } finally {
+      finding = false;
+      findBtn.disabled = false; geoBtn.disabled = false;
+    }
+  }
+
+  geoBtn.addEventListener('click', () => {
+    if (!navigator.geolocation) { status('Your browser doesn’t support location — type one instead.', true); return; }
+    status('Getting your location…');
+    navigator.geolocation.getCurrentPosition(
+      pos => findNearby(pos.coords.latitude, pos.coords.longitude, 'you'),
+      () => status('Location was blocked — type a city or address instead.', true),
+      { enableHighAccuracy: false, timeout: 12000, maximumAge: 300000 }
+    );
+  });
+
+  async function findByAddress() {
+    const q = addrInput.value.trim();
+    if (!q) { status('Type a city or address first, or use your location.', true); return; }
+    findBtn.disabled = true; geoBtn.disabled = true;
+    try {
+      status(`Looking up “${q}”…`);
+      const loc = await geocode(q);
+      findBtn.disabled = false; geoBtn.disabled = false;
+      await findNearby(loc.lat, loc.lon, loc.label);
+    } catch (e) {
+      status('Couldn’t find that location — try adding a city or zip code.', true);
+      findBtn.disabled = false; geoBtn.disabled = false;
+    }
+  }
+  findBtn.addEventListener('click', findByAddress);
+  addrInput.addEventListener('keydown', e => { if (e.key === 'Enter') findByAddress(); });
+
+  function renderNearbyOdds() {
+    oddsHead.innerHTML = '<tr><th>Restaurant</th><th>Cuisine</th><th>Distance</th><th>Chance</th><th></th></tr>';
+    panelActions.style.display = 'none';
+    panelNote.textContent = nearbyItems.length
+      ? 'Live results from OpenStreetMap. Closer restaurants get bigger slices. Remove any you’re not in the mood for and the odds rebalance.'
+      : 'Find restaurants above and they’ll appear here with their live odds.';
+    const w = weights();
+    oddsBody.innerHTML = '';
+    nearbyItems.forEach((it, i) => {
+      const tr = document.createElement('tr');
+
+      const tdName = document.createElement('td');
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = COLORS[i % COLORS.length];
+      tdName.append(sw, document.createTextNode(`${it.emoji} ${it.name}`));
+
+      const tdCuisine = document.createElement('td');
+      tdCuisine.textContent = it.cuisine || '—';
+
+      const tdDist = document.createElement('td');
+      tdDist.className = 'pct';
+      tdDist.textContent = it.dist >= 1000 ? (it.dist / 1000).toFixed(1) + ' km' : it.dist + ' m';
+
+      const tdPct = document.createElement('td');
+      tdPct.className = 'pct';
+      tdPct.textContent = (w[i] * 100).toFixed(1) + '%';
+
+      const tdRm = document.createElement('td');
+      const rm = document.createElement('button');
+      rm.className = 'rm-btn';
+      rm.textContent = '✕';
+      rm.title = 'Not in the mood';
+      rm.addEventListener('click', () => {
+        if (nearbyItems.length <= 2) { alert('Keep at least two options — otherwise it isn’t much of a wheel.'); return; }
+        nearbyItems.splice(i, 1);
+        drawWheel(); renderOdds();
+      });
+      tdRm.appendChild(rm);
+
+      tr.append(tdName, tdCuisine, tdDist, tdPct, tdRm);
+      oddsBody.appendChild(tr);
+    });
+  }
 
   /* ───────────────────────── init ───────────────────────── */
 
