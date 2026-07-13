@@ -13,13 +13,16 @@
   [hidden] { display: none !important; }
 
   :root {
-    --bg: #0c0c14;
-    --panel: #14141f;
-    --border: #26263a;
-    --text: #f0eef8;
-    --muted: #8a87a6;
-    --gold: #ffcf5c;
-    --gold-deep: #e09b16;
+    --bg: #f7efe1;
+    --panel: #fffdf7;
+    --panel-2: #fbf4e6;
+    --border: #e9ddc7;
+    --text: #443627;
+    --muted: #a3906f;
+    --gold: #c9922e;
+    --gold-deep: #a9761c;
+    --terra: #d9694a;
+    --red: #c0553f;
   }
 
   html, body { height: 100%; }
@@ -27,8 +30,9 @@
   body {
     font-family: 'Space Grotesk', sans-serif;
     background:
-      radial-gradient(1200px 700px at 50% -10%, #241a3d 0%, transparent 60%),
-      radial-gradient(900px 600px at 85% 110%, #12233a 0%, transparent 55%),
+      radial-gradient(1100px 640px at 50% -12%, #fbeacf 0%, transparent 62%),
+      radial-gradient(820px 560px at 88% 112%, #eef3e2 0%, transparent 58%),
+      radial-gradient(760px 520px at 8% 108%, #fbe4dc 0%, transparent 55%),
       var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -45,14 +49,13 @@
     z-index: 2;
   }
   header h1 {
-    font-size: clamp(1.6rem, 4.5vw, 2.6rem);
+    font-size: clamp(1.7rem, 4.6vw, 2.7rem);
     font-weight: 700;
-    letter-spacing: 0.01em;
-    background: linear-gradient(180deg, #fff 20%, #ffd97a 55%, #f5a623 100%);
+    letter-spacing: 0.005em;
+    background: linear-gradient(180deg, #6a4a28 8%, #c9922e 62%, #d9694a 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    text-shadow: 0 0 40px rgba(255, 190, 60, 0.25);
   }
   header p {
     margin-top: 6px;
@@ -159,7 +162,7 @@
     min-height: 1.3em;
     line-height: 1.5;
   }
-  .nearby-status.err { color: #ff8a8a; }
+  .nearby-status.err { color: var(--red); }
 
   /* ── Filter chips ── */
   .filters {
@@ -196,7 +199,7 @@
 
   /* ── Nearby rows: meta line, stars, boost ── */
   tr.pickable { cursor: pointer; }
-  tr.pickable:hover td { background: rgba(255, 205, 90, 0.05); }
+  tr.pickable:hover td { background: rgba(201, 146, 46, 0.08); }
   .row-meta {
     display: flex;
     align-items: center;
@@ -207,10 +210,10 @@
     color: var(--muted);
   }
   .stars { letter-spacing: 2px; cursor: pointer; user-select: none; }
-  .stars .st { color: #4a4763; transition: color 0.12s; }
-  .stars .st.lit { color: var(--gold); text-shadow: 0 0 8px rgba(255,207,92,0.55); }
+  .stars .st { color: #ddcdb0; transition: color 0.12s; }
+  .stars .st.lit { color: var(--gold); text-shadow: 0 0 8px rgba(201,146,46,0.4); }
   .boost-badge {
-    color: #ff9d5c;
+    color: var(--terra);
     font-weight: 700;
     font-size: 0.74rem;
     white-space: nowrap;
@@ -225,7 +228,7 @@
     filter: grayscale(0.6);
     transition: filter 0.15s, transform 0.1s;
   }
-  .boost-btn:hover { filter: none; background: rgba(255,157,92,0.1); }
+  .boost-btn:hover { filter: none; background: rgba(217,105,74,0.12); }
   .boost-btn:active { transform: scale(1.25); }
   @keyframes boostpop {
     0% { transform: scale(1); }
@@ -315,14 +318,14 @@
     font-weight: 700;
     font-size: clamp(1rem, 3.4vw, 1.5rem);
     letter-spacing: 0.08em;
-    color: #2a1a02;
+    color: #4a3110;
     background:
-      radial-gradient(circle at 32% 28%, #fff6d8 0%, #ffd970 30%, #f0a51d 68%, #b06e08 100%);
+      radial-gradient(circle at 32% 28%, #fffaf0 0%, #ffe6a8 32%, #e8b352 68%, #c8912f 100%);
     box-shadow:
-      0 0 0 6px rgba(20, 16, 8, 0.9),
-      0 0 0 8px rgba(255, 205, 90, 0.55),
-      0 6px 30px rgba(245, 166, 35, 0.5),
-      inset 0 -6px 14px rgba(120, 70, 0, 0.45);
+      0 0 0 6px rgba(255, 253, 247, 0.95),
+      0 0 0 8px rgba(201, 146, 46, 0.55),
+      0 8px 30px rgba(180, 130, 55, 0.4),
+      inset 0 -6px 14px rgba(160, 110, 40, 0.35);
     transition: transform 0.12s ease, box-shadow 0.2s;
     animation: hubpulse 1.8s ease-in-out infinite;
   }
@@ -334,8 +337,8 @@
     filter: saturate(0.55) brightness(0.85);
   }
   @keyframes hubpulse {
-    0%, 100% { box-shadow: 0 0 0 6px rgba(20,16,8,.9), 0 0 0 8px rgba(255,205,90,.55), 0 6px 26px rgba(245,166,35,.45), inset 0 -6px 14px rgba(120,70,0,.45); }
-    50%      { box-shadow: 0 0 0 6px rgba(20,16,8,.9), 0 0 0 8px rgba(255,225,140,.9), 0 6px 44px rgba(255,190,60,.8), inset 0 -6px 14px rgba(120,70,0,.45); }
+    0%, 100% { box-shadow: 0 0 0 6px rgba(255,253,247,.95), 0 0 0 8px rgba(201,146,46,.5), 0 6px 26px rgba(180,130,55,.35), inset 0 -6px 14px rgba(160,110,40,.35); }
+    50%      { box-shadow: 0 0 0 6px rgba(255,253,247,.95), 0 0 0 8px rgba(224,175,80,.85), 0 8px 44px rgba(210,160,70,.6), inset 0 -6px 14px rgba(160,110,40,.35); }
   }
 
   /* ── Result banner ── */
@@ -370,7 +373,7 @@
   .result.show .name {
     opacity: 1;
     transform: translateY(0) scale(1);
-    text-shadow: 0 0 34px rgba(255, 200, 80, 0.55);
+    text-shadow: 0 2px 20px rgba(201, 146, 46, 0.28);
   }
 
   /* ── Odds / editor ── */
@@ -382,6 +385,7 @@
     margin: 10px 0 46px;
     overflow: hidden;
     z-index: 2;
+    box-shadow: 0 10px 30px rgba(140, 110, 60, 0.1);
   }
   .panel summary {
     cursor: pointer;
@@ -429,25 +433,34 @@
     font-family: inherit;
     font-size: 0.86rem;
     color: var(--text);
-    background: rgba(255,255,255,0.04);
+    background: var(--panel-2);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 6px 8px;
     width: 100%;
   }
-  .odds-table input[type="number"] { width: 64px; text-align: right; }
-  .odds-table input:focus { outline: none; border-color: var(--gold-deep); }
+  .odds-table input[type="number"] { width: 58px; text-align: right; }
+  .odds-table input:focus { outline: none; border-color: var(--gold-deep); background: #fff; }
   .pct {
     font-family: 'Space Mono', monospace;
-    color: var(--gold);
+    color: var(--gold-deep);
     white-space: nowrap;
   }
+  .pct-cell { white-space: nowrap; }
+  .pct-cell input {
+    font-family: 'Space Mono', monospace !important;
+    color: var(--gold-deep) !important;
+    font-weight: 700;
+    width: 56px !important;
+    text-align: right;
+  }
+  .pct-cell .sign { color: var(--gold-deep); font-family: 'Space Mono', monospace; font-size: 0.8rem; margin-left: 2px; }
   .rm-btn {
     background: none; border: 0; cursor: pointer;
     color: var(--muted); font-size: 1rem; padding: 4px 8px;
     border-radius: 6px;
   }
-  .rm-btn:hover { color: #ff7b7b; background: rgba(255,120,120,0.08); }
+  .rm-btn:hover { color: var(--red); background: rgba(192,85,63,0.1); }
 
   .panel-actions {
     display: flex;
@@ -463,10 +476,10 @@
     border-radius: 10px;
     cursor: pointer;
     border: 1px solid var(--border);
-    background: rgba(255,255,255,0.04);
+    background: var(--panel-2);
     color: var(--text);
   }
-  .panel-actions button:hover { border-color: var(--gold-deep); }
+  .panel-actions button:hover { border-color: var(--gold-deep); background: #fff; }
   .panel-note {
     padding: 0 18px 14px;
     color: var(--muted);
@@ -476,7 +489,7 @@
 
   footer {
     padding: 0 0 30px;
-    color: var(--text-dim, #3a3852);
+    color: #c3b092;
     font-family: 'Space Mono', monospace;
     font-size: 0.72rem;
     letter-spacing: 0.1em;
@@ -562,6 +575,7 @@
   </table>
   <div class="panel-actions" id="panel-actions">
     <button id="add-row">+ Add restaurant</button>
+    <button id="even-split">⚖️ Even odds</button>
     <button id="reset">Reset to defaults</button>
   </div>
   <div class="panel-note" id="panel-note">
@@ -593,11 +607,14 @@
     { name: 'Lantern Noodle',    emoji: '🍜', lunch: 13, dinner: 15 },
   ];
 
+  // Soft pastel-jewel palette — warm and playful but harmonized with cream.
   const COLORS = [
-    '#e63946', '#f4a52a', '#2a9d8f', '#4361ee', '#b5179e',
-    '#ef6c35', '#43aa8b', '#7209b7', '#f9c74f', '#3a86ff',
-    '#d62863', '#588157',
+    '#e07a5f', '#e9b44c', '#81b29a', '#6d9dc5', '#c98bb9',
+    '#f2a65a', '#a3b18a', '#b56576', '#7fb0a6', '#d98c5f',
+    '#9a86b8', '#c4a35a',
   ];
+  // Dark espresso labels read cleanly on these mid-tone pastels.
+  const LABEL_COLOR = '#3a2a18';
 
   function loadItems() {
     try {
@@ -715,9 +732,9 @@
     ctx.save();
     ctx.translate(c, c);
     const rimGrad = ctx.createLinearGradient(0, -R, 0, R);
-    rimGrad.addColorStop(0, '#3d2f12');
-    rimGrad.addColorStop(0.5, '#8a6a24');
-    rimGrad.addColorStop(1, '#241a08');
+    rimGrad.addColorStop(0, '#fff6e4');
+    rimGrad.addColorStop(0.5, '#e6c07f');
+    rimGrad.addColorStop(1, '#c2913f');
     ctx.beginPath();
     ctx.arc(0, 0, R, 0, Math.PI * 2);
     ctx.fillStyle = rimGrad;
@@ -735,18 +752,18 @@
 
     for (let i = 0; i < list.length; i++) {
       const [a0, a1] = angles[i];
-      const col = placeholder ? (i % 2 ? '#2a2a3c' : '#343450') : COLORS[i % COLORS.length];
+      const col = placeholder ? (i % 2 ? '#efe6d4' : '#e6dcc6') : COLORS[i % COLORS.length];
       const grad = ctx.createRadialGradient(0, 0, innerR * 0.15, 0, 0, innerR);
-      grad.addColorStop(0, shade(col, 34));
-      grad.addColorStop(0.75, col);
-      grad.addColorStop(1, shade(col, -28));
+      grad.addColorStop(0, shade(col, 26));
+      grad.addColorStop(0.72, col);
+      grad.addColorStop(1, shade(col, -26));
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.arc(0, 0, innerR, a0, a1);
       ctx.closePath();
       ctx.fillStyle = grad;
       ctx.fill();
-      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.strokeStyle = 'rgba(255,250,240,0.5)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     }
@@ -762,9 +779,9 @@
       ctx.font = `600 ${fs}px 'Space Grotesk', sans-serif`;
       ctx.textAlign = 'right';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = placeholder ? 'rgba(255,255,255,0.35)' : '#fff';
-      ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 4;
+      ctx.fillStyle = placeholder ? 'rgba(120,100,70,0.4)' : LABEL_COLOR;
+      ctx.shadowColor = 'rgba(255,252,244,0.55)';
+      ctx.shadowBlur = 3;
       const label = `${list[i].emoji} ${list[i].name}`.trim();
       ctx.fillText(label, innerR * 0.93, 0, innerR * 0.72);
       ctx.restore();
@@ -785,8 +802,8 @@
       const x = Math.cos(a) * br, y = Math.sin(a) * br;
       ctx.beginPath();
       ctx.arc(x, y, rimW * 0.26, 0, Math.PI * 2);
-      ctx.fillStyle = on ? '#ffe9a0' : '#4a3a14';
-      ctx.shadowColor = on ? 'rgba(255,220,120,0.9)' : 'transparent';
+      ctx.fillStyle = on ? '#fff4cf' : '#c9a55f';
+      ctx.shadowColor = on ? 'rgba(255,225,140,0.95)' : 'transparent';
       ctx.shadowBlur = on ? 10 : 0;
       ctx.fill();
     }
@@ -797,7 +814,7 @@
     ctx.translate(c, c);
     ctx.beginPath();
     ctx.arc(0, 0, innerR * 0.30, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillStyle = 'rgba(150,120,75,0.22)';
     ctx.fill();
     ctx.restore();
   }
@@ -1051,11 +1068,32 @@
   const panelActions = document.getElementById('panel-actions');
   const panelNote = document.getElementById('panel-note');
 
+  // Set restaurant i to an exact chance for the active meal; keep every
+  // other restaurant's relative proportions and let them fill the rest.
+  function setExactPercent(i, pct) {
+    let f = (+pct || 0) / 100;
+    f = Math.max(0.01, Math.min(0.99, f));
+    let others = 0;
+    items.forEach((x, j) => { if (j !== i) others += Math.max(0, +x[meal] || 0); });
+    if (others <= 0) {
+      const share = (1 - f) * 100 / Math.max(1, items.length - 1);
+      items.forEach((x, j) => { x[meal] = j === i ? f * 100 : share; });
+    } else {
+      items[i][meal] = Math.round((f * others / (1 - f)) * 10) / 10;
+    }
+    saveItems(); drawWheel(); renderOdds();
+  }
+
+  function evenSplit() {
+    items.forEach(x => { x[meal] = 10; });
+    saveItems(); drawWheel(); renderOdds();
+  }
+
   function renderOdds() {
     if (mode === 'nearby') { renderNearbyOdds(); return; }
-    oddsHead.innerHTML = '<tr><th>Restaurant</th><th>Lunch wt</th><th>Dinner wt</th><th>Chance</th><th></th></tr>';
+    oddsHead.innerHTML = '<tr><th>Restaurant</th><th>Lunch</th><th>Dinner</th><th>Chance</th><th></th></tr>';
     panelActions.style.display = '';
-    panelNote.textContent = 'Weights don’t have to add to 100 — they’re normalized automatically. The "Chance" column shows the live probability for the selected meal, and the wheel’s slice sizes match it. Changes are saved in your browser.';
+    panelNote.innerHTML = 'Build your own wheel: <strong>+ Add</strong> your favorite spots, rename them, and set each restaurant’s <strong>Chance</strong> directly — type a % and the rest rebalance to match. Prefer weights? The Lunch and Dinner columns still work (they don’t need to add up to 100). 🔥 boosts a craving; ✕ removes. Everything saves in your browser.';
     const w = weights();
     oddsBody.innerHTML = '';
     items.forEach((it, i) => {
@@ -1092,8 +1130,19 @@
       }
 
       const tdPct = document.createElement('td');
-      tdPct.className = 'pct';
-      tdPct.textContent = (w[i] * 100).toFixed(1) + '%';
+      tdPct.className = 'pct-cell';
+      const pctInput = document.createElement('input');
+      pctInput.type = 'number';
+      pctInput.min = '0'; pctInput.max = '100'; pctInput.step = '1';
+      pctInput.value = (w[i] * 100).toFixed(0);
+      pctInput.title = 'Type an exact chance — the others rebalance';
+      pctInput.addEventListener('change', () => {
+        setExactPercent(i, +pctInput.value);
+      });
+      const sign = document.createElement('span');
+      sign.className = 'sign';
+      sign.textContent = '%';
+      tdPct.append(pctInput, sign);
 
       const tdRm = document.createElement('td');
       const boostBtn = document.createElement('button');
@@ -1126,6 +1175,8 @@
     saveItems(); drawWheel(); renderOdds();
     document.getElementById('panel').open = true;
   });
+
+  document.getElementById('even-split').addEventListener('click', evenSplit);
 
   document.getElementById('reset').addEventListener('click', () => {
     if (!confirm('Reset restaurants and odds to the defaults?')) return;
