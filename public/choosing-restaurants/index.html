@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Choosing Restaurants — Spin the Wheel</title>
+<meta name="description" content="Can't decide where to eat? Spin the wheel." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0c0c14;
+    --panel: #14141f;
+    --border: #26263a;
+    --text: #f0eef8;
+    --muted: #8a87a6;
+    --gold: #ffcf5c;
+    --gold-deep: #e09b16;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #241a3d 0%, transparent 60%),
+      radial-gradient(900px 600px at 85% 110%, #12233a 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    text-align: center;
+    padding: 34px 20px 6px;
+    z-index: 2;
+  }
+  header h1 {
+    font-size: clamp(1.6rem, 4.5vw, 2.6rem);
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    background: linear-gradient(180deg, #fff 20%, #ffd97a 55%, #f5a623 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 40px rgba(255, 190, 60, 0.25);
+  }
+  header p {
+    margin-top: 6px;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  /* ── Meal toggle ── */
+  .meal-toggle {
+    display: flex;
+    gap: 0;
+    margin: 18px auto 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px;
+    width: max-content;
+    position: relative;
+    z-index: 2;
+  }
+  .meal-toggle button {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: transparent;
+    border: 0;
+    border-radius: 999px;
+    padding: 9px 26px;
+    cursor: pointer;
+    transition: color 0.2s, background 0.25s, box-shadow 0.25s;
+  }
+  .meal-toggle button.active {
+    color: #1a1205;
+    background: linear-gradient(180deg, #ffe29a, #f5a623);
+    box-shadow: 0 2px 14px rgba(245, 166, 35, 0.45);
+  }
+  .meal-hint {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-family: 'Space Mono', monospace;
+    z-index: 2;
+  }
+
+  /* ── Wheel stage ── */
+  .stage {
+    position: relative;
+    width: min(92vw, 560px);
+    aspect-ratio: 1;
+    margin: 18px 0 8px;
+    z-index: 1;
+  }
+  #wheel, #fx {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  #fx { pointer-events: none; z-index: 5; }
+
+  .pointer {
+    position: absolute;
+    top: -3.2%;
+    left: 50%;
+    width: 11%;
+    aspect-ratio: 0.72;
+    transform: translateX(-50%);
+    transform-origin: 50% 22%;
+    z-index: 4;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.55));
+  }
+  .pointer svg { width: 100%; height: 100%; display: block; }
+
+  .hub-btn {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 26%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 0;
+    cursor: pointer;
+    z-index: 6;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1rem, 3.4vw, 1.5rem);
+    letter-spacing: 0.08em;
+    color: #2a1a02;
+    background:
+      radial-gradient(circle at 32% 28%, #fff6d8 0%, #ffd970 30%, #f0a51d 68%, #b06e08 100%);
+    box-shadow:
+      0 0 0 6px rgba(20, 16, 8, 0.9),
+      0 0 0 8px rgba(255, 205, 90, 0.55),
+      0 6px 30px rgba(245, 166, 35, 0.5),
+      inset 0 -6px 14px rgba(120, 70, 0, 0.45);
+    transition: transform 0.12s ease, box-shadow 0.2s;
+    animation: hubpulse 1.8s ease-in-out infinite;
+  }
+  .hub-btn:hover { transform: translate(-50%, -50%) scale(1.05); }
+  .hub-btn:active { transform: translate(-50%, -50%) scale(0.96); }
+  .hub-btn:disabled {
+    cursor: default;
+    animation: none;
+    filter: saturate(0.55) brightness(0.85);
+  }
+  @keyframes hubpulse {
+    0%, 100% { box-shadow: 0 0 0 6px rgba(20,16,8,.9), 0 0 0 8px rgba(255,205,90,.55), 0 6px 26px rgba(245,166,35,.45), inset 0 -6px 14px rgba(120,70,0,.45); }
+    50%      { box-shadow: 0 0 0 6px rgba(20,16,8,.9), 0 0 0 8px rgba(255,225,140,.9), 0 6px 44px rgba(255,190,60,.8), inset 0 -6px 14px rgba(120,70,0,.45); }
+  }
+
+  /* ── Result banner ── */
+  .result {
+    min-height: 86px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+    padding: 0 16px 10px;
+    z-index: 2;
+  }
+  .result .label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+  .result .name {
+    font-size: clamp(1.5rem, 5.5vw, 2.4rem);
+    font-weight: 700;
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+    transition: opacity 0.45s, transform 0.45s cubic-bezier(.2,1.6,.4,1);
+  }
+  .result.show .label { opacity: 1; }
+  .result.show .name {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    text-shadow: 0 0 34px rgba(255, 200, 80, 0.55);
+  }
+
+  /* ── Odds / editor ── */
+  .panel {
+    width: min(92vw, 560px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin: 10px 0 46px;
+    overflow: hidden;
+    z-index: 2;
+  }
+  .panel summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    user-select: none;
+  }
+  .panel summary::-webkit-details-marker { display: none; }
+  .panel summary::after { content: '▾'; transition: transform 0.2s; }
+  .panel[open] summary::after { transform: rotate(180deg); }
+
+  .odds-table { width: 100%; border-collapse: collapse; }
+  .odds-table th, .odds-table td {
+    padding: 8px 10px;
+    font-size: 0.86rem;
+    text-align: left;
+    border-top: 1px solid var(--border);
+  }
+  .odds-table th {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .odds-table td:first-child { padding-left: 18px; }
+  .odds-table th:first-child { padding-left: 18px; }
+  .swatch {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    margin-right: 9px;
+    vertical-align: 0;
+  }
+  .odds-table input[type="text"], .odds-table input[type="number"] {
+    font-family: inherit;
+    font-size: 0.86rem;
+    color: var(--text);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    width: 100%;
+  }
+  .odds-table input[type="number"] { width: 64px; text-align: right; }
+  .odds-table input:focus { outline: none; border-color: var(--gold-deep); }
+  .pct {
+    font-family: 'Space Mono', monospace;
+    color: var(--gold);
+    white-space: nowrap;
+  }
+  .rm-btn {
+    background: none; border: 0; cursor: pointer;
+    color: var(--muted); font-size: 1rem; padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .rm-btn:hover { color: #ff7b7b; background: rgba(255,120,120,0.08); }
+
+  .panel-actions {
+    display: flex;
+    gap: 10px;
+    padding: 12px 18px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .panel-actions button {
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,0.04);
+    color: var(--text);
+  }
+  .panel-actions button:hover { border-color: var(--gold-deep); }
+  .panel-note {
+    padding: 0 18px 14px;
+    color: var(--muted);
+    font-size: 0.76rem;
+    line-height: 1.5;
+  }
+
+  footer {
+    padding: 0 0 30px;
+    color: var(--text-dim, #3a3852);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    z-index: 2;
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hub-btn { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🍜 Where Are We Eating?</h1>
+  <p>Spin the wheel — the odds already know what you want.</p>
+</header>
+
+<div class="meal-toggle" role="tablist" aria-label="Meal">
+  <button id="btn-lunch"  role="tab">☀️ Lunch</button>
+  <button id="btn-dinner" role="tab">🌙 Dinner</button>
+</div>
+<div class="meal-hint" id="meal-hint"></div>
+
+<div class="stage">
+  <canvas id="wheel"></canvas>
+  <canvas id="fx"></canvas>
+  <div class="pointer" id="pointer" aria-hidden="true">
+    <svg viewBox="0 0 72 100">
+      <defs>
+        <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffe9a8"/>
+          <stop offset="0.5" stop-color="#f5a623"/>
+          <stop offset="1" stop-color="#c47a08"/>
+        </linearGradient>
+      </defs>
+      <path d="M36 100 L8 26 A30 30 0 1 1 64 26 Z" fill="url(#pg)" stroke="#5d3a02" stroke-width="3"/>
+      <circle cx="36" cy="24" r="9" fill="#fff3cf"/>
+    </svg>
+  </div>
+  <button class="hub-btn" id="spin">SPIN</button>
+</div>
+
+<div class="result" id="result">
+  <div class="label">Tonight's pick</div>
+  <div class="name" id="result-name"></div>
+</div>
+
+<details class="panel" id="panel">
+  <summary>Odds &amp; Restaurants</summary>
+  <table class="odds-table">
+    <thead>
+      <tr><th>Restaurant</th><th>Lunch wt</th><th>Dinner wt</th><th>Chance</th><th></th></tr>
+    </thead>
+    <tbody id="odds-body"></tbody>
+  </table>
+  <div class="panel-actions">
+    <button id="add-row">+ Add restaurant</button>
+    <button id="reset">Reset to defaults</button>
+  </div>
+  <div class="panel-note">
+    Weights don't have to add to 100 — they're normalized automatically. The
+    "Chance" column shows the live probability for the selected meal, and the
+    wheel's slice sizes match it. Changes are saved in your browser.
+  </div>
+</details>
+
+<footer><a href="/">christopherrathbun.com</a></footer>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ───────────────────────── data ───────────────────────── */
+
+  const STORAGE_KEY = 'choosing-restaurants-v1';
+
+  // Weights are relative; they get normalized. Lunch: Five Spices much
+  // higher, Shanghai Fresh high, Pai Kin Kao still strong. Dinner: the two
+  // Thai spots ~20% each, Saloniki ~15%.
+  const DEFAULTS = [
+    { name: "Pepper Sky's",      emoji: '🌶️', lunch: 12, dinner: 20 },
+    { name: 'Pai Kin Kao',       emoji: '🍛', lunch: 20, dinner: 20 },
+    { name: 'Saloniki Greek',    emoji: '🥙', lunch: 10, dinner: 15 },
+    { name: 'Five Spices House', emoji: '🥢', lunch: 25, dinner: 15 },
+    { name: 'Shanghai Fresh',    emoji: '🥟', lunch: 20, dinner: 15 },
+    { name: 'Lantern Noodle',    emoji: '🍜', lunch: 13, dinner: 15 },
+  ];
+
+  const COLORS = [
+    '#e63946', '#f4a52a', '#2a9d8f', '#4361ee', '#b5179e',
+    '#ef6c35', '#43aa8b', '#7209b7', '#f9c74f', '#3a86ff',
+    '#d62863', '#588157',
+  ];
+
+  function loadItems() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length &&
+            parsed.every(x => typeof x.name === 'string')) {
+          return parsed.map(x => ({
+            name: x.name,
+            emoji: x.emoji || '🍽️',
+            lunch: Math.max(0, +x.lunch || 0),
+            dinner: Math.max(0, +x.dinner || 0),
+          }));
+        }
+      }
+    } catch (e) { /* fall through to defaults */ }
+    return DEFAULTS.map(x => ({ ...x }));
+  }
+
+  function saveItems() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch (e) {}
+  }
+
+  let items = loadItems();
+
+  // 11:00–15:00 counts as lunchtime.
+  const hour = new Date().getHours();
+  let meal = (hour >= 11 && hour < 15) ? 'lunch' : 'dinner';
+
+  function weights() {
+    const w = items.map(x => Math.max(0, +x[meal] || 0));
+    const total = w.reduce((a, b) => a + b, 0);
+    if (total <= 0) return items.map(() => 1 / items.length);
+    return w.map(x => x / total);
+  }
+
+  /* ───────────────────────── wheel drawing ───────────────────────── */
+
+  const wheelCanvas = document.getElementById('wheel');
+  const fxCanvas = document.getElementById('fx');
+  const wctx = wheelCanvas.getContext('2d');
+  const fctx = fxCanvas.getContext('2d');
+  const pointerEl = document.getElementById('pointer');
+
+  let size = 0, dpr = 1;
+  let rotation = 0;          // current wheel rotation, radians
+  let spinning = false;
+  let bulbPhase = 0;
+
+  function resize() {
+    const rect = wheelCanvas.parentElement.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    size = rect.width;
+    for (const c of [wheelCanvas, fxCanvas]) {
+      c.width = Math.round(size * dpr);
+      c.height = Math.round(size * dpr);
+    }
+    drawWheel();
+  }
+  window.addEventListener('resize', resize);
+
+  // Slice boundaries (start angles) for the current weights. Angle 0 points
+  // to the right (canvas convention); the pointer sits at -90° (top).
+  function sliceAngles() {
+    const w = weights();
+    const angles = [];
+    let a = 0;
+    for (const wi of w) { angles.push([a, a + wi * Math.PI * 2]); a += wi * Math.PI * 2; }
+    return angles;
+  }
+
+  function drawWheel() {
+    if (!size) return;
+    const ctx = wctx;
+    const c = size / 2;
+    const R = c * 0.985;
+    const rimW = R * 0.055;
+    const innerR = R - rimW;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+
+    // outer rim
+    ctx.save();
+    ctx.translate(c, c);
+    const rimGrad = ctx.createLinearGradient(0, -R, 0, R);
+    rimGrad.addColorStop(0, '#3d2f12');
+    rimGrad.addColorStop(0.5, '#8a6a24');
+    rimGrad.addColorStop(1, '#241a08');
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    ctx.fillStyle = rimGrad;
+    ctx.fill();
+
+    // slices
+    ctx.rotate(rotation);
+    const angles = sliceAngles();
+    const w = weights();
+
+    for (let i = 0; i < items.length; i++) {
+      const [a0, a1] = angles[i];
+      const col = COLORS[i % COLORS.length];
+      const grad = ctx.createRadialGradient(0, 0, innerR * 0.15, 0, 0, innerR);
+      grad.addColorStop(0, shade(col, 34));
+      grad.addColorStop(0.75, col);
+      grad.addColorStop(1, shade(col, -28));
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, innerR, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // labels
+    for (let i = 0; i < items.length; i++) {
+      const [a0, a1] = angles[i];
+      const mid = (a0 + a1) / 2;
+      const frac = w[i];
+      ctx.save();
+      ctx.rotate(mid);
+      const fs = Math.max(10, Math.min(innerR * 0.072, innerR * frac * 1.9));
+      ctx.font = `600 ${fs}px 'Space Grotesk', sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff';
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 4;
+      const label = `${items[i].emoji} ${items[i].name}`;
+      ctx.fillText(label, innerR * 0.93, 0, innerR * 0.72);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // bulbs on the rim (drawn unrotated so they stay fixed; they chase
+    // while spinning and shimmer while idle)
+    ctx.save();
+    ctx.translate(c, c);
+    const bulbs = 24;
+    for (let i = 0; i < bulbs; i++) {
+      const a = (i / bulbs) * Math.PI * 2;
+      const on = spinning
+        ? (Math.floor(bulbPhase * 14) % 3) === (i % 3)
+        : Math.sin(bulbPhase * 2.2 + i * 0.9) > -0.25;
+      const br = R - rimW / 2;
+      const x = Math.cos(a) * br, y = Math.sin(a) * br;
+      ctx.beginPath();
+      ctx.arc(x, y, rimW * 0.26, 0, Math.PI * 2);
+      ctx.fillStyle = on ? '#ffe9a0' : '#4a3a14';
+      ctx.shadowColor = on ? 'rgba(255,220,120,0.9)' : 'transparent';
+      ctx.shadowBlur = on ? 10 : 0;
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // subtle center shadow under hub button
+    ctx.save();
+    ctx.translate(c, c);
+    ctx.beginPath();
+    ctx.arc(0, 0, innerR * 0.30, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) + amt, g = ((n >> 8) & 0xff) + amt, b = (n & 0xff) + amt;
+    r = Math.max(0, Math.min(255, r));
+    g = Math.max(0, Math.min(255, g));
+    b = Math.max(0, Math.min(255, b));
+    return `rgb(${r},${g},${b})`;
+  }
+
+  /* ───────────────────────── sound ───────────────────────── */
+
+  let audioCtx = null;
+  function ac() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { return null; }
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+
+  function tick(speed) {
+    const ctx = ac(); if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1700 + speed * 500, t);
+    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.04);
+  }
+
+  function fanfare() {
+    const ctx = ac(); if (!ctx) return;
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((f, i) => {
+      const t = ctx.currentTime + i * 0.11;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t); osc.stop(t + 0.55);
+    });
+  }
+
+  /* ───────────────────────── spinning ───────────────────────── */
+
+  const spinBtn = document.getElementById('spin');
+  const resultEl = document.getElementById('result');
+  const resultName = document.getElementById('result-name');
+
+  function pickWinner() {
+    const w = weights();
+    let r = Math.random();
+    for (let i = 0; i < w.length; i++) {
+      r -= w[i];
+      if (r <= 0) return i;
+    }
+    return w.length - 1;
+  }
+
+  // fast launch, long friction-style decay — like a real wheel
+  function ease(t) {
+    return 1 - Math.pow(1 - t, 4.1);
+  }
+
+  const POINTER_ANGLE = -Math.PI / 2; // top of the wheel
+
+  function spin() {
+    if (spinning || items.length === 0) return;
+    spinning = true;
+    spinBtn.disabled = true;
+    resultEl.classList.remove('show');
+
+    const winner = pickWinner();
+    const angles = sliceAngles();
+    const [a0, a1] = angles[winner];
+    // land somewhere inside the winning slice, away from its edges
+    const margin = (a1 - a0) * 0.14;
+    const landing = a0 + margin + Math.random() * ((a1 - a0) - margin * 2);
+
+    // final rotation must satisfy: rotation + landing ≡ POINTER_ANGLE (mod 2π)
+    const TWO_PI = Math.PI * 2;
+    const current = ((rotation % TWO_PI) + TWO_PI) % TWO_PI;
+    let target = ((POINTER_ANGLE - landing) % TWO_PI + TWO_PI) % TWO_PI;
+    const extraTurns = 6 + Math.floor(Math.random() * 3); // 6–8 full turns
+    let delta = target - current;
+    if (delta <= 0) delta += TWO_PI;
+    delta += extraTurns * TWO_PI;
+
+    const startRot = rotation;
+    const duration = 6200 + Math.random() * 1400;
+    const startTime = performance.now();
+    let lastNow = startTime;
+    let lastIndex = indexAtPointer(rotation);
+
+    function indexAtPointer(rot) {
+      const a = ((POINTER_ANGLE - rot) % TWO_PI + TWO_PI) % TWO_PI;
+      const angs = angles;
+      for (let i = 0; i < angs.length; i++) {
+        if (a >= angs[i][0] && a < angs[i][1]) return i;
+      }
+      return angs.length - 1;
+    }
+
+    function frame(now) {
+      const t = Math.min(1, (now - startTime) / duration);
+      rotation = startRot + delta * ease(t);
+      bulbPhase += (now - lastNow) / 1000 * (1 + (1 - t) * 6);
+      lastNow = now;
+
+      const idx = indexAtPointer(rotation);
+      if (idx !== lastIndex) {
+        lastIndex = idx;
+        const speed = 1 - t;
+        tick(speed);
+        flickPointer(speed);
+      }
+
+      drawWheel();
+
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        spinning = false;
+        spinBtn.disabled = false;
+        announce(winner);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function flickPointer(speed) {
+    pointerEl.style.transition = 'none';
+    pointerEl.style.transform = `translateX(-50%) rotate(${-14 - speed * 14}deg)`;
+    requestAnimationFrame(() => {
+      pointerEl.style.transition = 'transform 0.14s cubic-bezier(.2,2.2,.4,1)';
+      pointerEl.style.transform = 'translateX(-50%) rotate(0deg)';
+    });
+  }
+
+  function announce(winner) {
+    const it = items[winner];
+    resultName.textContent = `${it.emoji} ${it.name}`;
+    resultName.style.color = COLORS[winner % COLORS.length];
+    resultEl.classList.add('show');
+    fanfare();
+    confetti();
+    if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+  }
+
+  spinBtn.addEventListener('click', spin);
+
+  /* ───────────────────────── confetti ───────────────────────── */
+
+  let confettiParticles = [];
+  let confettiRunning = false;
+
+  function confetti() {
+    const c = size / 2;
+    for (let i = 0; i < 140; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = 3 + Math.random() * 8;
+      confettiParticles.push({
+        x: c, y: c,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v - 4,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.4,
+        w: 4 + Math.random() * 6,
+        h: 3 + Math.random() * 5,
+        col: COLORS[i % COLORS.length],
+        life: 1,
+      });
+    }
+    if (!confettiRunning) { confettiRunning = true; requestAnimationFrame(confettiFrame); }
+  }
+
+  function confettiFrame() {
+    fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fctx.clearRect(0, 0, size, size);
+    confettiParticles = confettiParticles.filter(p => p.life > 0 && p.y < size + 20);
+    for (const p of confettiParticles) {
+      p.vy += 0.18;
+      p.vx *= 0.985;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+      p.life -= 0.006;
+      fctx.save();
+      fctx.translate(p.x, p.y);
+      fctx.rotate(p.rot);
+      fctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.6));
+      fctx.fillStyle = p.col;
+      fctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      fctx.restore();
+    }
+    if (confettiParticles.length) {
+      requestAnimationFrame(confettiFrame);
+    } else {
+      confettiRunning = false;
+      fctx.clearRect(0, 0, size, size);
+    }
+  }
+
+  /* ───────────────────────── idle shimmer ───────────────────────── */
+
+  let lastIdle = performance.now();
+  function idleFrame(now) {
+    if (!spinning) {
+      bulbPhase += (now - lastIdle) / 1000;
+      drawWheel();
+    }
+    lastIdle = now;
+    requestAnimationFrame(idleFrame);
+  }
+
+  /* ───────────────────────── meal toggle ───────────────────────── */
+
+  const btnLunch = document.getElementById('btn-lunch');
+  const btnDinner = document.getElementById('btn-dinner');
+  const mealHint = document.getElementById('meal-hint');
+
+  function setMeal(m, manual) {
+    meal = m;
+    btnLunch.classList.toggle('active', m === 'lunch');
+    btnDinner.classList.toggle('active', m === 'dinner');
+    mealHint.textContent = manual
+      ? (m === 'lunch' ? 'lunch odds' : 'dinner odds')
+      : (m === 'lunch' ? 'it looks like lunchtime — lunch odds loaded'
+                       : 'dinner odds loaded (auto-detected)');
+    drawWheel();
+    renderOdds();
+  }
+  btnLunch.addEventListener('click', () => setMeal('lunch', true));
+  btnDinner.addEventListener('click', () => setMeal('dinner', true));
+
+  /* ───────────────────────── odds editor ───────────────────────── */
+
+  const oddsBody = document.getElementById('odds-body');
+
+  function renderOdds() {
+    const w = weights();
+    oddsBody.innerHTML = '';
+    items.forEach((it, i) => {
+      const tr = document.createElement('tr');
+
+      const tdName = document.createElement('td');
+      const sw = document.createElement('span');
+      sw.className = 'swatch';
+      sw.style.background = COLORS[i % COLORS.length];
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.value = it.name;
+      nameInput.addEventListener('change', () => {
+        it.name = nameInput.value.trim() || it.name;
+        nameInput.value = it.name;
+        saveItems(); drawWheel();
+      });
+      tdName.append(sw, nameInput);
+
+      const tdL = document.createElement('td');
+      const tdD = document.createElement('td');
+      for (const [td, key] of [[tdL, 'lunch'], [tdD, 'dinner']]) {
+        const inp = document.createElement('input');
+        inp.type = 'number';
+        inp.min = '0';
+        inp.step = '1';
+        inp.value = it[key];
+        inp.addEventListener('change', () => {
+          it[key] = Math.max(0, +inp.value || 0);
+          inp.value = it[key];
+          saveItems(); drawWheel(); renderOdds();
+        });
+        td.appendChild(inp);
+      }
+
+      const tdPct = document.createElement('td');
+      tdPct.className = 'pct';
+      tdPct.textContent = (w[i] * 100).toFixed(1) + '%';
+
+      const tdRm = document.createElement('td');
+      const rm = document.createElement('button');
+      rm.className = 'rm-btn';
+      rm.textContent = '✕';
+      rm.title = 'Remove';
+      rm.addEventListener('click', () => {
+        if (items.length <= 2) { alert('Keep at least two options — otherwise it isn\'t much of a wheel.'); return; }
+        items.splice(i, 1);
+        saveItems(); drawWheel(); renderOdds();
+      });
+      tdRm.appendChild(rm);
+
+      tr.append(tdName, tdL, tdD, tdPct, tdRm);
+      oddsBody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('add-row').addEventListener('click', () => {
+    if (items.length >= 12) { alert('12 slices max — the labels get unreadable past that.'); return; }
+    items.push({ name: 'New spot', emoji: '🍽️', lunch: 10, dinner: 10 });
+    saveItems(); drawWheel(); renderOdds();
+    document.getElementById('panel').open = true;
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    if (!confirm('Reset restaurants and odds to the defaults?')) return;
+    items = DEFAULTS.map(x => ({ ...x }));
+    saveItems(); drawWheel(); renderOdds();
+  });
+
+  /* ───────────────────────── init ───────────────────────── */
+
+  setMeal(meal, false);
+  resize();
+  requestAnimationFrame(idleFrame);
+})();
+</script>
+</body>
+</html>
