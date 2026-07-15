@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dish Chooser — Snap the Menu, Spin the Wheel</title>
+<meta name="description" content="Take a picture of the menu and let the wheel pick your dish." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  [hidden] { display: none !important; }
+
+  :root {
+    --bg: #f7efe1;
+    --panel: #fffdf7;
+    --panel-2: #fbf4e6;
+    --border: #e9ddc7;
+    --text: #443627;
+    --muted: #a3906f;
+    --gold: #c9922e;
+    --gold-deep: #a9761c;
+    --terra: #d9694a;
+    --red: #c0553f;
+  }
+
+  html, body { height: 100%; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background:
+      radial-gradient(1100px 640px at 50% -12%, #fbeacf 0%, transparent 62%),
+      radial-gradient(820px 560px at 88% 112%, #eef3e2 0%, transparent 58%),
+      radial-gradient(760px 520px at 8% 108%, #fbe4dc 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header { text-align: center; padding: 34px 20px 6px; z-index: 2; }
+  header h1 {
+    font-size: clamp(1.7rem, 4.6vw, 2.7rem);
+    font-weight: 700;
+    background: linear-gradient(180deg, #6a4a28 8%, #c9922e 62%, #d9694a 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p { margin-top: 6px; color: var(--muted); font-size: 0.95rem; }
+  .crumbs {
+    margin-top: 10px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+  }
+  .crumbs a { color: var(--muted); text-decoration: none; }
+  .crumbs a:hover { color: var(--gold-deep); }
+
+  /* ── Scan controls ── */
+  .scan {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin: 18px 0 4px;
+    padding: 0 16px;
+    width: min(92vw, 620px);
+    z-index: 2;
+  }
+  .scan-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; align-items: center; }
+  .btn {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 11px 18px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+  }
+  .btn:hover { border-color: var(--gold-deep); box-shadow: 0 2px 14px rgba(201,146,46,0.18); }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+  .btn.primary {
+    color: #3d2a08;
+    background: linear-gradient(180deg, #ffe29a, #e8b352);
+    border-color: transparent;
+  }
+  .thumbs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .thumb {
+    position: relative;
+    width: 72px; height: 72px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 12px rgba(140,110,60,0.15);
+  }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb button {
+    position: absolute; top: 2px; right: 2px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(60,45,25,0.75);
+    color: #fff;
+    font-size: 0.7rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .scan-status {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    text-align: center;
+    min-height: 1.3em;
+    line-height: 1.5;
+  }
+  .scan-status.err { color: var(--red); }
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    vertical-align: -2px;
+    margin-right: 6px;
+    animation: rot 0.8s linear infinite;
+  }
+  @keyframes rot { to { transform: rotate(360deg); } }
+
+  /* ── Section chips ── */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    max-width: min(92vw, 620px);
+    z-index: 2;
+  }
+  .chip {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .chip:hover { color: var(--text); }
+  .chip.on {
+    color: #3d2a08;
+    background: linear-gradient(180deg, #ffe29a, #e8b352);
+    border-color: transparent;
+  }
+
+  /* ── Wheel stage ── */
+  .stage {
+    position: relative;
+    width: min(92vw, 560px);
+    aspect-ratio: 1;
+    margin: 16px 0 8px;
+    z-index: 1;
+  }
+  #wheel, #fx { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #fx { pointer-events: none; z-index: 5; }
+  #wheel { cursor: pointer; }
+
+  .pointer {
+    position: absolute;
+    top: -3.2%; left: 50%;
+    width: 11%;
+    aspect-ratio: 0.72;
+    transform: translateX(-50%);
+    transform-origin: 50% 22%;
+    z-index: 4;
+    filter: drop-shadow(0 4px 8px rgba(120,90,40,0.4));
+  }
+  .pointer svg { width: 100%; height: 100%; display: block; }
+
+  .hub-btn {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 26%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 0;
+    cursor: pointer;
+    z-index: 6;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1rem, 3.4vw, 1.5rem);
+    letter-spacing: 0.08em;
+    color: #4a3110;
+    background:
+      radial-gradient(circle at 32% 28%, #fffaf0 0%, #ffe6a8 32%, #e8b352 68%, #c8912f 100%);
+    box-shadow:
+      0 0 0 6px rgba(255, 253, 247, 0.95),
+      0 0 0 8px rgba(201, 146, 46, 0.55),
+      0 8px 30px rgba(180, 130, 55, 0.4),
+      inset 0 -6px 14px rgba(160, 110, 40, 0.35);
+    transition: transform 0.12s ease;
+    animation: hubpulse 1.8s ease-in-out infinite;
+  }
+  .hub-btn:hover { transform: translate(-50%, -50%) scale(1.05); }
+  .hub-btn:active { transform: translate(-50%, -50%) scale(0.96); }
+  .hub-btn:disabled { cursor: default; animation: none; filter: saturate(0.55) brightness(0.95); }
+  @keyframes hubpulse {
+    0%, 100% { box-shadow: 0 0 0 6px rgba(255,253,247,.95), 0 0 0 8px rgba(201,146,46,.5), 0 6px 26px rgba(180,130,55,.35), inset 0 -6px 14px rgba(160,110,40,.35); }
+    50%      { box-shadow: 0 0 0 6px rgba(255,253,247,.95), 0 0 0 8px rgba(224,175,80,.85), 0 8px 44px rgba(210,160,70,.6), inset 0 -6px 14px rgba(160,110,40,.35); }
+  }
+
+  /* ── Slice popover ── */
+  .pop {
+    position: absolute;
+    z-index: 8;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(120, 90, 40, 0.25);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 150px;
+    transform: translate(-50%, 8px);
+  }
+  .pop .pop-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 2px 4px 4px;
+    max-width: 200px;
+    border-bottom: 1px solid var(--border);
+  }
+  .pop button {
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-align: left;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+  }
+  .pop button:hover { border-color: var(--gold-deep); background: #fff; }
+  .pop button.danger:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── Result ── */
+  .result {
+    min-height: 86px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px; text-align: center;
+    padding: 0 16px 10px;
+    z-index: 2;
+  }
+  .result .label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    opacity: 0; transition: opacity 0.4s;
+  }
+  .result .name {
+    font-size: clamp(1.4rem, 5vw, 2.2rem);
+    font-weight: 700;
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+    transition: opacity 0.45s, transform 0.45s cubic-bezier(.2,1.6,.4,1);
+  }
+  .result.show .label { opacity: 1; }
+  .result.show .name { opacity: 1; transform: none; text-shadow: 0 2px 20px rgba(201,146,46,0.28); }
+
+  /* ── Dish list ── */
+  .panel {
+    width: min(92vw, 560px);
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    margin: 10px 0 46px;
+    overflow: hidden;
+    z-index: 2;
+    box-shadow: 0 10px 30px rgba(140, 110, 60, 0.1);
+  }
+  .panel summary {
+    cursor: pointer; list-style: none;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--muted); user-select: none;
+  }
+  .panel summary::-webkit-details-marker { display: none; }
+  .panel summary::after { content: '▾'; transition: transform 0.2s; }
+  .panel[open] summary::after { transform: rotate(180deg); }
+  .dish-table { width: 100%; border-collapse: collapse; }
+  .dish-table th, .dish-table td {
+    padding: 9px 10px; font-size: 0.86rem; text-align: left;
+    border-top: 1px solid var(--border);
+  }
+  .dish-table th {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); font-weight: 400;
+  }
+  .dish-table td:first-child, .dish-table th:first-child { padding-left: 18px; }
+  tr.pickable { cursor: pointer; }
+  tr.pickable:hover td { background: rgba(201, 146, 46, 0.08); }
+  tr.off td { opacity: 0.45; }
+  .swatch {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 3px; margin-right: 9px;
+  }
+  .row-meta { font-size: 0.74rem; color: var(--muted); margin-top: 2px; }
+  .pct { font-family: 'Space Mono', monospace; color: var(--gold-deep); white-space: nowrap; }
+  .mini-btn {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 700;
+    width: 30px; height: 30px;
+    margin-left: 4px;
+  }
+  .mini-btn:hover { border-color: var(--gold-deep); background: #fff; }
+  .mini-btn.rm:hover { border-color: var(--red); color: var(--red); }
+  .panel-note { padding: 10px 18px 14px; color: var(--muted); font-size: 0.76rem; line-height: 1.5; }
+  .mult-badge { color: var(--terra); font-weight: 700; }
+
+  footer {
+    padding: 0 0 30px;
+    color: #c3b092;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem; letter-spacing: 0.1em;
+    z-index: 2;
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (prefers-reduced-motion: reduce) { .hub-btn { animation: none; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>📸 Dish Chooser</h1>
+  <p>Snap the menu — the wheel picks your dish.</p>
+  <div class="crumbs"><a href="/choosing-restaurants">← restaurant wheel</a></div>
+</header>
+
+<div class="scan">
+  <div class="scan-row">
+    <button class="btn primary" id="add-photos">📷 Take / add menu photos</button>
+    <button class="btn" id="scan-btn" disabled>✨ Scan the menu</button>
+    <input type="file" id="file-input" accept="image/*" capture="environment" multiple hidden>
+  </div>
+  <div class="thumbs" id="thumbs"></div>
+  <div class="scan-status" id="scan-status">Photograph every page of the menu, then scan — the wheel builds itself.</div>
+</div>
+
+<div class="filters" id="section-filters" hidden></div>
+
+<div class="stage">
+  <canvas id="wheel"></canvas>
+  <canvas id="fx"></canvas>
+  <div class="pointer" aria-hidden="true" id="pointer">
+    <svg viewBox="0 0 72 100">
+      <defs>
+        <linearGradient id="pg" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#ffe9a8"/>
+          <stop offset="0.5" stop-color="#e8a83c"/>
+          <stop offset="1" stop-color="#b97e18"/>
+        </linearGradient>
+      </defs>
+      <path d="M36 100 L8 26 A30 30 0 1 1 64 26 Z" fill="url(#pg)" stroke="#8a5f14" stroke-width="3"/>
+      <circle cx="36" cy="24" r="9" fill="#fff6da"/>
+    </svg>
+  </div>
+  <button class="hub-btn" id="spin" disabled>SPIN</button>
+</div>
+
+<div class="result" id="result">
+  <div class="label">Your dish</div>
+  <div class="name" id="result-name"></div>
+</div>
+
+<details class="panel" id="panel" open>
+  <summary>Dishes &amp; Odds</summary>
+  <table class="dish-table">
+    <thead>
+      <tr><th>Dish — tap a row or a wheel slice to adjust</th><th>Chance</th><th></th></tr>
+    </thead>
+    <tbody id="dish-body">
+      <tr><td colspan="3" style="color:var(--muted); padding:16px 18px;">Scan a menu and the dishes appear here.</td></tr>
+    </tbody>
+  </table>
+  <div class="panel-note" id="panel-note">
+    Tap ＋ / − (on a row, or right on the wheel) to crank a dish's odds up or down,
+    ✕ to remove it. The wheel holds up to 20 dishes at once — filter by menu
+    section if the list runs long.
+  </div>
+</details>
+
+<footer><a href="/">christopherrathbun.com</a> · <a href="/choosing-restaurants">restaurant wheel</a></footer>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ───────────── state ───────────── */
+
+  const MAX_WHEEL = 20;
+  // dishes: {name, section, price, mult (odds multiplier), removed}
+  let dishes = [];
+  let sectionFilter = new Set();     // empty = all sections
+  let photos = [];                   // data URLs waiting to be scanned
+
+  const COLORS = [
+    '#e07a5f', '#e9b44c', '#81b29a', '#6d9dc5', '#c98bb9',
+    '#f2a65a', '#a3b18a', '#b56576', '#7fb0a6', '#d98c5f',
+    '#9a86b8', '#c4a35a', '#cf8080', '#8fae9d', '#d9a06b',
+    '#7d9bc0', '#bd8fae', '#a8b37c', '#c98668', '#93a8c9',
+  ];
+  const LABEL_COLOR = '#3a2a18';
+
+  function wheelList() {
+    return dishes
+      .filter(d => !d.removed)
+      .filter(d => !sectionFilter.size || sectionFilter.has(d.section))
+      .slice(0, MAX_WHEEL);
+  }
+
+  function weights() {
+    const list = wheelList();
+    if (!list.length) return [];
+    const w = list.map(d => d.mult);
+    const total = w.reduce((a, b) => a + b, 0);
+    return w.map(x => x / total);
+  }
+
+  /* ───────────── photo intake ───────────── */
+
+  const fileInput = document.getElementById('file-input');
+  const addBtn = document.getElementById('add-photos');
+  const scanBtn = document.getElementById('scan-btn');
+  const thumbs = document.getElementById('thumbs');
+  const scanStatus = document.getElementById('scan-status');
+
+  function status(msg, isErr, busy) {
+    scanStatus.innerHTML = (busy ? '<span class="spinner"></span>' : '') + msg;
+    scanStatus.classList.toggle('err', !!isErr);
+  }
+
+  addBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async () => {
+    const files = [...fileInput.files].slice(0, 4 - photos.length);
+    fileInput.value = '';
+    for (const f of files) {
+      try {
+        photos.push(await downscale(f));
+      } catch (e) {
+        status('Couldn’t read one of the photos — try a JPEG or PNG.', true);
+      }
+    }
+    renderThumbs();
+  });
+
+  // Downscale to ≤1600px JPEG so uploads stay small and scans stay fast.
+  async function downscale(file) {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const cw = Math.round(bmp.width * scale), ch = Math.round(bmp.height * scale);
+    const cv = document.createElement('canvas');
+    cv.width = cw; cv.height = ch;
+    cv.getContext('2d').drawImage(bmp, 0, 0, cw, ch);
+    bmp.close && bmp.close();
+    return cv.toDataURL('image/jpeg', 0.82);
+  }
+
+  function renderThumbs() {
+    thumbs.innerHTML = '';
+    photos.forEach((p, i) => {
+      const d = document.createElement('div');
+      d.className = 'thumb';
+      const img = document.createElement('img');
+      img.src = p; img.alt = 'menu photo ' + (i + 1);
+      const x = document.createElement('button');
+      x.textContent = '✕';
+      x.title = 'Remove photo';
+      x.addEventListener('click', () => { photos.splice(i, 1); renderThumbs(); });
+      d.append(img, x);
+      thumbs.appendChild(d);
+    });
+    scanBtn.disabled = photos.length === 0;
+    if (photos.length) status(photos.length + (photos.length === 1 ? ' photo ready' : ' photos ready') + ' — hit “Scan the menu”.');
+  }
+
+  /* ───────────── scan ───────────── */
+
+  let scanning = false;
+  scanBtn.addEventListener('click', async () => {
+    if (scanning || !photos.length) return;
+    scanning = true;
+    scanBtn.disabled = true; addBtn.disabled = true;
+    status('Reading the menu — this takes a few seconds…', false, true);
+    try {
+      const res = await fetch('/api/menu-scan', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ images: photos }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || ('scan failed (' + res.status + ')'));
+      const found = Array.isArray(data.dishes) ? data.dishes : [];
+      if (!found.length) { status('No dishes found — try clearer, closer photos of the menu.', true); return; }
+      dishes = found.map(d => ({ ...d, mult: 1, removed: false }));
+      sectionFilter = new Set();
+      resultEl.classList.remove('show');
+      status('Found ' + dishes.length + ' dishes' + (dishes.length > MAX_WHEEL ? ' — wheel shows ' + MAX_WHEEL + ' at a time, use the section filters' : '') + '. Spin!');
+      renderSections();
+      refresh();
+      photos = [];
+      renderThumbs();
+      scanBtn.disabled = true;
+    } catch (e) {
+      status((e && e.message ? e.message : 'Scan failed') + ' — try again.', true);
+    } finally {
+      scanning = false;
+      addBtn.disabled = false;
+      if (photos.length) scanBtn.disabled = false;
+    }
+  });
+
+  /* ───────────── section chips ───────────── */
+
+  const sectionFilters = document.getElementById('section-filters');
+
+  function renderSections() {
+    const secs = [...new Set(dishes.filter(d => !d.removed).map(d => d.section))];
+    sectionFilters.innerHTML = '';
+    sectionFilters.hidden = secs.length < 2;
+    if (secs.length < 2) { sectionFilter = new Set(); return; }
+    const all = document.createElement('button');
+    all.className = 'chip' + (sectionFilter.size === 0 ? ' on' : '');
+    all.textContent = 'Whole menu';
+    all.addEventListener('click', () => { sectionFilter = new Set(); renderSections(); refresh(); });
+    sectionFilters.appendChild(all);
+    for (const s of secs) {
+      const b = document.createElement('button');
+      b.className = 'chip' + (sectionFilter.has(s) ? ' on' : '');
+      b.textContent = s;
+      b.addEventListener('click', () => {
+        sectionFilter.has(s) ? sectionFilter.delete(s) : sectionFilter.add(s);
+        renderSections(); refresh();
+      });
+      sectionFilters.appendChild(b);
+    }
+  }
+
+  /* ───────────── wheel (same engine as the restaurant wheel) ───────────── */
+
+  const wheelCanvas = document.getElementById('wheel');
+  const fxCanvas = document.getElementById('fx');
+  const wctx = wheelCanvas.getContext('2d');
+  const fctx = fxCanvas.getContext('2d');
+  const pointerEl = document.getElementById('pointer');
+  const spinBtn = document.getElementById('spin');
+  const resultEl = document.getElementById('result');
+  const resultName = document.getElementById('result-name');
+
+  let size = 0, dpr = 1, rotation = 0, spinning = false, bulbPhase = 0;
+
+  function resize() {
+    const rect = wheelCanvas.parentElement.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    size = rect.width;
+    for (const c of [wheelCanvas, fxCanvas]) {
+      c.width = Math.round(size * dpr);
+      c.height = Math.round(size * dpr);
+    }
+    drawWheel();
+  }
+  window.addEventListener('resize', resize);
+
+  function drawWheel() {
+    if (!size) return;
+    const ctx = wctx;
+    const c = size / 2;
+    const R = c * 0.985;
+    const rimW = R * 0.055;
+    const innerR = R - rimW;
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+
+    ctx.save();
+    ctx.translate(c, c);
+    const rimGrad = ctx.createLinearGradient(0, -R, 0, R);
+    rimGrad.addColorStop(0, '#fff6e4');
+    rimGrad.addColorStop(0.5, '#e6c07f');
+    rimGrad.addColorStop(1, '#c2913f');
+    ctx.beginPath();
+    ctx.arc(0, 0, R, 0, Math.PI * 2);
+    ctx.fillStyle = rimGrad;
+    ctx.fill();
+
+    ctx.rotate(rotation);
+    const real = wheelList();
+    const placeholder = real.length === 0;
+    const list = placeholder
+      ? Array.from({ length: 8 }, () => ({ name: '', emoji: '🍽️' }))
+      : real;
+    const w = placeholder ? list.map(() => 1 / 8) : weights();
+    const angles = [];
+    { let a = 0; for (const wi of w) { angles.push([a, a + wi * Math.PI * 2]); a += wi * Math.PI * 2; } }
+
+    for (let i = 0; i < list.length; i++) {
+      const [a0, a1] = angles[i];
+      const col = placeholder ? (i % 2 ? '#efe6d4' : '#e6dcc6') : COLORS[i % COLORS.length];
+      const grad = ctx.createRadialGradient(0, 0, innerR * 0.15, 0, 0, innerR);
+      grad.addColorStop(0, shade(col, 26));
+      grad.addColorStop(0.72, col);
+      grad.addColorStop(1, shade(col, -26));
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, innerR, a0, a1);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,250,240,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    for (let i = 0; i < list.length; i++) {
+      const [a0, a1] = angles[i];
+      const mid = (a0 + a1) / 2;
+      ctx.save();
+      ctx.rotate(mid);
+      const fs = Math.max(9, Math.min(innerR * 0.062, innerR * w[i] * 1.9));
+      ctx.font = `600 ${fs}px 'Space Grotesk', sans-serif`;
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = placeholder ? 'rgba(120,100,70,0.4)' : LABEL_COLOR;
+      ctx.shadowColor = 'rgba(255,252,244,0.55)';
+      ctx.shadowBlur = 3;
+      ctx.fillText(list[i].name || '❓', innerR * 0.94, 0, innerR * 0.74);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // rim bulbs
+    ctx.save();
+    ctx.translate(c, c);
+    const bulbs = 24;
+    for (let i = 0; i < bulbs; i++) {
+      const a = (i / bulbs) * Math.PI * 2;
+      const on = spinning
+        ? (Math.floor(bulbPhase * 14) % 3) === (i % 3)
+        : Math.sin(bulbPhase * 2.2 + i * 0.9) > -0.25;
+      const br = R - rimW / 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * br, Math.sin(a) * br, rimW * 0.26, 0, Math.PI * 2);
+      ctx.fillStyle = on ? '#fff4cf' : '#c9a55f';
+      ctx.shadowColor = on ? 'rgba(255,225,140,0.95)' : 'transparent';
+      ctx.shadowBlur = on ? 10 : 0;
+      ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(c, c);
+    ctx.beginPath();
+    ctx.arc(0, 0, innerR * 0.30, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(150,120,75,0.22)';
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const f = v => Math.max(0, Math.min(255, v));
+    return `rgb(${f((n >> 16) + amt)},${f(((n >> 8) & 0xff) + amt)},${f((n & 0xff) + amt)})`;
+  }
+
+  /* ───────────── slice tap → popover ───────────── */
+
+  const stage = document.querySelector('.stage');
+  let pop = null;
+
+  function closePop() { if (pop) { pop.remove(); pop = null; } }
+  document.addEventListener('click', e => {
+    if (pop && !pop.contains(e.target) && e.target !== wheelCanvas) closePop();
+  });
+
+  wheelCanvas.addEventListener('click', e => {
+    closePop();
+    if (spinning) return;
+    const list = wheelList();
+    if (!list.length) return;
+    const rect = wheelCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left - rect.width / 2;
+    const y = e.clientY - rect.top - rect.height / 2;
+    const r = Math.hypot(x, y) / (rect.width / 2);
+    if (r > 0.99 || r < 0.28) return;             // outside wheel or under hub
+    const TWO_PI = Math.PI * 2;
+    let a = Math.atan2(y, x) - rotation;
+    a = ((a % TWO_PI) + TWO_PI) % TWO_PI;
+    const w = weights();
+    let acc = 0, idx = list.length - 1;
+    for (let i = 0; i < w.length; i++) { acc += w[i] * TWO_PI; if (a < acc) { idx = i; break; } }
+    openPop(list[idx], e.clientX - rect.left, e.clientY - rect.top);
+  });
+
+  function openPop(dish, px, py) {
+    pop = document.createElement('div');
+    pop.className = 'pop';
+    const name = document.createElement('div');
+    name.className = 'pop-name';
+    name.textContent = dish.name;
+    const more = document.createElement('button');
+    more.textContent = '＋ More likely';
+    more.addEventListener('click', () => { bump(dish, 1.4); positionPopSafe(); });
+    const less = document.createElement('button');
+    less.textContent = '− Less likely';
+    less.addEventListener('click', () => { bump(dish, 1 / 1.4); positionPopSafe(); });
+    const rm = document.createElement('button');
+    rm.className = 'danger';
+    rm.textContent = '✕ Remove from wheel';
+    rm.addEventListener('click', () => { removeDish(dish); closePop(); });
+    pop.append(name, more, less, rm);
+    stage.appendChild(pop);
+    pop.style.left = px + 'px';
+    pop.style.top = py + 'px';
+    positionPopSafe();
+
+    function positionPopSafe() {
+      const r = pop.getBoundingClientRect();
+      const s = stage.getBoundingClientRect();
+      if (r.right > s.right) pop.style.left = (px - (r.right - s.right)) + 'px';
+      if (r.left < s.left) pop.style.left = (px + (s.left - r.left)) + 'px';
+      if (r.bottom > s.bottom + 60) pop.style.top = (py - r.height - 16) + 'px';
+    }
+  }
+
+  function bump(dish, factor) {
+    dish.mult = Math.max(0.2, Math.min(6, dish.mult * factor));
+    refresh(true);
+  }
+
+  function removeDish(dish) {
+    const active = wheelList();
+    if (active.length <= 2 && !dish.removed) {
+      alert('Keep at least two dishes — otherwise it isn’t much of a wheel.');
+      return;
+    }
+    dish.removed = true;
+    renderSections();
+    refresh();
+  }
+
+  /* ───────────── list ───────────── */
+
+  const dishBody = document.getElementById('dish-body');
+
+  function renderList() {
+    dishBody.innerHTML = '';
+    if (!dishes.length) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="3" style="color:var(--muted); padding:16px 18px;">Scan a menu and the dishes appear here.</td>';
+      dishBody.appendChild(tr);
+      return;
+    }
+    const active = wheelList();
+    const w = weights();
+    const pos = new Map(active.map((d, i) => [d, i]));
+
+    const visible = dishes.filter(d => !d.removed &&
+      (!sectionFilter.size || sectionFilter.has(d.section)));
+
+    visible.forEach(d => {
+      const i = pos.has(d) ? pos.get(d) : -1;
+      const onWheel = i >= 0;
+      const tr = document.createElement('tr');
+      tr.className = onWheel ? 'pickable' : 'off';
+      if (onWheel) tr.addEventListener('click', () => bump(d, 1.4));
+
+      const tdName = document.createElement('td');
+      const line = document.createElement('div');
+      if (onWheel) {
+        const sw = document.createElement('span');
+        sw.className = 'swatch';
+        sw.style.background = COLORS[i % COLORS.length];
+        line.appendChild(sw);
+      }
+      line.appendChild(document.createTextNode(d.name));
+      const meta = document.createElement('div');
+      meta.className = 'row-meta';
+      meta.textContent = d.section + (d.price ? ' · ' + d.price : '') + (onWheel ? '' : ' · waiting for a slot');
+      if (d.mult !== 1 && onWheel) {
+        const mb = document.createElement('span');
+        mb.className = 'mult-badge';
+        mb.textContent = '  ' + (d.mult > 1 ? '🔥' : '🧊') + '×' + d.mult.toFixed(1);
+        meta.appendChild(mb);
+      }
+      tdName.append(line, meta);
+
+      const tdPct = document.createElement('td');
+      tdPct.className = 'pct';
+      tdPct.textContent = onWheel ? (w[i] * 100).toFixed(1) + '%' : '—';
+
+      const tdAct = document.createElement('td');
+      tdAct.style.whiteSpace = 'nowrap';
+      const plus = document.createElement('button');
+      plus.className = 'mini-btn'; plus.textContent = '＋'; plus.title = 'More likely';
+      plus.addEventListener('click', e => { e.stopPropagation(); bump(d, 1.4); });
+      const minus = document.createElement('button');
+      minus.className = 'mini-btn'; minus.textContent = '−'; minus.title = 'Less likely';
+      minus.addEventListener('click', e => { e.stopPropagation(); bump(d, 1 / 1.4); });
+      const rm = document.createElement('button');
+      rm.className = 'mini-btn rm'; rm.textContent = '✕'; rm.title = 'Remove';
+      rm.addEventListener('click', e => { e.stopPropagation(); removeDish(d); });
+      tdAct.append(plus, minus, rm);
+
+      tr.append(tdName, tdPct, tdAct);
+      dishBody.appendChild(tr);
+    });
+  }
+
+  function refresh(keepPop) {
+    if (!keepPop) closePop();
+    if (!spinning) spinBtn.disabled = wheelList().length < 2;
+    drawWheel();
+    renderList();
+  }
+
+  /* ───────────── sound + spin + confetti ───────────── */
+
+  let audioCtx = null;
+  function ac() {
+    if (!audioCtx) {
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { return null; }
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function tickSound(speed) {
+    const ctx = ac(); if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1700 + speed * 500, t);
+    gain.gain.setValueAtTime(0.06, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t); osc.stop(t + 0.04);
+  }
+  function fanfare() {
+    const ctx = ac(); if (!ctx) return;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+      const t = ctx.currentTime + i * 0.11;
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.16, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t); osc.stop(t + 0.55);
+    });
+  }
+
+  const POINTER_ANGLE = -Math.PI / 2;
+  function ease(t) { return 1 - Math.pow(1 - t, 4.1); }
+
+  function spin() {
+    const list = wheelList();
+    if (spinning || list.length < 2) return;
+    closePop();
+    spinning = true;
+    spinBtn.disabled = true;
+    resultEl.classList.remove('show');
+
+    const w = weights();
+    let r = Math.random(), winner = w.length - 1;
+    for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) { winner = i; break; } }
+
+    const angles = [];
+    { let a = 0; for (const wi of w) { angles.push([a, a + wi * Math.PI * 2]); a += wi * Math.PI * 2; } }
+    const [a0, a1] = angles[winner];
+    const margin = (a1 - a0) * 0.14;
+    const landing = a0 + margin + Math.random() * ((a1 - a0) - margin * 2);
+
+    const TWO_PI = Math.PI * 2;
+    const current = ((rotation % TWO_PI) + TWO_PI) % TWO_PI;
+    let target = ((POINTER_ANGLE - landing) % TWO_PI + TWO_PI) % TWO_PI;
+    let delta = target - current;
+    if (delta <= 0) delta += TWO_PI;
+    delta += (6 + Math.floor(Math.random() * 3)) * TWO_PI;
+
+    const startRot = rotation;
+    const duration = 6200 + Math.random() * 1400;
+    const startTime = performance.now();
+    let lastNow = startTime;
+
+    function indexAtPointer(rot) {
+      const a = ((POINTER_ANGLE - rot) % TWO_PI + TWO_PI) % TWO_PI;
+      for (let i = 0; i < angles.length; i++) if (a >= angles[i][0] && a < angles[i][1]) return i;
+      return angles.length - 1;
+    }
+    let lastIndex = indexAtPointer(rotation);
+
+    function frame(now) {
+      const t = Math.min(1, (now - startTime) / duration);
+      rotation = startRot + delta * ease(t);
+      bulbPhase += (now - lastNow) / 1000 * (1 + (1 - t) * 6);
+      lastNow = now;
+      const idx = indexAtPointer(rotation);
+      if (idx !== lastIndex) {
+        lastIndex = idx;
+        tickSound(1 - t);
+        flickPointer(1 - t);
+      }
+      drawWheel();
+      if (t < 1) requestAnimationFrame(frame);
+      else {
+        spinning = false;
+        spinBtn.disabled = wheelList().length < 2;
+        const it = list[winner];
+        resultName.textContent = '🍽️ ' + it.name + (it.price ? '  ·  ' + it.price : '');
+        resultName.style.color = COLORS[winner % COLORS.length];
+        resultEl.classList.add('show');
+        fanfare();
+        confetti();
+        if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+  spinBtn.addEventListener('click', spin);
+
+  function flickPointer(speed) {
+    pointerEl.style.transition = 'none';
+    pointerEl.style.transform = `translateX(-50%) rotate(${-14 - speed * 14}deg)`;
+    requestAnimationFrame(() => {
+      pointerEl.style.transition = 'transform 0.14s cubic-bezier(.2,2.2,.4,1)';
+      pointerEl.style.transform = 'translateX(-50%) rotate(0deg)';
+    });
+  }
+
+  let confettiParticles = [], confettiRunning = false;
+  function confetti() {
+    const c = size / 2;
+    for (let i = 0; i < 140; i++) {
+      const a = Math.random() * Math.PI * 2, v = 3 + Math.random() * 8;
+      confettiParticles.push({
+        x: c, y: c, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 4,
+        rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.4,
+        w: 4 + Math.random() * 6, h: 3 + Math.random() * 5,
+        col: COLORS[i % COLORS.length], life: 1,
+      });
+    }
+    if (!confettiRunning) { confettiRunning = true; requestAnimationFrame(confettiFrame); }
+  }
+  function confettiFrame() {
+    fctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    fctx.clearRect(0, 0, size, size);
+    confettiParticles = confettiParticles.filter(p => p.life > 0 && p.y < size + 20);
+    for (const p of confettiParticles) {
+      p.vy += 0.18; p.vx *= 0.985;
+      p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= 0.006;
+      fctx.save();
+      fctx.translate(p.x, p.y);
+      fctx.rotate(p.rot);
+      fctx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.6));
+      fctx.fillStyle = p.col;
+      fctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      fctx.restore();
+    }
+    if (confettiParticles.length) requestAnimationFrame(confettiFrame);
+    else { confettiRunning = false; fctx.clearRect(0, 0, size, size); }
+  }
+
+  /* ───────────── idle shimmer + init ───────────── */
+
+  let lastIdle = performance.now();
+  function idleFrame(now) {
+    if (!spinning) { bulbPhase += (now - lastIdle) / 1000; drawWheel(); }
+    lastIdle = now;
+    requestAnimationFrame(idleFrame);
+  }
+
+  resize();
+  requestAnimationFrame(idleFrame);
+})();
+</script>
+</body>
+</html>

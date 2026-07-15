@@ -3,6 +3,7 @@ import { handleSentry } from './sentry-dashboard.js';
 import { handleVighnaa } from './vighnaa.js';
 import { handleUsers } from './users-dashboard.js';
 import { handleReminders } from './reminders.js';
+import { handleDishes } from './dishes.js';
 import { runReconciler, runPreScheduler, runWebhookFallback } from './reminders.js';
 
 function newGameId() {
@@ -98,6 +99,11 @@ export default {
     // Users dashboard (Clerk-authenticated)
     if (path === '/users' || path === '/users/' || path.startsWith('/users/') || path === '/api/users' || path.startsWith('/api/users/')) {
       return handleUsers(request, env, url);
+    }
+
+    // Dish Chooser — menu-photo scan API for /choosing-dishes
+    if (path === '/api/menu-scan') {
+      return handleDishes(request, env, url);
     }
 
     // Reminders — AI medication-reminder calls

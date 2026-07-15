@@ -15,7 +15,7 @@ routes = [
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/", "/vighnaatextllm", "/vighnaatextllm/*", "/users", "/users/*", "/api/users", "/api/users/*", "/reminders", "/reminders/*"]
+run_worker_first = ["/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/", "/vighnaatextllm", "/vighnaatextllm/*", "/users", "/users/*", "/api/users", "/api/users/*", "/reminders", "/reminders/*", "/api/menu-scan"]
 
 [vars]
 SENTRY_ORG = "lilac-impact-ventures-llc"
