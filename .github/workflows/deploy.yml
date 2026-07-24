@@ -11,6 +11,13 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+      - name: Check Cloudflare token is configured
+        run: |
+          if [ -z "${{ secrets.CLOUDFLARE_API_TOKEN }}" ]; then
+            echo "::error::The CLOUDFLARE_API_TOKEN repository secret is MISSING or EMPTY. Add it under Settings → Secrets and variables → Actions → Repository secrets (name must be exactly CLOUDFLARE_API_TOKEN)."
+            exit 1
+          fi
+          echo "Cloudflare token secret is present."
       - name: Deploy worker
         uses: cloudflare/wrangler-action@v3
         with:
