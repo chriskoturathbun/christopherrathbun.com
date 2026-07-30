@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Training — Warm-up, Passing, Dribbling</title>
+<meta name="description" content="A soccer training session: dynamic warm-up, five passing progressions, and four dribbling progressions." />
+<meta name="theme-color" content="#f7efe1" />
+<meta property="og:title" content="Training — Warm-up, Passing, Dribbling" />
+<meta property="og:description" content="Dynamic warm-up, passing progressions, dribbling progressions. One page, diagrams included." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7efe1;
+    --panel: #fffdf7;
+    --panel-2: #fbf4e6;
+    --border: #e9ddc7;
+    --text: #443627;
+    --muted: #a3906f;
+    --gold: #c9922e;
+    --gold-deep: #a9761c;
+    --terra: #d9694a;
+    --grass: #5c8a45;
+    --grass-deep: #3f6b2e;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    background:
+      radial-gradient(1100px 640px at 50% -14%, #f2f6e4 0%, transparent 60%),
+      radial-gradient(820px 560px at 92% 108%, #eef3e2 0%, transparent 58%),
+      radial-gradient(760px 520px at 4% 104%, #fbe4dc 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { width: min(94vw, 940px); margin: 0 auto; }
+
+  /* ── Header ── */
+  header { padding: 46px 0 8px; text-align: center; }
+  .eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 0.4em;
+  }
+  h1 {
+    margin-top: 10px;
+    font-size: clamp(2.4rem, 8vw, 4.2rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    background: linear-gradient(180deg, #3f6b2e 6%, #6a4a28 58%, #c9922e 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .lede {
+    margin: 14px auto 0;
+    max-width: 46ch;
+    color: #6f5c44;
+    font-size: 1rem;
+  }
+  .crumbs {
+    margin-top: 14px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+  }
+  .crumbs a { color: var(--muted); text-decoration: none; }
+  .crumbs a:hover { color: var(--gold-deep); }
+
+  /* ── Jump nav ── */
+  .jump {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin-top: 26px;
+    padding: 12px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    background: rgba(247, 239, 225, 0.9);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .jump a {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 6px 14px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .jump a:hover { color: var(--text); border-color: var(--gold); }
+
+  /* ── Sections ── */
+  section { margin-top: 54px; scroll-margin-top: 72px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .sec-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #fffdf7;
+    background: var(--grass-deep);
+    border-radius: 8px;
+    padding: 3px 10px;
+  }
+  .sec-head h2 {
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .sec-note { color: var(--muted); font-size: 0.86rem; }
+  .rule { height: 1px; background: var(--border); margin: 14px 0 22px; }
+
+  /* ── Warm-up ── */
+  .moves {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+    list-style: none;
+  }
+  .moves li {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 13px 15px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .moves .i {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--gold-deep);
+  }
+  .moves b { font-weight: 600; }
+  .moves small { display: block; color: var(--muted); font-size: 0.78rem; line-height: 1.4; }
+
+  /* ── Drill cards ── */
+  .drills { display: flex; flex-direction: column; gap: 16px; }
+  .drill {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 6px 22px rgba(150, 120, 70, 0.06);
+  }
+  .drill-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--border);
+  }
+  .roman {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--gold-deep);
+    background: #fdf1d8;
+    border: 1px solid #f0dfb8;
+    border-radius: 6px;
+    padding: 2px 8px;
+    min-width: 34px;
+    text-align: center;
+  }
+  .drill-head h3 { font-size: 1.08rem; font-weight: 600; letter-spacing: -0.01em; }
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px dashed var(--border);
+    border-radius: 999px;
+    padding: 3px 10px;
+    margin-left: auto;
+  }
+  .drill-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 20px;
+    padding: 18px;
+  }
+  @media (max-width: 720px) {
+    .drill-body { grid-template-columns: 1fr; gap: 14px; }
+    .tag { margin-left: 0; }
+  }
+
+  figure.diagram { margin: 0; }
+  figure.diagram svg {
+    width: 100%;
+    height: auto;
+    display: block;
+    background: #f4f8ec;
+    border: 1px solid #dfe9d1;
+    border-radius: 12px;
+  }
+  figcaption {
+    margin-top: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  ul.points { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  ul.points li {
+    position: relative;
+    padding-left: 20px;
+    font-size: 0.94rem;
+  }
+  ul.points li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.62em;
+    width: 8px;
+    height: 2px;
+    background: var(--gold);
+    border-radius: 2px;
+  }
+  ul.points li em {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--grass-deep);
+  }
+
+  .variation {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .var {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: var(--panel-2);
+  }
+  .var h4 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--gold-deep);
+    margin-bottom: 6px;
+  }
+  .var p { font-size: 0.9rem; }
+  .var.open { border-style: dashed; background: transparent; }
+  .var.open p { color: var(--muted); font-style: italic; }
+
+  /* ── Legend ── */
+  .legend {
+    margin-top: 26px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+    justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend svg { width: 26px; height: 16px; overflow: visible; }
+
+  footer {
+    margin: 64px 0 40px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--gold-deep); }
+
+  @media print {
+    body { background: #fff; }
+    .jump { display: none; }
+    .drill, .moves li { box-shadow: none; break-inside: avoid; }
+    section { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<!-- shared SVG defs: arrowheads + markers -->
+<svg width="0" height="0" aria-hidden="true" style="position:absolute">
+  <defs>
+    <marker id="ah-pass" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#c9922e" />
+    </marker>
+    <marker id="ah-run" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#5c8a45" />
+    </marker>
+    <marker id="ah-dribble" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#7a5ea8" />
+    </marker>
+    <symbol id="cone" viewBox="0 0 20 20">
+      <path d="M10 3 L16.5 16 H3.5 Z" fill="#d9694a" />
+      <ellipse cx="10" cy="16" rx="7.5" ry="2" fill="#b8543a" />
+    </symbol>
+    <style>
+      .pitch { fill: none; stroke: #cbdcb6; stroke-width: 2; }
+      .pass  { fill: none; stroke: #c9922e; stroke-width: 2.4; stroke-dasharray: 7 5; stroke-linecap: round; }
+      .run   { fill: none; stroke: #5c8a45; stroke-width: 2.4; stroke-linecap: round; }
+      .drib  { fill: none; stroke: #7a5ea8; stroke-width: 2.4; stroke-linecap: round; }
+      .plr   { fill: #443627; }
+      .def   { fill: #c9922e; }
+      .plr-l { fill: #fffdf7; font: 700 10px 'Space Mono', monospace; text-anchor: middle; }
+      .lbl   { fill: #8a7757; font: 500 11px 'Space Grotesk', sans-serif; text-anchor: middle; }
+    </style>
+  </defs>
+</svg>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Session Plan</div>
+    <h1>Training</h1>
+    <p class="lede">A warm-up, five passing progressions, and four dribbling progressions — each one building on the last.</p>
+    <div class="crumbs"><a href="/">← christopherrathbun.com</a></div>
+  </header>
+
+  <nav class="jump">
+    <a href="#warmup">1 · Dynamic warm-up</a>
+    <a href="#passing">2 · Passing</a>
+    <a href="#dribbling">3 · Dribbling</a>
+  </nav>
+
+  <!-- ─────────────── 1. WARM-UP ─────────────── -->
+  <section id="warmup">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Dynamic warm-up</h2>
+      <span class="sec-note">In order, around the field</span>
+    </div>
+    <div class="rule"></div>
+
+    <ul class="moves">
+      <li><span class="i">01</span><div><b>Light jog</b><small>Around the field</small></div></li>
+      <li><span class="i">02</span><div><b>High knees</b></div></li>
+      <li><span class="i">03</span><div><b>Side shuffles</b></div></li>
+      <li><span class="i">04</span><div><b>Butt kicks</b></div></li>
+      <li><span class="i">05</span><div><b>Open outwards &amp; inwards</b><small>Opening up the hips</small></div></li>
+      <li><span class="i">06</span><div><b>Lunges</b></div></li>
+      <li><span class="i">07</span><div><b>Acceleration</b><small>5–10 yards</small></div></li>
+    </ul>
+  </section>
+
+  <!-- ─────────────── 2. PASSING ─────────────── -->
+  <section id="passing">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Passing</h2>
+      <span class="sec-note">Work down the list as the group settles in</span>
+    </div>
+    <div class="rule"></div>
+
+    <div class="drills">
+
+      <!-- (i) Simple -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">i</span>
+          <h3>Simple</h3>
+          <span class="tag">group size dependent</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Two players facing each other passing back and forth inside a grid.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <path class="pass" d="M92 85 H228" marker-end="url(#ah-pass)" marker-start="url(#ah-pass)" />
+              <circle class="plr" cx="70" cy="85" r="13" /><text class="plr-l" x="70" y="89">A</text>
+              <circle class="plr" cx="250" cy="85" r="13" /><text class="plr-l" x="250" y="89">B</text>
+              <text class="lbl" x="160" y="62">two touches → one touch</text>
+              <text class="lbl" x="160" y="135">stationary, then pass + move</text>
+            </svg>
+            <figcaption>Pairs, facing each other</figcaption>
+          </figure>
+          <ul class="points">
+            <li>Start <em>stationary</em>, then progress to <em>pass + move</em>.</li>
+            <li>Two touches to begin — one to control, one to pass.</li>
+            <li>Proceed to <em>one touch</em> once it's clean.</li>
+            <li>Number of players per group depends on how many turn up.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- (ii) One marker -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">ii</span>
+          <h3>One marker / cone</h3>
+          <span class="tag">both feet</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Two players passing around a single cone placed between them.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <use href="#cone" x="150" y="75" width="20" height="20" />
+              <path class="pass" d="M88 76 Q160 34 232 76" marker-end="url(#ah-pass)" />
+              <path class="pass" d="M232 100 Q160 142 88 100" marker-end="url(#ah-pass)" />
+              <circle class="plr" cx="66" cy="88" r="13" /><text class="plr-l" x="66" y="92">A</text>
+              <circle class="plr" cx="254" cy="88" r="13" /><text class="plr-l" x="254" y="92">B</text>
+              <text class="lbl" x="160" y="26">trap · pass · same side every time</text>
+            </svg>
+            <figcaption>One cone between the pair</figcaption>
+          </figure>
+          <ul class="points">
+            <li><em>Trap with one foot</em>, pass with the other.</li>
+            <li>Ensure the ball stays on the <em>correct side</em> of the marker.</li>
+            <li>Swap the trapping foot so both feet get work.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- (iii) Two markers -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">iii</span>
+          <h3>Two markers / cones</h3>
+          <span class="tag">accuracy</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Two players passing through a gate formed by two cones.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <use href="#cone" x="150" y="36" width="20" height="20" />
+              <use href="#cone" x="150" y="106" width="20" height="20" />
+              <path d="M160 60 V110" stroke="#dfe9d1" stroke-width="2" stroke-dasharray="4 4" />
+              <path class="pass" d="M90 85 H230" marker-end="url(#ah-pass)" marker-start="url(#ah-pass)" />
+              <circle class="plr" cx="66" cy="85" r="13" /><text class="plr-l" x="66" y="89">A</text>
+              <circle class="plr" cx="254" cy="85" r="13" /><text class="plr-l" x="254" y="89">B</text>
+              <text class="lbl" x="160" y="150">the pass must go through the gate</text>
+            </svg>
+            <figcaption>A gate between the pair</figcaption>
+          </figure>
+          <ul class="points">
+            <li>Now for <em>accuracy</em> — the ball must be passed <em>within the markers</em> to the other player.</li>
+            <li>One or two touches.</li>
+            <li>Narrow the gate as the pair get sharper.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- (iv) Advanced -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">iv</span>
+          <h3>Advanced</h3>
+          <span class="tag">optional</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Three-player pattern: pass into the middle, lay off, then move to the other side.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <path class="pass" d="M62 76 H142" marker-end="url(#ah-pass)" />
+              <path class="pass" d="M178 76 H258" marker-end="url(#ah-pass)" />
+              <path class="run" d="M160 96 Q200 138 252 122" marker-end="url(#ah-run)" />
+              <circle class="plr" cx="46" cy="76" r="13" /><text class="plr-l" x="46" y="80">A</text>
+              <circle class="plr" cx="160" cy="76" r="13" /><text class="plr-l" x="160" y="80">C</text>
+              <circle class="plr" cx="274" cy="76" r="13" /><text class="plr-l" x="274" y="80">B</text>
+              <text class="lbl" x="102" y="58">pass</text>
+              <text class="lbl" x="218" y="58">lay off</text>
+              <text class="lbl" x="196" y="152">then move across</text>
+            </svg>
+            <figcaption>Pass · move to centre · lay off · rotate</figcaption>
+          </figure>
+          <ul class="points">
+            <li>Pass the ball, then <em>move to the centre</em>.</li>
+            <li>Wait for a pass from another player.</li>
+            <li><em>Lay off</em> the pass.</li>
+            <li>Move to the other side and repeat.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- (v) Rondo -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">v</span>
+          <h3>Rondo</h3>
+          <span class="tag">keep-away</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Rondo: outside players in a ring keeping the ball from two defenders in the middle.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <circle cx="160" cy="85" r="50" fill="none" stroke="#dfe9d1" stroke-width="2" stroke-dasharray="5 5" />
+              <path class="pass" d="M131 60 H187" marker-end="url(#ah-pass)" />
+              <path class="pass" d="M193 119 Q160 146 131 118" marker-end="url(#ah-pass)" />
+              <circle class="plr" cx="160" cy="35" r="12" />
+              <circle class="plr" cx="203" cy="60" r="12" />
+              <circle class="plr" cx="203" cy="110" r="12" />
+              <circle class="plr" cx="160" cy="135" r="12" />
+              <circle class="plr" cx="117" cy="110" r="12" />
+              <circle class="plr" cx="117" cy="60" r="12" />
+              <circle class="def" cx="142" cy="78" r="12" /><text class="plr-l" x="142" y="82" fill="#443627">D</text>
+              <circle class="def" cx="180" cy="98" r="12" /><text class="plr-l" x="180" y="102" fill="#443627">D</text>
+            </svg>
+            <figcaption>Outside keep it · inside win it</figcaption>
+          </figure>
+          <ul class="points">
+            <li>Use <em>two touches</em> — or only one touch to make it harder.</li>
+            <li><em>Outside players</em> retain the ball.</li>
+            <li><em>Inside players</em> try to get the ball.</li>
+            <li>Whoever loses it goes in the middle.</li>
+          </ul>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ─────────────── 3. DRIBBLING ─────────────── -->
+  <section id="dribbling">
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Dribbling</h2>
+      <span class="sec-note">Comfort first, then speed</span>
+    </div>
+    <div class="rule"></div>
+
+    <div class="drills">
+
+      <!-- (i) Simple -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">i</span>
+          <h3>Simple</h3>
+          <span class="tag">out &amp; back</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Dribble out with many touches, run the ball back with fewer touches.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <use href="#cone" x="34" y="75" width="20" height="20" />
+              <use href="#cone" x="266" y="75" width="20" height="20" />
+              <path class="drib" d="M50 62 C74 40 86 78 110 58 C134 38 146 76 170 56 C194 36 206 74 230 54 C246 41 258 48 266 56" marker-end="url(#ah-dribble)" />
+              <path class="drib" d="M262 118 C220 106 110 132 56 118" marker-end="url(#ah-dribble)" stroke-dasharray="0" />
+              <text class="lbl" x="160" y="30">out — as many touches as you like</text>
+              <text class="lbl" x="160" y="146">back — fewer touches, more speed</text>
+            </svg>
+            <figcaption>First half out, second half back</figcaption>
+          </figure>
+          <ul class="points">
+            <li>Take <em>as many touches</em> as you want during the first half — get comfortable with the ball.</li>
+            <li><em>Run with the ball</em> on the way back.</li>
+            <li>Fewer touches. More speed.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- (ii) In + out -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">ii</span>
+          <h3>In + out</h3>
+          <span class="tag">one foot, then the other</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Slalom dribble weaving in and out of a line of five cones.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <use href="#cone" x="80" y="75" width="20" height="20" />
+              <use href="#cone" x="120" y="75" width="20" height="20" />
+              <use href="#cone" x="160" y="75" width="20" height="20" />
+              <use href="#cone" x="200" y="75" width="20" height="20" />
+              <use href="#cone" x="240" y="75" width="20" height="20" />
+              <path class="drib" d="M46 85 C60 52 80 52 90 85 C100 118 120 118 130 85 C140 52 160 52 170 85 C180 118 200 118 210 85 C220 52 240 52 250 85 C256 100 264 104 276 104" marker-end="url(#ah-dribble)" />
+              <circle class="plr" cx="34" cy="85" r="12" />
+              <text class="lbl" x="160" y="150">switch feet on the way back</text>
+            </svg>
+            <figcaption>A line of markers</figcaption>
+          </figure>
+          <ul class="points">
+            <li>Using <em>one foot</em>, dribble in and out of the markers.</li>
+            <li><em>Switch feet</em> on the way back.</li>
+            <li>Small touches — keep the ball close to the cones.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- (iii) In + out, circle -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">iii</span>
+          <h3>In + out — circle</h3>
+          <span class="tag">same concept</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Same slalom dribble, with the cones arranged in a circle.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <circle cx="160" cy="85" r="52" fill="none" stroke="#dfe9d1" stroke-width="2" stroke-dasharray="5 5" />
+              <path class="drib" d="M210.7 96.7
+                A12 12 0 0 1 210.7 73.3
+                A52 52 0 0 0 195.5 47.0
+                A12 12 0 0 0 175.2 35.3
+                A52 52 0 0 0 144.8 35.3
+                A12 12 0 0 1 124.5 47.0
+                A52 52 0 0 0 109.3 73.3
+                A12 12 0 0 0 109.3 96.7
+                A52 52 0 0 0 124.5 123.0
+                A12 12 0 0 1 144.8 134.7
+                A52 52 0 0 0 175.2 134.7
+                A12 12 0 0 0 195.5 123.0
+                A52 52 0 0 0 210.7 96.7 Z" />
+              <use href="#cone" x="202" y="75" width="20" height="20" />
+              <use href="#cone" x="176" y="30" width="20" height="20" />
+              <use href="#cone" x="124" y="30" width="20" height="20" />
+              <use href="#cone" x="98"  y="75" width="20" height="20" />
+              <use href="#cone" x="124" y="120" width="20" height="20" />
+              <use href="#cone" x="176" y="120" width="20" height="20" />
+              <text class="lbl" x="160" y="26">weave the whole way round</text>
+            </svg>
+            <figcaption>Markers set out in a circle</figcaption>
+          </figure>
+          <ul class="points">
+            <li>Same concept as above, but <em>in a circle</em>.</li>
+            <li>Round the outside of one cone, the inside of the next.</li>
+            <li>Change direction once you get back to the start.</li>
+          </ul>
+        </div>
+      </article>
+
+      <!-- (iv) Advanced -->
+      <article class="drill">
+        <div class="drill-head">
+          <span class="roman">iv</span>
+          <h3>Advanced</h3>
+          <span class="tag">figure-eight</span>
+        </div>
+        <div class="drill-body">
+          <figure class="diagram">
+            <svg viewBox="0 0 320 170" role="img" aria-label="Four looping runs from a middle cone out to each of four corner cones and back.">
+              <rect class="pitch" x="10" y="12" width="300" height="146" rx="12" />
+              <path class="drib" d="M160 85 C132 72 108 64 96 50 C86 38 104 28 110 40 C116 52 142 70 160 85" />
+              <path class="drib" d="M160 85 C188 72 212 64 224 50 C234 38 216 28 210 40 C204 52 178 70 160 85" />
+              <path class="drib" d="M160 85 C132 98 108 106 96 120 C86 132 104 142 110 130 C116 118 142 100 160 85" />
+              <path class="drib" d="M160 85 C188 98 212 106 224 120 C234 132 216 142 210 130 C204 118 178 100 160 85" />
+              <use href="#cone" x="90"  y="35" width="20" height="20" />
+              <use href="#cone" x="210" y="35" width="20" height="20" />
+              <use href="#cone" x="90"  y="115" width="20" height="20" />
+              <use href="#cone" x="210" y="115" width="20" height="20" />
+              <use href="#cone" x="150" y="75" width="20" height="20" />
+              <text class="lbl" x="160" y="152">out to a marker, back through the middle</text>
+            </svg>
+            <figcaption>Four outer markers, one in the middle</figcaption>
+          </figure>
+          <ul class="points">
+            <li>Loop out to each outer marker and back through the middle one.</li>
+            <li>Keep the pattern going without stopping the ball.</li>
+          </ul>
+          <div class="variation" style="grid-column: 1 / -1;">
+            <div class="var">
+              <h4>Variation 1</h4>
+              <p><em>Inside foot</em> around the middle cone / marker. <em>Outside foot</em> around the outer cones / markers.</p>
+            </div>
+            <div class="var open">
+              <h4>Variation 2</h4>
+              <p>Left open in the notes — to be filled in on the day.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <div class="legend">
+      <span>
+        <svg viewBox="0 0 26 16"><path class="pass" d="M2 8 H20" marker-end="url(#ah-pass)" /></svg>
+        pass
+      </span>
+      <span>
+        <svg viewBox="0 0 26 16"><path class="run" d="M2 8 H20" marker-end="url(#ah-run)" /></svg>
+        run / movement
+      </span>
+      <span>
+        <svg viewBox="0 0 26 16"><path class="drib" d="M2 8 C6 1 10 15 14 8 C16 5 18 8 20 8" marker-end="url(#ah-dribble)" /></svg>
+        dribble
+      </span>
+      <span>
+        <svg viewBox="0 0 26 16"><use href="#cone" x="4" y="0" width="16" height="16" /></svg>
+        cone / marker
+      </span>
+      <span>
+        <svg viewBox="0 0 26 16"><circle class="plr" cx="13" cy="8" r="6" /></svg>
+        player
+      </span>
+    </div>
+  </section>
+
+  <footer>
+    <a href="/">christopherrathbun.com</a> · session notes
+  </footer>
+
+</div>
+</body>
+</html>
