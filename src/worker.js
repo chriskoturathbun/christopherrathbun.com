@@ -4,6 +4,7 @@ import { handleVighnaa } from './vighnaa.js';
 import { handleUsers } from './users-dashboard.js';
 import { handleReminders } from './reminders.js';
 import { handleDishes } from './dishes.js';
+import { handleParties } from './parties.js';
 import { runReconciler, runPreScheduler, runWebhookFallback } from './reminders.js';
 
 function newGameId() {
@@ -109,6 +110,11 @@ export default {
     // Reminders — AI medication-reminder calls
     if (path === '/reminders' || path === '/reminders/' || path.startsWith('/reminders/')) {
       return handleReminders(request, env, url);
+    }
+
+    // Parties — event invitations + RSVPs (/e/<token> is the short guest link)
+    if (path === '/parties' || path === '/parties/' || path.startsWith('/parties/') || path.startsWith('/e/')) {
+      return handleParties(request, env, url);
     }
 
     // Sentry error dashboard (private, Google-auth gated)

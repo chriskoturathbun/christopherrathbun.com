@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Parties — throw a party, text the invites</title>
+  <meta name="description" content="Create an event, invite people by text or email, and watch RSVPs roll in. No apps, no data harvesting." />
+  <link rel="stylesheet" href="/parties/parties.css" />
+  <script
+    async crossorigin="anonymous"
+    data-clerk-publishable-key="pk_live_Y2xlcmsuY2hyaXN0b3BoZXJyYXRoYnVuLmNvbSQ"
+    src="https://clerk.christopherrathbun.com/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    type="text/javascript"></script>
+  <style>
+    .app-main { max-width: 980px; margin: 0 auto; padding: 4vh 20px 10vh; }
+    .brand { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+    .brand strong { font-size: 18px; letter-spacing: -0.01em; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 24px; flex-wrap: wrap; }
+
+    .event-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 18px; }
+    .event-tile { padding: 22px; cursor: pointer; transition: transform .15s ease, border-color .15s ease; }
+    .event-tile:hover { transform: translateY(-3px); border-color: var(--accent); }
+    .event-tile .em { font-size: 34px; }
+    .event-tile h3 { margin: 8px 0 4px; font-size: 19px; letter-spacing: -0.01em; }
+    .event-tile .meta { font-size: 14px; color: var(--muted); }
+    .event-tile .counts { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .new-tile { display: flex; align-items: center; justify-content: center; min-height: 150px;
+      border-style: dashed; font-size: 16px; color: var(--muted); }
+    .new-tile:hover { color: var(--text); }
+
+    .form-card { padding: 28px clamp(20px, 4vw, 34px); max-width: 640px; margin: 0 auto; }
+    .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 560px) { .row-2 { grid-template-columns: 1fr; } }
+    .emoji-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .emoji-opt { font-size: 22px; padding: 8px 12px; border-radius: 12px; cursor: pointer;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+    .emoji-opt.sel { border-color: var(--accent); background: rgba(199,125,255,0.18); }
+
+    .detail-head { padding: 26px clamp(20px, 4vw, 32px); margin-bottom: 18px; }
+    .detail-head .em { font-size: 40px; }
+    .detail-head h2 { margin: 6px 0 2px; }
+    .detail-head .meta { color: var(--muted); font-size: 15px; }
+    .stat-row { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 16px; }
+    .stat .num { font-size: 26px; font-weight: 700; }
+    .stat .lab { font-size: 13px; color: var(--muted); }
+    .head-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+
+    .sec-card { padding: 24px clamp(18px, 4vw, 30px); margin-bottom: 18px; }
+    .sec-card h3 { margin: 0 0 14px; font-size: 17px; }
+    .guest-table { width: 100%; border-collapse: collapse; }
+    .guest-table th { text-align: left; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 6px 8px; }
+    .guest-table td { font-size: 14px; padding: 9px 8px; border-top: 1px solid rgba(255,255,255,0.07); vertical-align: middle; }
+    .guest-table .contact { color: var(--muted); font-size: 13px; }
+    .g-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 4px; }
+    .g-del:hover { color: var(--bad); }
+    .table-scroll { overflow-x: auto; }
+    .send-log { font-size: 13px; color: var(--muted); margin-top: 8px; }
+    .progress { font-size: 14px; color: var(--accent); margin-top: 10px; }
+    .copy-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; padding: 8px 14px; border-radius: 999px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); cursor: pointer; color: var(--text); font-family: var(--font); }
+    .copy-chip:hover { border-color: var(--accent); }
+    .back-link { color: var(--muted); text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 14px; cursor: pointer; }
+    .back-link:hover { color: var(--text); }
+    .hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="fluid-bg"></div>
+  <header class="wrap brand">
+    <strong>🎈 Parties</strong>
+    <span id="brand-right"></span>
+  </header>
+  <main class="app-main" id="root">
+    <div class="center-wrap"><p class="muted">Loading…</p></div>
+  </main>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    'use strict';
+    var root = document.getElementById('root');
+    var EMOJIS = ['🎉','🎂','🍻','🏠','🌮','🎃','🎄','💃','🏖️','🎾','🍷','🔥'];
+    var state = { events: [], detail: null, sending: false };
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function toast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show'); }, 2800);
+    }
+
+    /* ---- Clerk bootstrap (same pattern as /reminders/dashboard) ---- */
+    function whenClerkReady() {
+      return new Promise(function (resolve) {
+        if (window.Clerk) { resolve(window.Clerk); return; }
+        var tries = 0;
+        var iv = setInterval(function () {
+          tries++;
+          if (window.Clerk) { clearInterval(iv); resolve(window.Clerk); }
+          else if (tries > 200) { clearInterval(iv); resolve(null); }
+        }, 100);
+      });
+    }
+
+    async function boot() {
+      var Clerk = await whenClerkReady();
+      if (!Clerk) { renderMsg("Couldn't load the sign-in service. Please refresh the page."); return; }
+      try { await Clerk.load(); } catch (e) { renderMsg('Sign-in failed to initialize. Please refresh and try again.'); return; }
+      if (!Clerk.user) { renderSignIn(Clerk); return; }
+      window._clerk = Clerk;
+      document.getElementById('brand-right').innerHTML = '<button class="btn btn-ghost btn-sm" id="signout-btn">Sign out</button>';
+      document.getElementById('signout-btn').addEventListener('click', function () { Clerk.signOut().then(function () { location.reload(); }); });
+      loadEvents();
+    }
+
+    function renderMsg(msg) {
+      root.innerHTML = '<div class="center-wrap"><div class="glass msg-card"><p class="muted">' + esc(msg) + '</p></div></div>';
+    }
+
+    function renderSignIn(Clerk) {
+      root.innerHTML =
+        '<div class="center-wrap"><div class="glass signin-card">' +
+          '<div style="font-size:44px;margin-bottom:8px">🎈</div>' +
+          '<h2>Throw a party</h2>' +
+          '<p class="muted">Create an event, text the invites, watch RSVPs roll in. Your guests never need an account — and nobody\'s data gets harvested.</p>' +
+          '<button class="btn" id="signin-btn">Sign in to get started</button>' +
+        '</div></div>';
+      document.getElementById('signin-btn').addEventListener('click', function () {
+        Clerk.openSignIn({ afterSignInUrl: '/parties', afterSignUpUrl: '/parties' });
+      });
+    }
+
+    async function authFetch(url, opts) {
+      var token = await window._clerk.session.getToken();
+      opts = opts || {};
+      opts.headers = opts.headers || {};
+      opts.headers['authorization'] = 'Bearer ' + token;
+      if (opts.body && !opts.headers['content-type']) opts.headers['content-type'] = 'application/json';
+      return fetch(url, opts);
+    }
+
+    /* ---- Events list ---- */
+    async function loadEvents() {
+      var res, data;
+      try { res = await authFetch('/parties/api/events'); data = await res.json(); }
+      catch (e) { renderMsg('Network error — please refresh.'); return; }
+      if (res.status === 401) { renderSignIn(window._clerk); return; }
+      if (!data.ok) { renderMsg('Something went wrong loading your events.'); return; }
+      state.events = data.events;
+      renderList();
+    }
+
+    function renderList() {
+      var tiles = state.events.map(function (ev) {
+        return '<div class="glass event-tile" data-id="' + esc(ev.id) + '">' +
+          '<span class="em">' + esc(ev.emoji || '🎉') + '</span>' +
+          '<h3>' + esc(ev.title) + '</h3>' +
+          '<div class="meta">' + esc(ev.when_text || 'Date TBD') + (ev.status === 'cancelled' ? ' · cancelled' : '') + '</div>' +
+          '<div class="counts">' +
+            '<span class="pill yes"><span class="dot"></span>' + (ev.yes_count + (ev.plus_ones || 0)) + ' going</span>' +
+            '<span class="pill pending"><span class="dot"></span>' + ev.guest_count + ' invited</span>' +
+          '</div></div>';
+      }).join('');
+      root.innerHTML =
+        '<div class="topbar"><h1 style="margin:0">Your events</h1></div>' +
+        '<div class="event-grid">' + tiles +
+          '<div class="glass event-tile new-tile" id="new-tile">+ New event</div>' +
+        '</div>';
+      document.getElementById('new-tile').addEventListener('click', renderCreate);
+      Array.prototype.forEach.call(document.querySelectorAll('.event-tile[data-id]'), function (el) {
+        el.addEventListener('click', function () { openDetail(el.getAttribute('data-id')); });
+      });
+    }
+
+    /* ---- Create event ---- */
+    function renderCreate() {
+      var tz = 'America/New_York';
+      try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) {}
+      root.innerHTML =
+        '<a class="back-link" id="back">← Back to events</a>' +
+        '<div class="glass form-card">' +
+          '<h2>New event</h2>' +
+          '<div class="field"><label>Pick a vibe</label><div class="emoji-row" id="emoji-row">' +
+            EMOJIS.map(function (e, i) { return '<span class="emoji-opt' + (i === 0 ? ' sel' : '') + '" data-e="' + e + '">' + e + '</span>'; }).join('') +
+          '</div></div>' +
+          '<div class="field"><label>Event name</label><input type="text" id="f-title" maxlength="120" placeholder="Summer rooftop party"></div>' +
+          '<div class="row-2">' +
+            '<div class="field"><label>When</label><input type="datetime-local" id="f-when"></div>' +
+            '<div class="field"><label>Max guests (optional)</label><input type="number" id="f-cap" min="1" max="1000" placeholder="No limit"></div>' +
+          '</div>' +
+          '<div class="field"><label>Where</label><input type="text" id="f-loc" maxlength="300" placeholder="123 Main St, or \'my place\'"></div>' +
+          '<div class="field"><label>Details (optional)</label><textarea id="f-desc" maxlength="2000" placeholder="BYOB, dogs welcome, rooftop closes at midnight…"></textarea></div>' +
+          '<div class="field"><label>Your name (shows on the invite)</label><input type="text" id="f-host" maxlength="80" placeholder="Chris"></div>' +
+          '<input type="hidden" id="f-tz" value="' + esc(tz) + '">' +
+          '<div style="text-align:center;margin-top:20px"><button class="btn" id="create-btn">Create event</button></div>' +
+        '</div>';
+      document.getElementById('back').addEventListener('click', function () { renderList(); });
+      Array.prototype.forEach.call(document.querySelectorAll('.emoji-opt'), function (el) {
+        el.addEventListener('click', function () {
+          Array.prototype.forEach.call(document.querySelectorAll('.emoji-opt'), function (x) { x.classList.remove('sel'); });
+          el.classList.add('sel');
+        });
+      });
+      document.getElementById('create-btn').addEventListener('click', createEvent);
+    }
+
+    async function createEvent() {
+      var btn = document.getElementById('create-btn');
+      var title = document.getElementById('f-title').value.trim();
+      if (!title) { toast('Give your event a name.'); return; }
+      var whenVal = document.getElementById('f-when').value;
+      var capVal = parseInt(document.getElementById('f-cap').value, 10);
+      var emoji = (document.querySelector('.emoji-opt.sel') || {}).getAttribute ? document.querySelector('.emoji-opt.sel').getAttribute('data-e') : '🎉';
+      var payload = {
+        title: title,
+        emoji: emoji,
+        description: document.getElementById('f-desc').value,
+        location: document.getElementById('f-loc').value,
+        timezone: document.getElementById('f-tz').value,
+        host_name: document.getElementById('f-host').value,
+      };
+      // datetime-local is wall-clock in the browser's tz; convert to ISO.
+      if (whenVal) payload.starts_at = new Date(whenVal).toISOString();
+      if (capVal > 0) payload.capacity = capVal;
+      btn.disabled = true; btn.textContent = 'Creating…';
+      var res, data;
+      try { res = await authFetch('/parties/api/events', { method: 'POST', body: JSON.stringify(payload) }); data = await res.json(); }
+      catch (e) { toast('Network error — try again.'); btn.disabled = false; btn.textContent = 'Create event'; return; }
+      if (!data.ok) { toast(data.error || 'Could not create the event.'); btn.disabled = false; btn.textContent = 'Create event'; return; }
+      openDetail(data.event.id);
+    }
+
+    /* ---- Event detail ---- */
+    async function openDetail(id) {
+      root.innerHTML = '<div class="center-wrap"><p class="muted">Loading event…</p></div>';
+      var res, data;
+      try { res = await authFetch('/parties/api/events/' + id); data = await res.json(); }
+      catch (e) { renderMsg('Network error — please refresh.'); return; }
+      if (!data.ok) { renderMsg(data.error || 'Could not load that event.'); return; }
+      state.detail = data;
+      renderDetail();
+    }
+
+    function rsvpPill(r) {
+      var labels = { yes: 'Going', maybe: 'Maybe', no: "Can't go", pending: 'Invited' };
+      return '<span class="pill ' + esc(r) + '"><span class="dot"></span>' + (labels[r] || r) + '</span>';
+    }
+
+    function renderDetail() {
+      var ev = state.detail.event;
+      var guests = state.detail.guests;
+      var yes = 0, maybe = 0, no = 0, pending = 0, plus = 0, uninvited = 0;
+      guests.forEach(function (g) {
+        if (g.rsvp === 'yes') { yes++; plus += g.plus_ones || 0; }
+        else if (g.rsvp === 'maybe') maybe++;
+        else if (g.rsvp === 'no') no++;
+        else pending++;
+        if (!g.invited_at && (g.phone_e164 || g.email)) uninvited++;
+      });
+
+      var rows = guests.map(function (g) {
+        var contact = [g.phone_e164, g.email].filter(Boolean).join(' · ');
+        return '<tr>' +
+          '<td>' + esc(g.name || '—') + '<div class="contact">' + esc(contact) + '</div></td>' +
+          '<td>' + rsvpPill(g.rsvp) + (g.plus_ones ? ' +' + g.plus_ones : '') + '</td>' +
+          '<td>' + (g.note ? esc(g.note) : '<span class="muted">—</span>') + '</td>' +
+          '<td>' + (g.invited_at ? '<span class="muted">sent</span>' : '<span class="muted">not sent</span>') + '</td>' +
+          '<td><button class="g-del" data-gid="' + esc(g.id) + '" title="Remove guest">✕</button></td>' +
+        '</tr>';
+      }).join('');
+
+      root.innerHTML =
+        '<a class="back-link" id="back">← All events</a>' +
+        '<div class="glass detail-head">' +
+          '<span class="em">' + esc(ev.emoji || '🎉') + '</span>' +
+          '<h2>' + esc(ev.title) + (ev.status === 'cancelled' ? ' <span class="muted">(cancelled)</span>' : '') + '</h2>' +
+          '<div class="meta">' + esc(ev.when_text || 'Date TBD') + (ev.location ? ' · ' + esc(ev.location) : '') + '</div>' +
+          '<div class="stat-row">' +
+            '<div class="stat"><div class="num">' + (yes + plus) + '</div><div class="lab">going</div></div>' +
+            '<div class="stat"><div class="num">' + maybe + '</div><div class="lab">maybe</div></div>' +
+            '<div class="stat"><div class="num">' + no + '</div><div class="lab">can\'t go</div></div>' +
+            '<div class="stat"><div class="num">' + pending + '</div><div class="lab">no reply yet</div></div>' +
+          '</div>' +
+          '<div class="head-actions">' +
+            '<button class="copy-chip" id="copy-share">🔗 Copy open invite link</button>' +
+            (ev.status === 'active' ? '<button class="copy-chip" id="cancel-ev">Cancel event</button>' : '') +
+          '</div>' +
+        '</div>' +
+
+        '<div class="glass sec-card">' +
+          '<h3>Add guests</h3>' +
+          '<div class="field"><textarea id="guest-input" rows="4" placeholder="One guest per line — name and phone or email:\nSam, 415-555-0132\nPriya, priya@example.com\n415-555-0177"></textarea></div>' +
+          '<button class="btn btn-sm" id="add-guests-btn">Add to guest list</button>' +
+          '<div class="hint">Phone numbers get a text; everyone else gets an email. Each guest gets their own private RSVP link.</div>' +
+        '</div>' +
+
+        '<div class="glass sec-card">' +
+          '<h3>Send</h3>' +
+          '<div class="head-actions" style="margin-top:0">' +
+            '<button class="btn btn-sm" id="send-invites-btn"' + (uninvited ? '' : ' disabled') + '>Send invites (' + uninvited + ' waiting)</button>' +
+            '<button class="btn btn-ghost btn-sm" id="send-reminder-btn">Send reminder to non-decliners</button>' +
+          '</div>' +
+          '<div class="field" style="margin-top:16px"><label>Or blast a custom update to everyone (except decliners)</label>' +
+            '<input type="text" id="blast-input" maxlength="300" placeholder="Change of plans — we start at 8pm now!"></div>' +
+          '<button class="btn btn-ghost btn-sm" id="blast-btn">Send update</button>' +
+          '<div class="progress" id="send-progress"></div>' +
+        '</div>' +
+
+        '<div class="glass sec-card">' +
+          '<h3>Guest list (' + guests.length + ')</h3>' +
+          (guests.length
+            ? '<div class="table-scroll"><table class="guest-table"><thead><tr><th>Guest</th><th>RSVP</th><th>Note</th><th>Invite</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+            : '<p class="muted">No guests yet — paste some above.</p>') +
+        '</div>';
+
+      document.getElementById('back').addEventListener('click', function () { loadEvents(); });
+      document.getElementById('copy-share').addEventListener('click', function () {
+        navigator.clipboard.writeText(ev.share_link).then(function () { toast('Open invite link copied — anyone with it can RSVP.'); });
+      });
+      var cancelBtn = document.getElementById('cancel-ev');
+      if (cancelBtn) cancelBtn.addEventListener('click', function () { cancelEvent(ev.id); });
+      document.getElementById('add-guests-btn').addEventListener('click', function () { addGuests(ev.id); });
+      document.getElementById('send-invites-btn').addEventListener('click', function () { sendBatched(ev.id, 'invite', null); });
+      document.getElementById('send-reminder-btn').addEventListener('click', function () { sendReminder(ev.id); });
+      document.getElementById('blast-btn').addEventListener('click', function () { sendBlast(ev.id); });
+      Array.prototype.forEach.call(document.querySelectorAll('.g-del'), function (el) {
+        el.addEventListener('click', function () { removeGuest(ev.id, el.getAttribute('data-gid')); });
+      });
+    }
+
+    async function cancelEvent(id) {
+      if (!confirm('Cancel this event? Guests who visit their link will see it\'s cancelled.')) return;
+      try {
+        var res = await authFetch('/parties/api/events/' + id, { method: 'PATCH', body: JSON.stringify({ status: 'cancelled' }) });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not cancel.'); return; }
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
+    }
+
+    // Client-side guest-line parsing mirrors the server's parseGuestLine; the
+    // server re-validates everything, this is just for a fast preview.
+    function parseLines(text) {
+      return text.split('\n').map(function (line) {
+        var raw = line.trim();
+        if (!raw) return null;
+        var angled = raw.match(/^(.*?)<([^>]+)>\s*$/);
+        if (angled) return { name: angled[1].trim().replace(/,\s*$/, ''), email: angled[2].trim() };
+        var parts = raw.split(/[,;\t]/).map(function (p) { return p.trim(); }).filter(Boolean);
+        var g = {};
+        var leftover = [];
+        parts.forEach(function (p) {
+          if (!g.email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(p)) { g.email = p; return; }
+          var digits = p.replace(/[^0-9]/g, '');
+          if (!g.phone && (digits.length === 10 || (digits.length === 11 && digits[0] === '1') || (p.trim()[0] === '+' && digits.length >= 8))) { g.phone = p; return; }
+          leftover.push(p);
+        });
+        if (leftover.length) g.name = leftover.join(' ');
+        if (!g.name && !g.phone && !g.email) return null;
+        return g;
+      }).filter(Boolean);
+    }
+
+    async function addGuests(id) {
+      var input = document.getElementById('guest-input');
+      var guests = parseLines(input.value);
+      if (!guests.length) { toast('Paste at least one line with a phone number or email.'); return; }
+      var btn = document.getElementById('add-guests-btn');
+      btn.disabled = true; btn.textContent = 'Adding…';
+      var res, data;
+      try { res = await authFetch('/parties/api/events/' + id + '/guests', { method: 'POST', body: JSON.stringify({ guests: guests }) }); data = await res.json(); }
+      catch (e) { toast('Network error — try again.'); btn.disabled = false; btn.textContent = 'Add to guest list'; return; }
+      if (!data.ok) { toast(data.error || 'Could not add guests.'); btn.disabled = false; btn.textContent = 'Add to guest list'; return; }
+      var msg = 'Added ' + data.added.length + ' guest' + (data.added.length === 1 ? '' : 's');
+      if (data.skipped.length) msg += ' · skipped ' + data.skipped.length + ' (' + data.skipped.map(function (s) { return s.reason; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join('; ') + ')';
+      toast(msg);
+      openDetail(id);
+    }
+
+    async function removeGuest(id, gid) {
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/guests/' + gid, { method: 'DELETE' });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not remove.'); return; }
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
+    }
+
+    // The server caps each call at 25 sends, so chunk explicit guest IDs and
+    // walk through them with a progress line.
+    async function sendBatched(id, kind, message) {
+      if (state.sending) return;
+      var guests = state.detail.guests;
+      var targets = guests.filter(function (g) {
+        if (!g.phone_e164 && !g.email) return false;
+        if (kind === 'invite') return !g.invited_at;
+        return g.rsvp !== 'no';
+      }).map(function (g) { return g.id; });
+      if (!targets.length) { toast('Nobody to send that to right now.'); return; }
+
+      state.sending = true;
+      var prog = document.getElementById('send-progress');
+      var total = 0, failed = 0;
+      try {
+        for (var i = 0; i < targets.length; i += 25) {
+          prog.textContent = 'Sending… ' + total + ' of ' + targets.length;
+          var body = { kind: kind, guestIds: targets.slice(i, i + 25) };
+          if (message) body.message = message;
+          var res = await authFetch('/parties/api/events/' + id + '/send', { method: 'POST', body: JSON.stringify(body) });
+          var data = await res.json();
+          if (!data.ok) { toast(data.error || 'Send failed.'); break; }
+          total += data.sent.length;
+          failed += data.sent.filter(function (s) { return !s.ok; }).length;
+        }
+        prog.textContent = total
+          ? ('Done — ' + (total - failed) + ' of ' + targets.length + ' sent 🎉' + (failed ? ' (' + failed + ' failed)' : ''))
+          : 'Nothing was sent.';
+        if (failed) toast(failed + ' message(s) failed — the send column shows who got theirs.');
+      } catch (e) {
+        toast('Network error mid-send — some messages may have gone out. Reload to check.');
+      }
+      state.sending = false;
+      setTimeout(function () { openDetail(id); }, 1400);
+    }
+
+    function sendReminder(id) { sendBatched(id, 'reminder', null); }
+
+    function sendBlast(id) {
+      var msg = document.getElementById('blast-input').value.trim();
+      if (!msg) { toast('Write the update first.'); return; }
+      sendBatched(id, 'update', msg);
+    }
+
+    boot();
+  </script>
+</body>
+</html>

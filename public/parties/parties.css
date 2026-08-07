@@ -1,0 +1,89 @@
+:root {
+  --bg: #0b0710;
+  --glass: rgba(255,255,255,0.06);
+  --glass-strong: rgba(255,255,255,0.10);
+  --border: rgba(255,255,255,0.14);
+  --text: #f7f4fb;
+  --muted: rgba(247,244,251,0.62);
+  --accent: #c77dff;
+  --accent-2: #ff8fab;
+  --good: #6ee7a8;
+  --warn: #ffcf7a;
+  --bad: #ff8080;
+  --radius: 22px;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font); color: var(--text); background: var(--bg);
+  min-height: 100vh; overflow-x: hidden; line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+.fluid-bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: var(--bg); }
+.fluid-bg::before, .fluid-bg::after {
+  content: ""; position: absolute; width: 70vmax; height: 70vmax; border-radius: 50%;
+  filter: blur(90px); opacity: 0.45; mix-blend-mode: screen;
+}
+.fluid-bg::before { background: radial-gradient(circle, var(--accent), transparent 60%); top: -14%; left: -12%; animation: drift1 24s ease-in-out infinite alternate; }
+.fluid-bg::after { background: radial-gradient(circle, var(--accent-2), transparent 60%); bottom: -18%; right: -12%; animation: drift2 28s ease-in-out infinite alternate; }
+@keyframes drift1 { to { transform: translate(18vw, 10vh) scale(1.2); } }
+@keyframes drift2 { to { transform: translate(-14vw, -8vh) scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .fluid-bg::before, .fluid-bg::after { animation: none; } }
+
+.glass {
+  background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
+  backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+.muted { color: var(--muted); }
+
+.btn {
+  display: inline-block; padding: 13px 26px; border-radius: 999px; font-weight: 600;
+  text-decoration: none; color: #140a1c; background: linear-gradient(120deg, var(--accent), var(--accent-2));
+  border: none; cursor: pointer; font-size: 16px; font-family: var(--font);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(199,125,255,0.35); }
+.btn:disabled { opacity: 0.5; cursor: default; transform: none; box-shadow: none; }
+.btn-ghost { background: var(--glass-strong); color: var(--text); border: 1px solid var(--border); }
+.btn-sm { font-size: 14px; padding: 9px 18px; }
+
+h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.08; letter-spacing: -0.02em; margin: 0 0 14px; }
+h2 { font-size: clamp(22px, 3vw, 30px); letter-spacing: -0.01em; margin: 0 0 10px; }
+
+input[type=text], input[type=email], input[type=tel], input[type=number],
+input[type=datetime-local], select, textarea {
+  width: 100%; padding: 12px 14px; font-size: 15px; font-family: var(--font);
+  color: var(--text); background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border); border-radius: 12px; outline: none;
+  -webkit-appearance: none; appearance: none;
+  transition: border-color .15s ease, background .15s ease;
+}
+input::placeholder, textarea::placeholder { color: rgba(247,244,251,0.38); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); background: rgba(255,255,255,0.08); }
+textarea { resize: vertical; min-height: 80px; }
+label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--muted); }
+.field { margin-bottom: 14px; }
+
+.center-wrap { min-height: 70vh; display: flex; align-items: center; justify-content: center; padding: 6vh 20px; }
+.msg-card, .signin-card { max-width: 460px; width: 100%; padding: 38px clamp(24px, 5vw, 40px); text-align: center; }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
+  padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: rgba(255,255,255,0.05);
+}
+.pill .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--muted); }
+.pill.yes .dot { background: var(--good); }
+.pill.maybe .dot { background: var(--warn); }
+.pill.no .dot { background: var(--bad); }
+.pill.pending .dot { background: var(--muted); }
+
+.toast {
+  position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+  background: rgba(20,12,28,0.92); border: 1px solid var(--border); color: var(--text);
+  padding: 12px 22px; border-radius: 999px; font-size: 14px; z-index: 50;
+  opacity: 0; pointer-events: none; transition: opacity .25s ease;
+}
+.toast.show { opacity: 1; }

@@ -97,12 +97,12 @@ export async function detectConcern(patientName, transcript, env) {
   } catch { return { concern: false, severity: 'none', category: 'none', summary: '' }; }
 }
 
-export async function sendResendEmail({ to, subject, html, text }, env) {
+export async function sendResendEmail({ to, subject, html, text, from }, env) {
   if (!env.RESEND_API_KEY || !to) return { ok: false, error: 'no key/recipient' };
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({ from: 'Reminders <reminders@mail.giftanagent.com>', to: Array.isArray(to) ? to : [to], subject, html, text }),
+    body: JSON.stringify({ from: from || 'Reminders <reminders@mail.giftanagent.com>', to: Array.isArray(to) ? to : [to], subject, html, text }),
   });
   return { ok: res.ok, status: res.status };
 }

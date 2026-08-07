@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>You're invited</title>
+  <meta name="description" content="RSVP in one tap — no account, no questions." />
+  <meta name="robots" content="noindex" />
+  <link rel="stylesheet" href="/parties/parties.css" />
+  <style>
+    .rsvp-main { max-width: 560px; margin: 0 auto; padding: 6vh 20px 10vh; }
+    .event-card { padding: 34px clamp(22px, 5vw, 40px); text-align: center; }
+    .event-emoji { font-size: 64px; line-height: 1; margin-bottom: 10px; }
+    .event-host { font-size: 15px; color: var(--muted); margin: 0 0 4px; }
+    .event-title { margin: 0 0 18px; }
+    .detail-row { display: flex; gap: 10px; align-items: baseline; justify-content: center; font-size: 16px; margin: 6px 0; flex-wrap: wrap; }
+    .detail-row .k { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .08em; }
+    .event-desc { white-space: pre-wrap; text-align: left; margin: 20px 0 0; color: var(--text); font-size: 15px;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+    .rsvp-btns { display: flex; gap: 12px; justify-content: center; margin: 26px 0 8px; flex-wrap: wrap; }
+    .rsvp-btn {
+      flex: 1 1 130px; max-width: 160px; padding: 16px 10px; border-radius: 16px; cursor: pointer;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text);
+      font-family: var(--font); font-size: 15px; font-weight: 600; transition: border-color .15s ease, transform .12s ease;
+    }
+    .rsvp-btn .big { display: block; font-size: 26px; margin-bottom: 6px; }
+    .rsvp-btn:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .rsvp-btn.sel { border-color: var(--accent); background: rgba(199,125,255,0.16); }
+    .extra { text-align: left; margin-top: 18px; }
+    .stepper { display: flex; align-items: center; gap: 14px; }
+    .stepper button {
+      width: 38px; height: 38px; border-radius: 999px; font-size: 20px; cursor: pointer;
+      background: rgba(255,255,255,0.07); border: 1px solid var(--border); color: var(--text);
+    }
+    .stepper .num { font-size: 18px; font-weight: 700; min-width: 24px; text-align: center; }
+    .privacy { font-size: 13px; color: var(--muted); margin-top: 22px; }
+    .done-card { padding: 40px clamp(22px, 5vw, 40px); text-align: center; }
+    .done-emoji { font-size: 56px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <div class="fluid-bg"></div>
+  <main class="rsvp-main" id="root">
+    <div class="center-wrap"><p class="muted">Loading your invite…</p></div>
+  </main>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    'use strict';
+    var root = document.getElementById('root');
+    var token = (location.pathname.match(/^\/e\/([A-Za-z0-9]+)/) || [])[1] || '';
+    var state = { type: null, event: null, guest: null, rsvp: null, plusOnes: 0, atCapacity: false };
+
+    function esc(s) {
+      return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+    function toast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      setTimeout(function () { t.classList.remove('show'); }, 2600);
+    }
+    // Show the event time in the guest's local timezone too when it differs.
+    function localWhen(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      try {
+        return d.toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+      } catch (e) { return ''; }
+    }
+
+    function renderError(msg) {
+      root.innerHTML = '<div class="center-wrap"><div class="glass msg-card">' +
+        '<div class="event-emoji">😕</div><p class="muted">' + esc(msg) + '</p></div></div>';
+    }
+
+    function render() {
+      var ev = state.event;
+      var isGuest = state.type === 'guest';
+      var g = state.guest || {};
+      var sel = state.rsvp || (isGuest && g.rsvp !== 'pending' ? g.rsvp : null);
+      var mapsHref = ev.location ? 'https://maps.google.com/?q=' + encodeURIComponent(ev.location) : null;
+      var local = localWhen(ev.starts_at);
+
+      var html =
+        '<div class="glass event-card">' +
+          '<div class="event-emoji">' + esc(ev.emoji || '🎉') + '</div>' +
+          '<p class="event-host">' + esc(ev.host_name || 'Someone') + ' invited you to</p>' +
+          '<h1 class="event-title">' + esc(ev.title) + '</h1>' +
+          (ev.when_text ? '<div class="detail-row"><span class="k">When</span><span>' + esc(ev.when_text) +
+            (local && local !== ev.when_text ? ' <span class="muted">(' + esc(local) + ' your time)</span>' : '') + '</span></div>' : '') +
+          (ev.location ? '<div class="detail-row"><span class="k">Where</span><span><a style="color:var(--accent)" href="' + esc(mapsHref) + '" target="_blank" rel="noopener">' + esc(ev.location) + '</a></span></div>' : '') +
+          (ev.description ? '<div class="event-desc">' + esc(ev.description) + '</div>' : '') +
+          '<div class="rsvp-btns">' +
+            btn('yes', '🎉', "I'm in", sel) + btn('maybe', '🤔', 'Maybe', sel) + btn('no', '😢', "Can't make it", sel) +
+          '</div>' +
+          '<div class="extra" id="extra"></div>' +
+          '<p class="privacy">No account needed. Your info is only used for this event — nothing else, ever.</p>' +
+        '</div>';
+      root.innerHTML = html;
+
+      ['yes', 'maybe', 'no'].forEach(function (v) {
+        document.getElementById('rsvp-' + v).addEventListener('click', function () {
+          state.rsvp = v; render(); renderExtra();
+        });
+      });
+      renderExtra();
+    }
+
+    function btn(val, big, label, sel) {
+      return '<button class="rsvp-btn' + (sel === val ? ' sel' : '') + '" id="rsvp-' + val + '">' +
+        '<span class="big">' + big + '</span>' + label + '</button>';
+    }
+
+    function renderExtra() {
+      var box = document.getElementById('extra');
+      if (!state.rsvp) { box.innerHTML = ''; return; }
+      var isGuest = state.type === 'guest';
+      var g = state.guest || {};
+      if (state.rsvp === 'yes' && state.atCapacity && !isGuest) {
+        box.innerHTML = '<p class="muted">Sorry — this event is at capacity. You can still RSVP maybe/no.</p>';
+        return;
+      }
+      var html = '';
+      if (!isGuest || !g.name) {
+        html += '<div class="field"><label>Your name</label><input type="text" id="f-name" maxlength="80" placeholder="So the host knows it\'s you" value="' + esc(g.name || '') + '"></div>';
+      }
+      if (!isGuest) {
+        html += '<div class="field"><label>Phone (optional — for event updates by text)</label><input type="tel" id="f-phone" placeholder="(555) 555-0123"></div>';
+      }
+      if (state.rsvp === 'yes') {
+        html += '<div class="field"><label>Bringing anyone?</label><div class="stepper">' +
+          '<button type="button" id="po-minus">−</button><span class="num" id="po-num">' + state.plusOnes + '</span>' +
+          '<button type="button" id="po-plus">+</button><span class="muted" style="font-size:14px">plus-ones</span></div></div>';
+      }
+      html += '<div class="field"><label>Note to the host (optional)</label><input type="text" id="f-note" maxlength="500" placeholder="Can\'t wait! 🙌" value="' + esc(g.note || '') + '"></div>';
+      html += '<div style="text-align:center;margin-top:18px"><button class="btn" id="submit-btn">Send RSVP</button></div>';
+      box.innerHTML = html;
+
+      var minus = document.getElementById('po-minus');
+      if (minus) {
+        minus.addEventListener('click', function () { state.plusOnes = Math.max(0, state.plusOnes - 1); document.getElementById('po-num').textContent = state.plusOnes; });
+        document.getElementById('po-plus').addEventListener('click', function () { state.plusOnes = Math.min(10, state.plusOnes + 1); document.getElementById('po-num').textContent = state.plusOnes; });
+      }
+      document.getElementById('submit-btn').addEventListener('click', submit);
+    }
+
+    async function submit() {
+      var btnEl = document.getElementById('submit-btn');
+      btnEl.disabled = true; btnEl.textContent = 'Sending…';
+      var nameEl = document.getElementById('f-name');
+      var phoneEl = document.getElementById('f-phone');
+      var noteEl = document.getElementById('f-note');
+      var payload = {
+        rsvp: state.rsvp,
+        plus_ones: state.rsvp === 'yes' ? state.plusOnes : 0,
+        note: noteEl ? noteEl.value : '',
+      };
+      if (nameEl) payload.name = nameEl.value;
+      var url;
+      if (state.type === 'guest') {
+        url = '/parties/api/rsvp/' + token;
+      } else {
+        url = '/parties/api/open/' + token;
+        if (phoneEl && phoneEl.value.trim()) payload.phone = phoneEl.value;
+        if (!payload.name || !payload.name.trim()) {
+          toast('Please add your name so the host knows who this is.');
+          btnEl.disabled = false; btnEl.textContent = 'Send RSVP';
+          return;
+        }
+      }
+      var res, data;
+      try {
+        res = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+        data = await res.json();
+      } catch (e) {
+        toast('Network hiccup — please try again.');
+        btnEl.disabled = false; btnEl.textContent = 'Send RSVP';
+        return;
+      }
+      if (!res.ok || !data.ok) {
+        toast(data && data.error ? data.error : 'Something went wrong — please try again.');
+        btnEl.disabled = false; btnEl.textContent = 'Send RSVP';
+        return;
+      }
+      renderDone();
+    }
+
+    function renderDone() {
+      var msgs = {
+        yes: { e: '🎉', t: "You're in!", s: 'The host can see your RSVP. See you there!' },
+        maybe: { e: '🤔', t: 'Marked as maybe', s: 'You can come back to this link anytime to update your answer.' },
+        no: { e: '💜', t: 'Thanks for letting them know', s: 'Changed your mind? This link always works.' },
+      };
+      var m = msgs[state.rsvp] || msgs.yes;
+      root.innerHTML =
+        '<div class="glass done-card">' +
+          '<div class="done-emoji">' + m.e + '</div>' +
+          '<h2>' + esc(m.t) + '</h2>' +
+          '<p class="muted">' + esc(m.s) + '</p>' +
+          '<button class="btn btn-ghost btn-sm" id="change-btn" style="margin-top:16px">Change my RSVP</button>' +
+        '</div>';
+      document.getElementById('change-btn').addEventListener('click', function () { load(); });
+    }
+
+    async function load() {
+      if (!token) { renderError('This invite link looks incomplete. Ask your host to resend it.'); return; }
+      var res, data;
+      try {
+        res = await fetch('/parties/api/link/' + token);
+        data = await res.json();
+      } catch (e) { renderError('Network hiccup — please refresh to try again.'); return; }
+      if (!res.ok || !data.ok) { renderError("We couldn't find this invite. Double-check the link from your text or email."); return; }
+      state.type = data.type;
+      state.event = data.event;
+      state.guest = data.guest || null;
+      state.atCapacity = !!data.at_capacity;
+      state.plusOnes = (data.guest && data.guest.plus_ones) || 0;
+      state.rsvp = null;
+      if (state.event.status !== 'active') { renderError('This event has been cancelled.'); return; }
+      document.title = (state.event.emoji ? state.event.emoji + ' ' : '') + state.event.title;
+      render();
+    }
+
+    load();
+  </script>
+</body>
+</html>
