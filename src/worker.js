@@ -4,7 +4,7 @@ import { handleVighnaa } from './vighnaa.js';
 import { handleUsers } from './users-dashboard.js';
 import { handleReminders } from './reminders.js';
 import { handleDishes } from './dishes.js';
-import { handleParties } from './parties.js';
+import { handleParties, runPartyReminders } from './parties.js';
 import { runReconciler, runPreScheduler, runWebhookFallback } from './reminders.js';
 
 function newGameId() {
@@ -187,6 +187,15 @@ export default {
       await job(env);
     } catch (e) {
       console.error('reminders scheduled error', (e && e.stack) || String(e));
+    }
+    // Party auto-reminders drain on the per-minute tick, isolated so a
+    // failure here can never affect the medication-reminder pipeline.
+    if (event.cron !== '0 * * * *') {
+      try {
+        await runPartyReminders(env);
+      } catch (e) {
+        console.error('party reminders scheduled error', (e && e.stack) || String(e));
+      }
     }
   },
 };

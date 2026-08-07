@@ -1,7 +1,8 @@
 // Node sanity test for parties helpers. Run: node test/parties.test.mjs
 import {
   isEmail, parseGuestLine, formatEventWhen,
-  buildInviteSms, buildReminderSms, buildUpdateSms, buildInviteEmail,
+  buildInviteSms, buildReminderSms, buildUpdateSms, buildAdmitSms,
+  buildInviteEmail, buildOgMeta, firstName, COVER_THEMES,
 } from '../src/parties.js';
 
 let pass = 0, fail = 0;
@@ -72,6 +73,35 @@ ok(em.subject.includes("You're invited: Rooftop <Party>"), 'email subject');
 ok(em.html.includes('Rooftop &lt;Party&gt;'), 'email HTML escapes title');
 ok(em.html.includes('Roof &amp; Deck'), 'email HTML escapes location');
 ok(em.text.includes('RSVP here (no account needed): https://x/e/t'), 'email text has link');
+
+// --- Admit SMS ---
+const adm = buildAdmitSms({ title: 'Rooftop Party', emoji: '🎉', whenText: 'Sat 7 PM', link: 'L' });
+ok(adm.includes("you're in for Rooftop Party!"), 'admit SMS phrasing');
+ok(adm.includes('L'), 'admit SMS has link');
+
+// --- firstName ---
+eq(firstName('Sam Altman-Jones'), 'Sam', 'first name extracted');
+eq(firstName('  '), '', 'blank name → empty');
+eq(firstName(null), '', 'null name → empty');
+
+// --- OG meta ---
+const og = buildOgMeta({
+  title: 'Rooftop "Party"', emoji: '🎉', whenText: 'Sat, Aug 15, 7:00 PM',
+  location: 'Roof & Deck', imageUrl: 'https://img.example/x.png', pageUrl: 'https://x/e/sabc',
+});
+ok(og.includes('og:title'), 'og:title present');
+ok(og.includes('Rooftop &quot;Party&quot;'), 'og title escaped');
+ok(og.includes('Roof &amp; Deck'), 'og description escaped');
+ok(og.includes('summary_large_image'), 'large card with image');
+ok(og.includes('https://img.example/x.png'), 'og image url present');
+
+const ogNoImg = buildOgMeta({ title: 'Dinner', emoji: '', whenText: '', location: '', imageUrl: '', pageUrl: '' });
+ok(ogNoImg.includes('content="summary"'), 'summary card without image');
+ok(ogNoImg.includes('You&#39;re invited!'), 'fallback description (escaped)');
+ok(!ogNoImg.includes('og:image'), 'no og:image without url');
+
+// --- themes ---
+ok(COVER_THEMES.includes('confetti') && COVER_THEMES.length >= 8, 'cover themes defined');
 
 console.log(`parties tests: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

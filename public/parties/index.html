@@ -176,6 +176,26 @@
     }
 
     /* ---- Create event ---- */
+    var THEMES = ['confetti', 'sunset', 'neon', 'ocean', 'garden', 'gold', 'midnight', 'cherry'];
+
+    function themeRow(sel) {
+      return THEMES.map(function (t) {
+        return '<button type="button" class="theme-swatch sw-' + t + (t === sel ? ' sel' : '') + '" data-t="' + t + '" title="' + t + '"></button>';
+      }).join('');
+    }
+    function bindThemeRow() {
+      Array.prototype.forEach.call(document.querySelectorAll('.theme-swatch'), function (el) {
+        el.addEventListener('click', function () {
+          Array.prototype.forEach.call(document.querySelectorAll('.theme-swatch'), function (x) { x.classList.remove('sel'); });
+          el.classList.add('sel');
+        });
+      });
+    }
+    function selectedTheme() {
+      var el = document.querySelector('.theme-swatch.sel');
+      return el ? el.getAttribute('data-t') : 'confetti';
+    }
+
     function renderCreate() {
       var tz = 'America/New_York';
       try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) {}
@@ -186,6 +206,7 @@
           '<div class="field"><label>Pick a vibe</label><div class="emoji-row" id="emoji-row">' +
             EMOJIS.map(function (e, i) { return '<span class="emoji-opt' + (i === 0 ? ' sel' : '') + '" data-e="' + e + '">' + e + '</span>'; }).join('') +
           '</div></div>' +
+          '<div class="field"><label>Page theme (colors your guests see)</label><div class="emoji-row">' + themeRow('confetti') + '</div></div>' +
           '<div class="field"><label>Event name</label><input type="text" id="f-title" maxlength="120" placeholder="Summer rooftop party"></div>' +
           '<div class="row-2">' +
             '<div class="field"><label>When</label><input type="datetime-local" id="f-when"></div>' +
@@ -193,9 +214,11 @@
           '</div>' +
           '<div class="field"><label>Where</label><input type="text" id="f-loc" maxlength="300" placeholder="123 Main St, or \'my place\'"></div>' +
           '<div class="field"><label>Details (optional)</label><textarea id="f-desc" maxlength="2000" placeholder="BYOB, dogs welcome, rooftop closes at midnight…"></textarea></div>' +
+          '<div class="field"><label>Cover image URL (optional — shows on the invite page + text previews)</label><input type="text" id="f-cover" maxlength="500" placeholder="https://…/photo.jpg"></div>' +
           '<div class="field"><label>Your name (shows on the invite)</label><input type="text" id="f-host" maxlength="80" placeholder="Chris"></div>' +
           '<input type="hidden" id="f-tz" value="' + esc(tz) + '">' +
           '<div style="text-align:center;margin-top:20px"><button class="btn" id="create-btn">Create event</button></div>' +
+          '<p class="hint" style="text-align:center">Guest list, comment wall, and an automatic day-before text reminder are on by default — tweak them in event settings after creating.</p>' +
         '</div>';
       document.getElementById('back').addEventListener('click', function () { renderList(); });
       Array.prototype.forEach.call(document.querySelectorAll('.emoji-opt'), function (el) {
@@ -204,6 +227,7 @@
           el.classList.add('sel');
         });
       });
+      bindThemeRow();
       document.getElementById('create-btn').addEventListener('click', createEvent);
     }
 
@@ -221,6 +245,8 @@
         location: document.getElementById('f-loc').value,
         timezone: document.getElementById('f-tz').value,
         host_name: document.getElementById('f-host').value,
+        cover_theme: selectedTheme(),
+        cover_image_url: document.getElementById('f-cover').value.trim(),
       };
       // datetime-local is wall-clock in the browser's tz; convert to ISO.
       if (whenVal) payload.starts_at = new Date(whenVal).toISOString();
@@ -245,32 +271,48 @@
     }
 
     function rsvpPill(r) {
-      var labels = { yes: 'Going', maybe: 'Maybe', no: "Can't go", pending: 'Invited' };
+      var labels = { yes: 'Going', maybe: 'Maybe', no: "Can't go", pending: 'Invited', waitlist: 'Waitlist' };
       return '<span class="pill ' + esc(r) + '"><span class="dot"></span>' + (labels[r] || r) + '</span>';
     }
 
     function renderDetail() {
       var ev = state.detail.event;
       var guests = state.detail.guests;
-      var yes = 0, maybe = 0, no = 0, pending = 0, plus = 0, uninvited = 0;
+      var comments = state.detail.comments || [];
+      var cohosts = state.detail.cohosts || [];
+      var yes = 0, maybe = 0, no = 0, pending = 0, waitlist = 0, plus = 0, uninvited = 0;
       guests.forEach(function (g) {
         if (g.rsvp === 'yes') { yes++; plus += g.plus_ones || 0; }
         else if (g.rsvp === 'maybe') maybe++;
         else if (g.rsvp === 'no') no++;
+        else if (g.rsvp === 'waitlist') waitlist++;
         else pending++;
-        if (!g.invited_at && (g.phone_e164 || g.email)) uninvited++;
+        if (!g.invited_at && g.rsvp !== 'waitlist' && (g.phone_e164 || g.email)) uninvited++;
       });
 
       var rows = guests.map(function (g) {
         var contact = [g.phone_e164, g.email].filter(Boolean).join(' · ');
         return '<tr>' +
           '<td>' + esc(g.name || '—') + '<div class="contact">' + esc(contact) + '</div></td>' +
-          '<td>' + rsvpPill(g.rsvp) + (g.plus_ones ? ' +' + g.plus_ones : '') + '</td>' +
+          '<td>' + rsvpPill(g.rsvp) + (g.plus_ones ? ' +' + g.plus_ones : '') +
+            (g.rsvp === 'waitlist' ? ' <button class="copy-chip" style="font-size:12px;padding:4px 10px" data-admit="' + esc(g.id) + '">Admit</button>' : '') + '</td>' +
           '<td>' + (g.note ? esc(g.note) : '<span class="muted">—</span>') + '</td>' +
           '<td>' + (g.invited_at ? '<span class="muted">sent</span>' : '<span class="muted">not sent</span>') + '</td>' +
-          '<td><button class="g-del" data-gid="' + esc(g.id) + '" title="Remove guest">✕</button></td>' +
+          '<td style="white-space:nowrap"><button class="g-del" data-copy="' + esc(g.link) + '" title="Copy their personal link">🔗</button>' +
+          '<button class="g-del" data-gid="' + esc(g.id) + '" title="Remove guest">✕</button></td>' +
         '</tr>';
       }).join('');
+
+      var commentRows = comments.map(function (c) {
+        return '<div class="comment" style="display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,0.07);font-size:14px">' +
+          '<span><strong>' + esc(c.name || 'Guest') + '</strong> ' + esc(c.body) + '</span>' +
+          '<button class="g-del" data-cid="' + esc(c.id) + '" title="Delete comment">✕</button></div>';
+      }).join('');
+
+      var cohostRows = cohosts.map(function (em) {
+        return '<span class="copy-chip" style="cursor:default">' + esc(em) +
+          ' <button class="g-del" data-cohost="' + esc(em) + '" title="Remove co-host" style="padding:0 2px">✕</button></span>';
+      }).join(' ');
 
       root.innerHTML =
         '<a class="back-link" id="back">← All events</a>' +
@@ -283,10 +325,40 @@
             '<div class="stat"><div class="num">' + maybe + '</div><div class="lab">maybe</div></div>' +
             '<div class="stat"><div class="num">' + no + '</div><div class="lab">can\'t go</div></div>' +
             '<div class="stat"><div class="num">' + pending + '</div><div class="lab">no reply yet</div></div>' +
+            (waitlist ? '<div class="stat"><div class="num">' + waitlist + '</div><div class="lab">waitlist</div></div>' : '') +
           '</div>' +
           '<div class="head-actions">' +
             '<button class="copy-chip" id="copy-share">🔗 Copy open invite link</button>' +
+            '<a class="copy-chip" href="/e/' + esc(ev.share_token) + '" target="_blank" rel="noopener" style="text-decoration:none">👀 Preview guest page</a>' +
+            '<button class="copy-chip" id="settings-toggle">⚙️ Event settings</button>' +
             (ev.status === 'active' ? '<button class="copy-chip" id="cancel-ev">Cancel event</button>' : '') +
+          '</div>' +
+        '</div>' +
+
+        '<div class="glass sec-card" id="settings-card" style="display:none">' +
+          '<h3>Event settings</h3>' +
+          '<div class="field"><label>Page theme</label><div class="emoji-row">' + themeRow(ev.cover_theme || 'confetti') + '</div></div>' +
+          '<div class="field"><label>Cover image URL (shows on the invite page and in text-message link previews)</label>' +
+            '<input type="text" id="s-cover" maxlength="500" placeholder="https://…/photo.jpg" value="' + esc(ev.cover_image_url || '') + '"></div>' +
+          '<div class="row-2">' +
+            '<div class="field"><label>Event name</label><input type="text" id="s-title" maxlength="120" value="' + esc(ev.title) + '"></div>' +
+            '<div class="field"><label>Where</label><input type="text" id="s-loc" maxlength="300" value="' + esc(ev.location || '') + '"></div>' +
+          '</div>' +
+          '<div class="field"><label>Details</label><textarea id="s-desc" maxlength="2000">' + esc(ev.description || '') + '</textarea></div>' +
+          '<div class="row-2">' +
+            '<div class="field"><label>Max guests</label><input type="number" id="s-cap" min="1" max="1000" value="' + (ev.capacity || '') + '" placeholder="No limit"></div>' +
+            '<div class="field"><label>&nbsp;</label>' +
+              '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-guestlist" style="width:auto"' + (ev.show_guest_list ? ' checked' : '') + '> Guests can see who\'s going</label>' +
+              '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-comments" style="width:auto"' + (ev.allow_comments ? ' checked' : '') + '> Comment wall on</label>' +
+              '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-autorem" style="width:auto"' + (ev.auto_reminder ? ' checked' : '') + '> Auto text reminder 24h before</label>' +
+            '</div>' +
+          '</div>' +
+          '<button class="btn btn-sm" id="save-settings">Save settings</button>' +
+          '<div style="margin-top:20px"><h3>Co-hosts</h3>' +
+            '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">' + (cohostRows || '<span class="muted" style="font-size:14px">None yet.</span>') + '</div>' +
+            '<div style="display:flex;gap:10px"><input type="email" id="cohost-email" placeholder="friend@example.com" style="max-width:280px">' +
+            '<button class="btn btn-ghost btn-sm" id="add-cohost">Add co-host</button></div>' +
+            '<div class="hint">Co-hosts sign in with that email and can manage this event too.</div>' +
           '</div>' +
         '</div>' +
 
@@ -314,21 +386,109 @@
           (guests.length
             ? '<div class="table-scroll"><table class="guest-table"><thead><tr><th>Guest</th><th>RSVP</th><th>Note</th><th>Invite</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
             : '<p class="muted">No guests yet — paste some above.</p>') +
-        '</div>';
+        '</div>' +
+
+        (ev.allow_comments ? '<div class="glass sec-card">' +
+          '<h3>The wall (' + comments.length + ')</h3>' +
+          (commentRows || '<p class="muted" style="margin:0">No guest messages yet.</p>') +
+        '</div>' : '');
 
       document.getElementById('back').addEventListener('click', function () { loadEvents(); });
       document.getElementById('copy-share').addEventListener('click', function () {
         navigator.clipboard.writeText(ev.share_link).then(function () { toast('Open invite link copied — anyone with it can RSVP.'); });
       });
+      document.getElementById('settings-toggle').addEventListener('click', function () {
+        var card = document.getElementById('settings-card');
+        card.style.display = card.style.display === 'none' ? '' : 'none';
+        bindThemeRow();
+      });
+      document.getElementById('save-settings').addEventListener('click', function () { saveSettings(ev.id); });
+      document.getElementById('add-cohost').addEventListener('click', function () { addCohost(ev.id); });
       var cancelBtn = document.getElementById('cancel-ev');
       if (cancelBtn) cancelBtn.addEventListener('click', function () { cancelEvent(ev.id); });
       document.getElementById('add-guests-btn').addEventListener('click', function () { addGuests(ev.id); });
       document.getElementById('send-invites-btn').addEventListener('click', function () { sendBatched(ev.id, 'invite', null); });
       document.getElementById('send-reminder-btn').addEventListener('click', function () { sendReminder(ev.id); });
       document.getElementById('blast-btn').addEventListener('click', function () { sendBlast(ev.id); });
-      Array.prototype.forEach.call(document.querySelectorAll('.g-del'), function (el) {
+      Array.prototype.forEach.call(document.querySelectorAll('[data-gid]'), function (el) {
         el.addEventListener('click', function () { removeGuest(ev.id, el.getAttribute('data-gid')); });
       });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-copy]'), function (el) {
+        el.addEventListener('click', function () {
+          navigator.clipboard.writeText(el.getAttribute('data-copy')).then(function () { toast('Personal RSVP link copied.'); });
+        });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-admit]'), function (el) {
+        el.addEventListener('click', function () { admitGuest(ev.id, el.getAttribute('data-admit')); });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-cid]'), function (el) {
+        el.addEventListener('click', function () { deleteComment(ev.id, el.getAttribute('data-cid')); });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-cohost]'), function (el) {
+        el.addEventListener('click', function () { removeCohost(ev.id, el.getAttribute('data-cohost')); });
+      });
+    }
+
+    async function saveSettings(id) {
+      var capVal = parseInt(document.getElementById('s-cap').value, 10);
+      var payload = {
+        title: document.getElementById('s-title').value,
+        location: document.getElementById('s-loc').value,
+        description: document.getElementById('s-desc').value,
+        capacity: capVal > 0 ? capVal : null,
+        cover_theme: selectedTheme(),
+        cover_image_url: document.getElementById('s-cover').value.trim(),
+        show_guest_list: document.getElementById('s-guestlist').checked,
+        allow_comments: document.getElementById('s-comments').checked,
+        auto_reminder: document.getElementById('s-autorem').checked,
+      };
+      try {
+        var res = await authFetch('/parties/api/events/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not save.'); return; }
+        toast('Settings saved.');
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
+    }
+
+    async function addCohost(id) {
+      var email = document.getElementById('cohost-email').value.trim();
+      if (!email) { toast('Enter the co-host\'s email.'); return; }
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/cohosts', { method: 'POST', body: JSON.stringify({ email: email }) });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not add co-host.'); return; }
+        toast('Co-host added — they\'ll see this event when they sign in with that email.');
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
+    }
+
+    async function removeCohost(id, email) {
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/cohosts', { method: 'DELETE', body: JSON.stringify({ email: email }) });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not remove co-host.'); return; }
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
+    }
+
+    async function admitGuest(id, gid) {
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/guests/' + gid + '/admit', { method: 'POST', body: JSON.stringify({}) });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not admit.'); return; }
+        toast(data.notified ? 'Admitted — they just got the good-news text.' : 'Admitted (could not notify them automatically).');
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
+    }
+
+    async function deleteComment(id, cid) {
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/comments/' + cid, { method: 'DELETE' });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not delete.'); return; }
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
     }
 
     async function cancelEvent(id) {
@@ -396,8 +556,9 @@
       var guests = state.detail.guests;
       var targets = guests.filter(function (g) {
         if (!g.phone_e164 && !g.email) return false;
+        if (g.rsvp === 'waitlist') return false;
         if (kind === 'invite') return !g.invited_at;
-        return g.rsvp !== 'no';
+        return g.rsvp === 'pending' || g.rsvp === 'yes' || g.rsvp === 'maybe';
       }).map(function (g) { return g.id; });
       if (!targets.length) { toast('Nobody to send that to right now.'); return; }
 

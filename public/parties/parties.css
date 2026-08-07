@@ -79,6 +79,34 @@ label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--muted)
 .pill.maybe .dot { background: var(--warn); }
 .pill.no .dot { background: var(--bad); }
 .pill.pending .dot { background: var(--muted); }
+.pill.waitlist .dot { background: var(--accent); }
+
+/* Cover themes — each swaps the accent pair; the ambient background and all
+   accent-tinted UI pick the change up automatically via the CSS vars. */
+body.theme-confetti { --accent: #c77dff; --accent-2: #ff8fab; }
+body.theme-sunset   { --accent: #ff9e7a; --accent-2: #ff5e8a; --bg: #120a08; }
+body.theme-neon     { --accent: #39ff88; --accent-2: #00e0ff; --bg: #060d0a; }
+body.theme-ocean    { --accent: #4aa8ff; --accent-2: #7ae0d8; --bg: #060a12; }
+body.theme-garden   { --accent: #7ad97a; --accent-2: #ffd97a; --bg: #090f08; }
+body.theme-gold     { --accent: #ffd766; --accent-2: #ff9e40; --bg: #100c06; }
+body.theme-midnight { --accent: #5a6cff; --accent-2: #9a7dff; --bg: #06070f; }
+body.theme-cherry   { --accent: #ff5a7a; --accent-2: #ffb3c1; --bg: #10060a; }
+
+.theme-swatch {
+  width: 34px; height: 34px; border-radius: 999px; cursor: pointer;
+  border: 2px solid transparent; padding: 0;
+}
+.theme-swatch.sel { border-color: #fff; }
+.sw-confetti { background: linear-gradient(120deg, #c77dff, #ff8fab); }
+.sw-sunset   { background: linear-gradient(120deg, #ff9e7a, #ff5e8a); }
+.sw-neon     { background: linear-gradient(120deg, #39ff88, #00e0ff); }
+.sw-ocean    { background: linear-gradient(120deg, #4aa8ff, #7ae0d8); }
+.sw-garden   { background: linear-gradient(120deg, #7ad97a, #ffd97a); }
+.sw-gold     { background: linear-gradient(120deg, #ffd766, #ff9e40); }
+.sw-midnight { background: linear-gradient(120deg, #5a6cff, #9a7dff); }
+.sw-cherry   { background: linear-gradient(120deg, #ff5a7a, #ffb3c1); }
+
+.cover-img { width: 100%; max-height: 260px; object-fit: cover; border-radius: 16px; margin-bottom: 16px; }
 
 .toast {
   position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);

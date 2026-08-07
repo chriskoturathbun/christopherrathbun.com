@@ -39,6 +39,31 @@ migration files):
   (pending/yes/maybe/no), plus-ones, note; unique per event on phone and email
 - `party_sends` — log of every SMS/email attempt (channel, kind, ok, sid)
 
+## Partiful-parity features
+
+- **Cover themes + images** — 8 color themes (`COVER_THEMES`) restyle the
+  whole guest page; an optional `https` cover image URL shows on the page
+  and in link previews.
+- **Rich link previews** — `/e/<token>` responses get OpenGraph/Twitter meta
+  injected server-side (`buildOgMeta`), so the texted link unfurls as a card
+  in iMessage/WhatsApp. The preview image is the cover image, else a
+  thum.io screenshot of the open-invite page (share token only — personal
+  tokens are never sent to the screenshot service).
+- **Who's going** — first names + plus-one counts on the guest page
+  (host-toggleable, contact info never exposed).
+- **The wall** — a comment feed on the guest page. Posting requires a
+  personal guest token (open-link guests get one after RSVPing), capped at
+  20 comments per guest; hosts moderate from the dashboard.
+- **Waitlist** — when a capacity-limited event fills, open-link "yes" RSVPs
+  land on the waitlist; the host admits with one tap and the guest gets a
+  "you're in!" text automatically.
+- **Auto reminder** — the per-minute cron (`runPartyReminders`, wired in
+  `src/worker.js`) texts every non-declined guest once, 22-24h before the
+  event, in batches of 12/minute. `party_guests.reminded_at` is set before
+  sending so a crashed tick can't double-text.
+- **Co-hosts** — added by email (`party_cohosts`); anyone signing into
+  Clerk with that email can manage the event.
+
 ## Abuse limits (in `src/parties.js`)
 
 - 200 guests per event, 25 sends per API call (the host UI batches),
