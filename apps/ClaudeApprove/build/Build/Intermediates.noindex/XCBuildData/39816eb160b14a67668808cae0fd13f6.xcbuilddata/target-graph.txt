@@ -1,0 +1,4 @@
+Target dependency graph (2 targets)
+Target 'ClaudeApprove' in project 'ClaudeApprove'
+➜ Explicit dependency on target 'ClaudeApproveWatch' in project 'ClaudeApprove'
+Target 'ClaudeApproveWatch' in project 'ClaudeApprove' (no dependencies)

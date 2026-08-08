@@ -18,6 +18,8 @@ const AUTO_REMINDER_BATCH = 12;
 
 const RSVP_CHOICES = ['yes', 'maybe', 'no'];
 export const COVER_THEMES = ['confetti', 'sunset', 'neon', 'ocean', 'garden', 'gold', 'midnight', 'cherry'];
+export const TITLE_FONTS = ['classic', 'eclectic', 'fancy', 'literary'];
+const MAX_DATE_OPTIONS = 8;
 
 // --- Pure helpers (unit-tested in test/parties.test.mjs) ---
 
@@ -209,6 +211,20 @@ async function ensureSchema(env) {
       email TEXT NOT NULL,
       added_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (event_id, email))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS party_date_options (
+      id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL,
+      starts_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_party_date_options_event ON party_date_options (event_id)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS party_date_votes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      option_id TEXT NOT NULL,
+      event_id TEXT NOT NULL,
+      guest_id TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (option_id, guest_id))`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_party_date_votes_event ON party_date_votes (event_id)`),
   ]);
   // Additive columns (idempotent — ignore "duplicate column" on re-run).
   for (const stmt of [
@@ -218,6 +234,15 @@ async function ensureSchema(env) {
     "ALTER TABLE party_events ADD COLUMN allow_comments INTEGER DEFAULT 1",
     "ALTER TABLE party_events ADD COLUMN auto_reminder INTEGER DEFAULT 1",
     "ALTER TABLE party_guests ADD COLUMN reminded_at TEXT",
+    "ALTER TABLE party_events ADD COLUMN host_nickname TEXT",
+    "ALTER TABLE party_events ADD COLUMN cost_text TEXT",
+    "ALTER TABLE party_events ADD COLUMN rsvp_deadline TEXT",
+    "ALTER TABLE party_events ADD COLUMN link_url TEXT",
+    "ALTER TABLE party_events ADD COLUMN playlist_url TEXT",
+    "ALTER TABLE party_events ADD COLUMN registry_url TEXT",
+    "ALTER TABLE party_events ADD COLUMN dress_code TEXT",
+    "ALTER TABLE party_events ADD COLUMN is_public INTEGER DEFAULT 1",
+    "ALTER TABLE party_events ADD COLUMN title_font TEXT DEFAULT 'classic'",
   ]) { try { await db.prepare(stmt).run(); } catch (e) { /* column exists */ } }
   schemaReady = true;
 }
@@ -239,7 +264,9 @@ function emailFrom(env) {
 }
 
 function ogImageUrl(env, ev) {
-  if (ev.cover_image_url) return ev.cover_image_url;
+  // SVG covers render on the page but most unfurlers (iMessage, Twitter)
+  // won't accept an SVG og:image — fall through to the screenshot service.
+  if (ev.cover_image_url && !/\.svg(\?|#|$)/i.test(ev.cover_image_url)) return ev.cover_image_url;
   // Screenshot of the open-invite page (share token only — never a personal
   // token, which would leak a guest's private link to the screenshot service).
   return `https://image.thum.io/get/width/1200/crop/630/noanimate/${rsvpLink(env, ev.share_token)}`;
@@ -286,6 +313,16 @@ function publicEvent(ev) {
     cover_image_url: ev.cover_image_url || null,
     show_guest_list: !!ev.show_guest_list,
     allow_comments: !!ev.allow_comments,
+    host_nickname: ev.host_nickname || null,
+    cost_text: ev.cost_text || null,
+    dress_code: ev.dress_code || null,
+    link_url: ev.link_url || null,
+    playlist_url: ev.playlist_url || null,
+    registry_url: ev.registry_url || null,
+    rsvp_deadline: ev.rsvp_deadline || null,
+    rsvp_closed: rsvpClosed(ev),
+    is_public: ev.is_public === undefined || ev.is_public === null ? true : !!ev.is_public,
+    title_font: TITLE_FONTS.includes(ev.title_font) ? ev.title_font : 'classic',
   };
 }
 
@@ -309,6 +346,19 @@ async function commentList(env, eventId) {
      WHERE event_id = ? ORDER BY created_at DESC LIMIT 50`
   ).bind(eventId).all();
   return rows.results || [];
+}
+
+// A user-supplied URL is only stored if it's a plausible https URL.
+export function httpsUrl(v) {
+  const u = String(v || '').trim().slice(0, 500);
+  return /^https:\/\/[^\s]+\.[^\s]+$/.test(u) ? u : null;
+}
+
+// True once the RSVP deadline (if any) has passed.
+export function rsvpClosed(ev, now = new Date()) {
+  if (!ev || !ev.rsvp_deadline) return false;
+  const d = new Date(ev.rsvp_deadline);
+  return !isNaN(d.getTime()) && now.getTime() > d.getTime();
 }
 
 // --- Event field sanitizing (shared by create + update) ---
@@ -337,6 +387,22 @@ function sanitizeEventFields(body, { partial }) {
   if (has('capacity') || !partial) {
     fields.capacity = Number.isInteger(body.capacity) && body.capacity > 0 ? Math.min(body.capacity, 1000) : null;
   }
+  if (has('host_nickname') || !partial) fields.host_nickname = String(body.host_nickname || '').trim().slice(0, 80) || null;
+  if (has('cost_text') || !partial) fields.cost_text = String(body.cost_text || '').trim().slice(0, 120) || null;
+  if (has('dress_code') || !partial) fields.dress_code = String(body.dress_code || '').trim().slice(0, 120) || null;
+  for (const k of ['link_url', 'playlist_url', 'registry_url']) {
+    if (has(k) || !partial) fields[k] = httpsUrl(body[k]);
+  }
+  if (has('rsvp_deadline') || !partial) {
+    if (!body.rsvp_deadline) fields.rsvp_deadline = null;
+    else {
+      const d = new Date(body.rsvp_deadline);
+      if (isNaN(d.getTime())) return { error: 'invalid rsvp_deadline' };
+      fields.rsvp_deadline = d.toISOString();
+    }
+  }
+  if (has('is_public') || !partial) fields.is_public = (body.is_public === undefined || body.is_public) ? 1 : 0;
+  if (has('title_font') || !partial) fields.title_font = TITLE_FONTS.includes(body.title_font) ? body.title_font : 'classic';
   if (has('cover_theme')) {
     fields.cover_theme = COVER_THEMES.includes(body.cover_theme) ? body.cover_theme : 'confetti';
   }
@@ -367,8 +433,9 @@ async function handleCreateEvent(request, env) {
   const shareToken = 's' + hexToken(8);
   await env.DB.prepare(
     `INSERT INTO party_events (id, host_clerk_id, host_email, host_name, title, emoji, description, location,
-       starts_at, timezone, capacity, share_token, cover_theme, cover_image_url, show_guest_list, allow_comments, auto_reminder)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       starts_at, timezone, capacity, share_token, cover_theme, cover_image_url, show_guest_list, allow_comments, auto_reminder,
+       host_nickname, cost_text, dress_code, link_url, playlist_url, registry_url, rsvp_deadline, is_public, title_font)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(
     id, host.clerkId, hostEmail, hostName, fields.title, fields.emoji, fields.description, fields.location,
     fields.starts_at, fields.timezone, fields.capacity, shareToken,
@@ -376,7 +443,15 @@ async function handleCreateEvent(request, env) {
     fields.show_guest_list !== undefined ? fields.show_guest_list : 1,
     fields.allow_comments !== undefined ? fields.allow_comments : 1,
     fields.auto_reminder !== undefined ? fields.auto_reminder : 1,
+    fields.host_nickname, fields.cost_text, fields.dress_code,
+    fields.link_url, fields.playlist_url, fields.registry_url,
+    fields.rsvp_deadline, fields.is_public, fields.title_font,
   ).run();
+
+  // "Can't decide when? Poll your guests" — optional list of candidate dates.
+  if (Array.isArray(body.date_options) && body.date_options.length) {
+    await replaceDateOptions(env, id, body.date_options);
+  }
 
   return json({ ok: true, event: { id, share_token: shareToken } });
 }
@@ -425,6 +500,7 @@ async function handleEventDetail(request, env, eventId) {
     guests: (guests.results || []).map(g => ({ ...g, link: rsvpLink(env, g.token) })),
     comments: await commentList(env, eventId),
     cohosts: (cohosts.results || []).map(c => c.email),
+    date_poll: await datePoll(env, ev, null),
   });
 }
 
@@ -708,6 +784,96 @@ async function handleDeleteComment(request, env, eventId, commentId) {
   return json({ ok: true });
 }
 
+// --- Date poll ("Can't decide when? Poll your guests") ---
+
+// Replace an event's candidate dates wholesale. Votes for options that
+// survive (same starts_at) are preserved by keeping their ids.
+async function replaceDateOptions(env, eventId, isoList) {
+  const dates = [];
+  for (const v of isoList.slice(0, MAX_DATE_OPTIONS)) {
+    const d = new Date(v);
+    if (!isNaN(d.getTime())) dates.push(d.toISOString());
+  }
+  const existing = await env.DB.prepare('SELECT id, starts_at FROM party_date_options WHERE event_id = ?').bind(eventId).all();
+  const keep = new Map();
+  for (const row of (existing.results || [])) if (dates.includes(row.starts_at)) keep.set(row.starts_at, row.id);
+  await env.DB.prepare('DELETE FROM party_date_options WHERE event_id = ?').bind(eventId).run();
+  await env.DB.prepare('DELETE FROM party_date_votes WHERE event_id = ? AND option_id NOT IN (SELECT id FROM party_date_options)').bind(eventId).run();
+  for (const iso of dates) {
+    const oid = keep.get(iso) || shortId(12);
+    await env.DB.prepare('INSERT INTO party_date_options (id, event_id, starts_at) VALUES (?, ?, ?)').bind(oid, eventId, iso).run();
+  }
+  // Drop votes that pointed at deleted options.
+  await env.DB.prepare('DELETE FROM party_date_votes WHERE event_id = ? AND option_id NOT IN (SELECT id FROM party_date_options WHERE event_id = ?)').bind(eventId, eventId).run();
+}
+
+async function datePoll(env, ev, guestId) {
+  const rows = await env.DB.prepare(
+    `SELECT o.id, o.starts_at,
+       (SELECT COUNT(*) FROM party_date_votes v WHERE v.option_id = o.id) AS votes
+     FROM party_date_options o WHERE o.event_id = ? ORDER BY o.starts_at`
+  ).bind(ev.id).all();
+  const options = rows.results || [];
+  if (!options.length) return null;
+  let mine = new Set();
+  if (guestId) {
+    const my = await env.DB.prepare('SELECT option_id FROM party_date_votes WHERE event_id = ? AND guest_id = ?').bind(ev.id, guestId).all();
+    mine = new Set((my.results || []).map(r => r.option_id));
+  }
+  return options.map(o => ({
+    id: o.id, starts_at: o.starts_at,
+    when_text: formatEventWhen(o.starts_at, ev.timezone),
+    votes: o.votes, mine: mine.has(o.id),
+  }));
+}
+
+async function handleSetDateOptions(request, env, eventId) {
+  const host = await requireHost(request, env);
+  if (!host) return json({ ok: false, error: 'unauthorized' }, 401);
+  const ev = await loadHostEvent(env, eventId, host);
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+  if (!Array.isArray(body.options)) return json({ ok: false, error: 'options must be an array of dates' }, 400);
+  await replaceDateOptions(env, eventId, body.options);
+  return json({ ok: true, date_poll: await datePoll(env, ev, null) });
+}
+
+// Host picks the winning date: it becomes starts_at and the poll closes.
+async function handlePickDate(request, env, eventId, optionId) {
+  const host = await requireHost(request, env);
+  if (!host) return json({ ok: false, error: 'unauthorized' }, 401);
+  const ev = await loadHostEvent(env, eventId, host);
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+  const opt = await env.DB.prepare('SELECT * FROM party_date_options WHERE id = ? AND event_id = ?').bind(optionId, eventId).first();
+  if (!opt) return json({ ok: false, error: 'not found' }, 404);
+  await env.DB.prepare(`UPDATE party_events SET starts_at = ?, updated_at = datetime('now') WHERE id = ?`).bind(opt.starts_at, eventId).run();
+  await env.DB.prepare('DELETE FROM party_date_options WHERE event_id = ?').bind(eventId).run();
+  await env.DB.prepare('DELETE FROM party_date_votes WHERE event_id = ?').bind(eventId).run();
+  return json({ ok: true, starts_at: opt.starts_at });
+}
+
+// Guest votes with their personal token: the submitted set replaces their
+// previous votes (checkbox semantics — multiple dates OK).
+async function handleDateVote(request, env, token) {
+  await ensureSchema(env);
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+  const ids = Array.isArray(body.option_ids) ? body.option_ids.slice(0, MAX_DATE_OPTIONS) : [];
+
+  const g = await env.DB.prepare('SELECT * FROM party_guests WHERE token = ?').bind(token).first();
+  if (!g) return json({ ok: false, error: 'not found' }, 404);
+  const ev = await env.DB.prepare('SELECT * FROM party_events WHERE id = ?').bind(g.event_id).first();
+  if (!ev || ev.status !== 'active') return json({ ok: false, error: 'event is not active' }, 400);
+
+  await env.DB.prepare('DELETE FROM party_date_votes WHERE event_id = ? AND guest_id = ?').bind(ev.id, g.id).run();
+  for (const oid of ids) {
+    const opt = await env.DB.prepare('SELECT id FROM party_date_options WHERE id = ? AND event_id = ?').bind(String(oid), ev.id).first();
+    if (opt) {
+      await env.DB.prepare('INSERT OR IGNORE INTO party_date_votes (option_id, event_id, guest_id) VALUES (?, ?, ?)').bind(opt.id, ev.id, g.id).run();
+    }
+  }
+  return json({ ok: true, date_poll: await datePoll(env, ev, g.id) });
+}
+
 // --- Handlers: public guest API ---
 
 // One endpoint resolves both link types: a personal guest token or the
@@ -724,6 +890,7 @@ async function handleLinkLookup(env, token) {
     const atCapacity = shared.capacity ? ((yes?.n || 0) + (yes?.p || 0)) >= shared.capacity : false;
     return json({
       ok: true, type: 'open', event: publicEvent(shared), at_capacity: atCapacity,
+      date_poll: await datePoll(env, shared, null),
       ...(shared.show_guest_list ? await goingList(env, shared.id) : {}),
       comments: shared.allow_comments ? await commentList(env, shared.id) : [],
     });
@@ -736,6 +903,7 @@ async function handleLinkLookup(env, token) {
   return json({
     ok: true, type: 'guest', event: publicEvent(ev),
     guest: { name: guest.name, rsvp: guest.rsvp, plus_ones: guest.plus_ones, note: guest.note },
+    date_poll: await datePoll(env, ev, guest.id),
     ...(ev.show_guest_list ? await goingList(env, ev.id) : {}),
     comments: ev.allow_comments ? await commentList(env, ev.id) : [],
   });
@@ -754,6 +922,7 @@ async function handleRsvp(request, env, token) {
   if (!guest) return json({ ok: false, error: 'not found' }, 404);
   const ev = await env.DB.prepare('SELECT * FROM party_events WHERE id = ?').bind(guest.event_id).first();
   if (!ev || ev.status !== 'active') return json({ ok: false, error: 'this event is no longer active' }, 400);
+  if (rsvpClosed(ev)) return json({ ok: false, error: 'RSVPs are closed for this event' }, 400);
 
   await env.DB.prepare(
     `UPDATE party_guests SET rsvp = ?, plus_ones = ?, note = ?, name = COALESCE(?, name), responded_at = datetime('now') WHERE id = ?`
@@ -770,6 +939,10 @@ async function handleOpenRsvp(request, env, shareToken) {
   const ev = await env.DB.prepare('SELECT * FROM party_events WHERE share_token = ?').bind(shareToken).first();
   if (!ev) return json({ ok: false, error: 'not found' }, 404);
   if (ev.status !== 'active') return json({ ok: false, error: 'this event is no longer active' }, 400);
+  if (ev.is_public !== undefined && ev.is_public !== null && !ev.is_public) {
+    return json({ ok: false, error: 'this event is invite-only — ask the host for a personal invite' }, 403);
+  }
+  if (rsvpClosed(ev)) return json({ ok: false, error: 'RSVPs are closed for this event' }, 400);
 
   let rsvp = RSVP_CHOICES.includes(body.rsvp) ? body.rsvp : null;
   if (!rsvp) return json({ ok: false, error: 'rsvp must be yes, maybe, or no' }, 400);
@@ -908,6 +1081,8 @@ export async function handleParties(request, env, url) {
   if (m && request.method === 'POST') return handleOpenRsvp(request, env, m[1]);
   m = path.match(/^\/parties\/api\/comment\/([A-Za-z0-9]+)$/);
   if (m && request.method === 'POST') return handlePostComment(request, env, m[1]);
+  m = path.match(/^\/parties\/api\/datevote\/([A-Za-z0-9]+)$/);
+  if (m && request.method === 'POST') return handleDateVote(request, env, m[1]);
 
   // Host API (Clerk-gated).
   if (path.startsWith('/parties/api/')) {
@@ -925,6 +1100,10 @@ export async function handleParties(request, env, url) {
     if (m && request.method === 'POST') return handleAdmitGuest(request, env, m[1], m[2]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/send$/);
     if (m && request.method === 'POST') return handleSend(request, env, m[1]);
+    m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/date-options$/);
+    if (m && request.method === 'POST') return handleSetDateOptions(request, env, m[1]);
+    m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/date-options\/([A-Za-z0-9]+)\/pick$/);
+    if (m && request.method === 'POST') return handlePickDate(request, env, m[1], m[2]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/cohosts$/);
     if (m && request.method === 'POST') return handleAddCohost(request, env, m[1]);
     if (m && request.method === 'DELETE') return handleRemoveCohost(request, env, m[1]);

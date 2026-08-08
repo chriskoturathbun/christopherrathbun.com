@@ -3,6 +3,7 @@ import {
   isEmail, parseGuestLine, formatEventWhen,
   buildInviteSms, buildReminderSms, buildUpdateSms, buildAdmitSms,
   buildInviteEmail, buildOgMeta, firstName, COVER_THEMES,
+  TITLE_FONTS, httpsUrl, rsvpClosed,
 } from '../src/parties.js';
 
 let pass = 0, fail = 0;
@@ -102,6 +103,23 @@ ok(!ogNoImg.includes('og:image'), 'no og:image without url');
 
 // --- themes ---
 ok(COVER_THEMES.includes('confetti') && COVER_THEMES.length >= 8, 'cover themes defined');
+
+// --- title fonts ---
+ok(TITLE_FONTS.includes('classic') && TITLE_FONTS.length === 4, 'title fonts defined');
+
+// --- httpsUrl ---
+eq(httpsUrl('https://open.spotify.com/playlist/abc'), 'https://open.spotify.com/playlist/abc', 'valid https url kept');
+eq(httpsUrl('http://example.com'), null, 'http (not https) rejected');
+eq(httpsUrl('javascript:alert(1)'), null, 'javascript: url rejected');
+eq(httpsUrl(''), null, 'empty url → null');
+eq(httpsUrl('  https://a.co/x  '), 'https://a.co/x', 'url trimmed');
+
+// --- rsvpClosed ---
+ok(!rsvpClosed({ rsvp_deadline: null }), 'no deadline → open');
+ok(!rsvpClosed(null), 'no event → open');
+ok(rsvpClosed({ rsvp_deadline: '2020-01-01T00:00:00.000Z' }, new Date('2020-06-01T00:00:00Z')), 'past deadline → closed');
+ok(!rsvpClosed({ rsvp_deadline: '2030-01-01T00:00:00.000Z' }, new Date('2020-06-01T00:00:00Z')), 'future deadline → open');
+ok(!rsvpClosed({ rsvp_deadline: 'garbage' }), 'unparseable deadline → open');
 
 console.log(`parties tests: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

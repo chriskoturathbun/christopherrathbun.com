@@ -86,3 +86,27 @@ Public: `GET /parties/api/link/:token` (resolves either token type),
 `node test/parties.test.mjs` — pure helpers (guest-line parsing, E.164
 normalization via reminders' `normalizePhone`, SMS/email builders, event-time
 formatting).
+
+## Partiful-parity side functions (Aug 2026)
+
+Event fields beyond the basics: `host_nickname` ("Hosted by The Rathbun Crew"),
+`cost_text` (free-text cost per person), `dress_code`, `link_url` / `playlist_url` /
+`registry_url` (https-validated), `rsvp_deadline` (RSVPs lock server-side after it),
+`is_public` (off = the open share link stops accepting RSVPs), and `title_font`
+(classic / eclectic / fancy / literary — Google Fonts on both pages).
+
+**Date poll** — when the host can't pick a date: `party_date_options` +
+`party_date_votes` tables. Host sets options (create form or
+`POST /parties/api/events/:id/date-options`), guests with a personal token vote via
+`POST /parties/api/datevote/:token` (checkbox semantics, replaces their votes),
+host locks a winner with `POST .../date-options/:id/pick` → sets `starts_at`,
+deletes the poll.
+
+**Example covers** — 16 generated SVGs in `public/parties/covers/` (regenerate with
+the build script in the repo history; deterministic seeds). Picking one stores its
+absolute URL in `cover_image_url`. `ogImageUrl` skips SVG covers for og:image
+(unfurlers don't render SVG) and falls back to the screenshot service.
+
+**Full emoji library** — `public/parties/emoji.json` (~1,900 emoji, Unicode 17,
+grouped, searchable by name; skin-tone variants collapsed). The host page's
+"➕ More" opens the picker modal.

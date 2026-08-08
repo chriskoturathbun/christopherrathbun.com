@@ -1,0 +1,79 @@
+{
+  "" : {
+    "diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatch-primary.dia",
+    "emit-module-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatch-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatch-primary-emit-module.dia",
+    "pch" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatch-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatch-primary.swiftdeps"
+  },
+  "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/Shared/ApprovalsAPI.swift" : {
+    "const-values" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ApprovalsAPI.swiftconstvalues",
+    "dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ApprovalsAPI.d",
+    "diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ApprovalsAPI.dia",
+    "index-unit-output-path" : "/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ApprovalsAPI.o",
+    "llvm-bc" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ApprovalsAPI.bc",
+    "object" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ApprovalsAPI.o",
+    "swift-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ApprovalsAPI.swiftdeps",
+    "swiftmodule" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ApprovalsAPI~partial.swiftmodule"
+  },
+  "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/Shared/Models.swift" : {
+    "const-values" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/Models.swiftconstvalues",
+    "dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/Models.d",
+    "diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/Models.dia",
+    "index-unit-output-path" : "/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/Models.o",
+    "llvm-bc" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/Models.bc",
+    "object" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/Models.o",
+    "swift-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/Models.swiftdeps",
+    "swiftmodule" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/Models~partial.swiftmodule"
+  },
+  "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/Shared/NotificationManager.swift" : {
+    "const-values" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/NotificationManager.swiftconstvalues",
+    "dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/NotificationManager.d",
+    "diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/NotificationManager.dia",
+    "index-unit-output-path" : "/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/NotificationManager.o",
+    "llvm-bc" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/NotificationManager.bc",
+    "object" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/NotificationManager.o",
+    "swift-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/NotificationManager.swiftdeps",
+    "swiftmodule" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/NotificationManager~partial.swiftmodule"
+  },
+  "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/Shared/PendingModel.swift" : {
+    "const-values" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/PendingModel.swiftconstvalues",
+    "dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/PendingModel.d",
+    "diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/PendingModel.dia",
+    "index-unit-output-path" : "/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/PendingModel.o",
+    "llvm-bc" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/PendingModel.bc",
+    "object" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/PendingModel.o",
+    "swift-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/PendingModel.swiftdeps",
+    "swiftmodule" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/PendingModel~partial.swiftmodule"
+  },
+  "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/Shared/SettingsSync.swift" : {
+    "const-values" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/SettingsSync.swiftconstvalues",
+    "dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/SettingsSync.d",
+    "diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/SettingsSync.dia",
+    "index-unit-output-path" : "/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/SettingsSync.o",
+    "llvm-bc" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/SettingsSync.bc",
+    "object" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/SettingsSync.o",
+    "swift-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/SettingsSync.swiftdeps",
+    "swiftmodule" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/SettingsSync~partial.swiftmodule"
+  },
+  "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/WatchApp/ClaudeApproveWatchApp.swift" : {
+    "const-values" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatchApp.swiftconstvalues",
+    "dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatchApp.d",
+    "diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatchApp.dia",
+    "index-unit-output-path" : "/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatchApp.o",
+    "llvm-bc" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatchApp.bc",
+    "object" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatchApp.o",
+    "swift-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatchApp.swiftdeps",
+    "swiftmodule" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/ClaudeApproveWatchApp~partial.swiftmodule"
+  },
+  "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/WatchApp/WatchContentView.swift" : {
+    "const-values" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/WatchContentView.swiftconstvalues",
+    "dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/WatchContentView.d",
+    "diagnostics" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/WatchContentView.dia",
+    "index-unit-output-path" : "/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/WatchContentView.o",
+    "llvm-bc" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/WatchContentView.bc",
+    "object" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/WatchContentView.o",
+    "swift-dependencies" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/WatchContentView.swiftdeps",
+    "swiftmodule" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/ClaudeApprove.build/Debug-watchos/ClaudeApproveWatch.build/Objects-normal/arm64_32/WatchContentView~partial.swiftmodule"
+  }
+}

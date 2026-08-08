@@ -6,6 +6,9 @@
   <title>Parties — throw a party, text the invites</title>
   <meta name="description" content="Create an event, invite people by text or email, and watch RSVPs roll in. No apps, no data harvesting." />
   <link rel="stylesheet" href="/parties/parties.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Fraunces:ital,wght@0,600;1,600&family=Dancing+Script:wght@600&display=swap" rel="stylesheet">
   <script
     async crossorigin="anonymous"
     data-clerk-publishable-key="pk_live_Y2xlcmsuY2hyaXN0b3BoZXJyYXRoYnVuLmNvbSQ"
@@ -62,6 +65,50 @@
     .back-link { color: var(--muted); text-decoration: none; font-size: 14px; display: inline-block; margin-bottom: 14px; cursor: pointer; }
     .back-link:hover { color: var(--text); }
     .hint { font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+    /* Side-function chips (+ Link, + Playlist, …) */
+    .fn-chip-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; }
+    .fn-chip { font-size: 13px; padding: 8px 14px; border-radius: 999px; cursor: pointer; color: var(--text);
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); font-family: var(--font); }
+    .fn-chip:hover { border-color: var(--accent); }
+    .fn-chip.on { border-color: var(--accent); background: rgba(199,125,255,0.18); }
+    .fn-field { display: none; }
+    .fn-field.open { display: block; }
+
+    /* Title font styles */
+    .font-chip { font-size: 15px; padding: 7px 16px; border-radius: 999px; cursor: pointer; color: var(--text);
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+    .font-chip.sel { border-color: var(--accent); background: rgba(199,125,255,0.18); }
+    .tf-classic { font-family: var(--font); }
+    .tf-eclectic { font-family: 'Space Grotesk', sans-serif; font-weight: 700; }
+    .tf-fancy { font-family: 'Dancing Script', cursive; font-size: 18px; }
+    .tf-literary { font-family: 'Fraunces', Georgia, serif; font-style: italic; }
+
+    /* Example cover gallery */
+    .cover-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 6px; }
+    .cover-thumb { position: relative; border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid transparent; aspect-ratio: 3/2; }
+    .cover-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cover-thumb.sel { border-color: var(--accent); }
+    .cover-thumb.none { display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted);
+      background: rgba(255,255,255,0.05); border: 2px dashed var(--border); }
+    .cover-thumb.none.sel { border-color: var(--accent); color: var(--text); }
+
+    /* Full emoji library modal */
+    .emoji-modal { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(4px); }
+    .emoji-panel { width: min(520px, calc(100vw - 32px)); max-height: min(72vh, 640px); display: flex; flex-direction: column;
+      padding: 16px; border-radius: 18px; }
+    .emoji-panel input { margin-bottom: 10px; }
+    .emoji-tabs { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 8px; }
+    .emoji-tab { font-size: 18px; padding: 6px 10px; border-radius: 10px; cursor: pointer; background: none; border: 1px solid transparent; flex: 0 0 auto; }
+    .emoji-tab.sel { border-color: var(--accent); background: rgba(199,125,255,0.18); }
+    .emoji-grid { overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 2px; }
+    .emoji-cell { font-size: 24px; padding: 7px 0; text-align: center; cursor: pointer; border-radius: 8px; }
+    .emoji-cell:hover { background: rgba(255,255,255,0.1); }
+
+    /* Date poll */
+    .poll-opt { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid rgba(255,255,255,0.07); font-size: 14px; flex-wrap: wrap; }
+    .poll-bar { height: 6px; border-radius: 3px; background: var(--accent); opacity: 0.7; min-width: 4px; }
   </style>
 </head>
 <body>
@@ -79,6 +126,184 @@
     'use strict';
     var root = document.getElementById('root');
     var EMOJIS = ['🎉','🎂','🍻','🏠','🌮','🎃','🎄','💃','🏖️','🎾','🍷','🔥'];
+
+    /* ---- Full emoji library (loaded lazily from /parties/emoji.json) ---- */
+    var emojiData = null;
+    var GROUP_ICONS = { 'Smileys & Emotion': '😀', 'People & Body': '🧑', 'Animals & Nature': '🐻', 'Food & Drink': '🍔',
+      'Travel & Places': '✈️', 'Activities': '⚽', 'Objects': '💡', 'Symbols': '❤️', 'Flags': '🏁' };
+
+    function openEmojiPicker(onPick) {
+      var overlay = document.createElement('div');
+      overlay.className = 'emoji-modal';
+      overlay.innerHTML = '<div class="emoji-panel glass">' +
+        '<input type="text" id="emoji-search" placeholder="Search emoji…" autocomplete="off">' +
+        '<div class="emoji-tabs" id="emoji-tabs"></div>' +
+        '<div class="emoji-grid" id="emoji-grid"><span class="muted" style="grid-column:1/-1;padding:20px;text-align:center">Loading the library…</span></div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+      function close() { document.body.removeChild(overlay); document.removeEventListener('keydown', onKey); }
+      function onKey(e) { if (e.key === 'Escape') close(); }
+      document.addEventListener('keydown', onKey);
+
+      var grid = overlay.querySelector('#emoji-grid');
+      var tabs = overlay.querySelector('#emoji-tabs');
+      var search = overlay.querySelector('#emoji-search');
+      var curGroup = 0;
+
+      function cells(list) {
+        grid.innerHTML = list.length
+          ? list.map(function (x) { return '<span class="emoji-cell" title="' + esc(x.n) + '" data-e="' + x.e + '">' + x.e + '</span>'; }).join('')
+          : '<span class="muted" style="grid-column:1/-1;padding:20px;text-align:center">No matches.</span>';
+        Array.prototype.forEach.call(grid.querySelectorAll('.emoji-cell'), function (el) {
+          el.addEventListener('click', function () { onPick(el.getAttribute('data-e')); close(); });
+        });
+      }
+      function showGroup(i) {
+        curGroup = i;
+        Array.prototype.forEach.call(tabs.children, function (t, j) { t.classList.toggle('sel', j === i); });
+        cells(emojiData.groups[i].emoji);
+      }
+      function ready() {
+        tabs.innerHTML = emojiData.groups.map(function (gr, i) {
+          return '<button type="button" class="emoji-tab" title="' + esc(gr.name) + '">' + (GROUP_ICONS[gr.name] || '✨') + '</button>';
+        }).join('');
+        Array.prototype.forEach.call(tabs.children, function (t, i) {
+          t.addEventListener('click', function () { search.value = ''; showGroup(i); });
+        });
+        showGroup(0);
+        search.addEventListener('input', function () {
+          var q = search.value.trim().toLowerCase();
+          if (!q) { showGroup(curGroup); return; }
+          var out = [];
+          for (var i = 0; i < emojiData.groups.length && out.length < 300; i++) {
+            var g = emojiData.groups[i].emoji;
+            for (var j = 0; j < g.length && out.length < 300; j++) {
+              if (g[j].n.indexOf(q) !== -1) out.push(g[j]);
+            }
+          }
+          cells(out);
+        });
+        search.focus();
+      }
+      if (emojiData) { ready(); }
+      else {
+        fetch('/parties/emoji.json').then(function (r) { return r.json(); }).then(function (d) { emojiData = d; ready(); })
+          .catch(function () { grid.innerHTML = '<span class="muted" style="grid-column:1/-1;padding:20px;text-align:center">Could not load the emoji library.</span>'; });
+      }
+    }
+
+    /* ---- Example covers, title fonts, side-function chips ---- */
+    var COVERS = ['confetti-pop','disco-night','golden-hour','neon-glow','ocean-splash','garden-party','birthday-cake','cocktail-hour',
+      'movie-night','game-night','picnic-day','beach-bash','winter-lights','retro-wave','midnight-stars','sunset-soiree'];
+    function coverUrl(name) { return location.origin + '/parties/covers/' + name + '.svg'; }
+
+    function coverGridHtml(currentUrl) {
+      var isCustom = currentUrl && COVERS.every(function (c) { return coverUrl(c) !== currentUrl; });
+      return '<div class="cover-grid">' +
+        '<div class="cover-thumb none' + (currentUrl ? '' : ' sel') + '" data-cover="">None</div>' +
+        COVERS.map(function (c) {
+          return '<div class="cover-thumb' + (currentUrl === coverUrl(c) ? ' sel' : '') + '" data-cover="' + coverUrl(c) + '" title="' + c.replace(/-/g, ' ') + '">' +
+            '<img src="/parties/covers/' + c + '.svg" alt="' + c.replace(/-/g, ' ') + '" loading="lazy"></div>';
+        }).join('') +
+        '</div>' +
+        '<div class="hint">…or paste your own image URL below' + (isCustom ? ' (using a custom image now)' : '') + '.</div>';
+    }
+    function bindCoverGrid(inputEl) {
+      Array.prototype.forEach.call(document.querySelectorAll('.cover-thumb'), function (el) {
+        el.addEventListener('click', function () {
+          Array.prototype.forEach.call(document.querySelectorAll('.cover-thumb'), function (x) { x.classList.remove('sel'); });
+          el.classList.add('sel');
+          inputEl.value = el.getAttribute('data-cover');
+        });
+      });
+      inputEl.addEventListener('input', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.cover-thumb'), function (x) {
+          x.classList.toggle('sel', x.getAttribute('data-cover') === inputEl.value.trim());
+        });
+      });
+    }
+
+    var TITLE_FONTS = [
+      { k: 'classic', label: 'Classic' },
+      { k: 'eclectic', label: 'Eclectic' },
+      { k: 'fancy', label: 'Fancy' },
+      { k: 'literary', label: 'Literary' },
+    ];
+    function fontChipRow(sel) {
+      return '<div class="emoji-row" id="font-row">' + TITLE_FONTS.map(function (f) {
+        return '<button type="button" class="font-chip tf-' + f.k + (f.k === sel ? ' sel' : '') + '" data-f="' + f.k + '">' + f.label + '</button>';
+      }).join('') + '</div>';
+    }
+    function bindFontRow(titleInput) {
+      Array.prototype.forEach.call(document.querySelectorAll('.font-chip'), function (el) {
+        el.addEventListener('click', function () {
+          Array.prototype.forEach.call(document.querySelectorAll('.font-chip'), function (x) { x.classList.remove('sel'); });
+          el.classList.add('sel');
+          if (titleInput) titleInput.className = 'tf-' + el.getAttribute('data-f');
+        });
+      });
+    }
+    function selectedFont() {
+      var el = document.querySelector('.font-chip.sel');
+      return el ? el.getAttribute('data-f') : 'classic';
+    }
+
+    function bindFnChips() {
+      Array.prototype.forEach.call(document.querySelectorAll('.fn-chip[data-fn]'), function (el) {
+        el.addEventListener('click', function () {
+          var f = document.getElementById(el.getAttribute('data-fn'));
+          var open = f.classList.toggle('open');
+          el.classList.toggle('on', open);
+          if (open) { var inp = f.querySelector('input,textarea'); if (inp) inp.focus(); }
+        });
+      });
+    }
+    // A chip-revealed field only submits its value while open (chip toggled on).
+    function fnValue(fieldId, inputId) {
+      var f = document.getElementById(fieldId);
+      if (!f || !f.classList.contains('open')) return '';
+      var inp = document.getElementById(inputId);
+      return inp ? inp.value.trim() : '';
+    }
+
+    // ISO string → value for a datetime-local input (browser-local wall clock).
+    function localDatetimeValue(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      var p = function (n) { return (n < 10 ? '0' : '') + n; };
+      return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+
+    /* ---- Date poll editor (shared by create + detail) ---- */
+    var dateOpts = [];
+    function dateOptsHtml() {
+      return '<div id="date-opts">' + dateOpts.map(function (iso, i) {
+        return '<div class="poll-opt"><span>' + esc(new Date(iso).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '</span>' +
+          '<button type="button" class="g-del" data-dopt="' + i + '" title="Remove option">✕</button></div>';
+      }).join('') + '</div>';
+    }
+    function bindDateOpts(rerender) {
+      Array.prototype.forEach.call(document.querySelectorAll('[data-dopt]'), function (el) {
+        el.addEventListener('click', function () {
+          dateOpts.splice(parseInt(el.getAttribute('data-dopt'), 10), 1);
+          rerender();
+        });
+      });
+    }
+    // Bind once — the add button lives outside the rerendered list.
+    function bindAddDateOpt(rerender) {
+      var addBtn = document.getElementById('add-dopt');
+      if (addBtn) addBtn.addEventListener('click', function () {
+        var v = document.getElementById('dopt-input').value;
+        if (!v) { toast('Pick a date and time first.'); return; }
+        if (dateOpts.length >= 8) { toast('Up to 8 date options.'); return; }
+        var iso = new Date(v).toISOString();
+        if (dateOpts.indexOf(iso) === -1) dateOpts.push(iso);
+        rerender();
+      });
+    }
     var state = { events: [], detail: null, sending: false };
 
     function esc(s) {
@@ -199,35 +424,91 @@
     function renderCreate() {
       var tz = 'America/New_York';
       try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || tz; } catch (e) {}
+      dateOpts = [];
       root.innerHTML =
         '<a class="back-link" id="back">← Back to events</a>' +
         '<div class="glass form-card">' +
           '<h2>New event</h2>' +
           '<div class="field"><label>Pick a vibe</label><div class="emoji-row" id="emoji-row">' +
             EMOJIS.map(function (e, i) { return '<span class="emoji-opt' + (i === 0 ? ' sel' : '') + '" data-e="' + e + '">' + e + '</span>'; }).join('') +
+            '<span class="emoji-opt" id="emoji-more" title="Browse the full emoji library">➕ More</span>' +
           '</div></div>' +
           '<div class="field"><label>Page theme (colors your guests see)</label><div class="emoji-row">' + themeRow('confetti') + '</div></div>' +
           '<div class="field"><label>Event name</label><input type="text" id="f-title" maxlength="120" placeholder="Summer rooftop party"></div>' +
+          '<div class="field"><label>Title style</label>' + fontChipRow('classic') + '</div>' +
           '<div class="row-2">' +
             '<div class="field"><label>When</label><input type="datetime-local" id="f-when"></div>' +
             '<div class="field"><label>Max guests (optional)</label><input type="number" id="f-cap" min="1" max="1000" placeholder="No limit"></div>' +
           '</div>' +
+          '<div class="field"><label>Can\'t decide when? Add a few dates and let guests vote</label>' +
+            '<div id="dopt-wrap">' + dateOptsHtml() + '</div>' +
+            '<div style="display:flex;gap:10px;margin-top:6px"><input type="datetime-local" id="dopt-input" style="max-width:240px">' +
+            '<button type="button" class="btn btn-ghost btn-sm" id="add-dopt">Add date option</button></div></div>' +
           '<div class="field"><label>Where</label><input type="text" id="f-loc" maxlength="300" placeholder="123 Main St, or \'my place\'"></div>' +
           '<div class="field"><label>Details (optional)</label><textarea id="f-desc" maxlength="2000" placeholder="BYOB, dogs welcome, rooftop closes at midnight…"></textarea></div>' +
-          '<div class="field"><label>Cover image URL (optional — shows on the invite page + text previews)</label><input type="text" id="f-cover" maxlength="500" placeholder="https://…/photo.jpg"></div>' +
+
+          '<div class="fn-chip-row">' +
+            '<button type="button" class="fn-chip" data-fn="fnf-link">+ Link</button>' +
+            '<button type="button" class="fn-chip" data-fn="fnf-playlist">+ Playlist</button>' +
+            '<button type="button" class="fn-chip" data-fn="fnf-registry">+ Registry</button>' +
+            '<button type="button" class="fn-chip" data-fn="fnf-dress">+ Dress code</button>' +
+            '<button type="button" class="fn-chip" data-fn="fnf-cost">+ Cost per person</button>' +
+            '<button type="button" class="fn-chip" data-fn="fnf-deadline">+ RSVP deadline</button>' +
+            '<button type="button" class="fn-chip" data-fn="fnf-nick">+ Host nickname</button>' +
+          '</div>' +
+          '<div class="fn-field field" id="fnf-link"><label>Link (website, tickets, menu…)</label><input type="text" id="f-link" maxlength="500" placeholder="https://…"></div>' +
+          '<div class="fn-field field" id="fnf-playlist"><label>Playlist link (Spotify, Apple Music…)</label><input type="text" id="f-playlist" maxlength="500" placeholder="https://open.spotify.com/…"></div>' +
+          '<div class="fn-field field" id="fnf-registry"><label>Registry / wishlist link</label><input type="text" id="f-registry" maxlength="500" placeholder="https://…"></div>' +
+          '<div class="fn-field field" id="fnf-dress"><label>Dress code</label><input type="text" id="f-dress" maxlength="120" placeholder="Disco chic, all white, come as you are…"></div>' +
+          '<div class="fn-field field" id="fnf-cost"><label>Cost per person</label><input type="text" id="f-cost" maxlength="120" placeholder="$15 for pizza, Venmo @chris"></div>' +
+          '<div class="fn-field field" id="fnf-deadline"><label>RSVP deadline (RSVPs lock after this)</label><input type="datetime-local" id="f-deadline"></div>' +
+          '<div class="fn-field field" id="fnf-nick"><label>Hosted by (a nickname or crew name shown on the invite)</label><input type="text" id="f-nick" maxlength="80" placeholder="The Rathbun Crew"></div>' +
+
+          '<div class="field"><label>Cover — pick an example or use your own image</label>' + coverGridHtml('') +
+            '<input type="text" id="f-cover" maxlength="500" placeholder="https://…/photo.jpg" style="margin-top:8px"></div>' +
           '<div class="field"><label>Your name (shows on the invite)</label><input type="text" id="f-host" maxlength="80" placeholder="Chris"></div>' +
+          '<div class="field"><label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">' +
+            '<input type="checkbox" id="f-public" checked style="width:auto"> Make it public — anyone with the open invite link can RSVP</label></div>' +
           '<input type="hidden" id="f-tz" value="' + esc(tz) + '">' +
           '<div style="text-align:center;margin-top:20px"><button class="btn" id="create-btn">Create event</button></div>' +
           '<p class="hint" style="text-align:center">Guest list, comment wall, and an automatic day-before text reminder are on by default — tweak them in event settings after creating.</p>' +
         '</div>';
       document.getElementById('back').addEventListener('click', function () { renderList(); });
-      Array.prototype.forEach.call(document.querySelectorAll('.emoji-opt'), function (el) {
-        el.addEventListener('click', function () {
-          Array.prototype.forEach.call(document.querySelectorAll('.emoji-opt'), function (x) { x.classList.remove('sel'); });
-          el.classList.add('sel');
+      function bindVibeRow() {
+        Array.prototype.forEach.call(document.querySelectorAll('.emoji-opt[data-e]'), function (el) {
+          el.addEventListener('click', function () {
+            Array.prototype.forEach.call(document.querySelectorAll('.emoji-opt'), function (x) { x.classList.remove('sel'); });
+            el.classList.add('sel');
+          });
+        });
+      }
+      bindVibeRow();
+      document.getElementById('emoji-more').addEventListener('click', function () {
+        openEmojiPicker(function (e) {
+          var row = document.getElementById('emoji-row');
+          var existing = row.querySelector('[data-e="' + e + '"]');
+          if (!existing) {
+            existing = document.createElement('span');
+            existing.className = 'emoji-opt';
+            existing.setAttribute('data-e', e);
+            existing.textContent = e;
+            row.insertBefore(existing, row.firstChild);
+            bindVibeRow();
+          }
+          Array.prototype.forEach.call(row.querySelectorAll('.emoji-opt'), function (x) { x.classList.remove('sel'); });
+          existing.classList.add('sel');
         });
       });
       bindThemeRow();
+      bindFontRow(document.getElementById('f-title'));
+      bindFnChips();
+      bindCoverGrid(document.getElementById('f-cover'));
+      function rerenderOpts() {
+        document.getElementById('dopt-wrap').innerHTML = dateOptsHtml();
+        bindDateOpts(rerenderOpts);
+      }
+      bindDateOpts(rerenderOpts);
+      bindAddDateOpt(rerenderOpts);
       document.getElementById('create-btn').addEventListener('click', createEvent);
     }
 
@@ -247,10 +528,21 @@
         host_name: document.getElementById('f-host').value,
         cover_theme: selectedTheme(),
         cover_image_url: document.getElementById('f-cover').value.trim(),
+        title_font: selectedFont(),
+        is_public: document.getElementById('f-public').checked,
+        link_url: fnValue('fnf-link', 'f-link'),
+        playlist_url: fnValue('fnf-playlist', 'f-playlist'),
+        registry_url: fnValue('fnf-registry', 'f-registry'),
+        dress_code: fnValue('fnf-dress', 'f-dress'),
+        cost_text: fnValue('fnf-cost', 'f-cost'),
+        host_nickname: fnValue('fnf-nick', 'f-nick'),
       };
       // datetime-local is wall-clock in the browser's tz; convert to ISO.
       if (whenVal) payload.starts_at = new Date(whenVal).toISOString();
+      var deadlineVal = fnValue('fnf-deadline', 'f-deadline');
+      if (deadlineVal) payload.rsvp_deadline = new Date(deadlineVal).toISOString();
       if (capVal > 0) payload.capacity = capVal;
+      if (dateOpts.length) payload.date_options = dateOpts.slice();
       btn.disabled = true; btn.textContent = 'Creating…';
       var res, data;
       try { res = await authFetch('/parties/api/events', { method: 'POST', body: JSON.stringify(payload) }); data = await res.json(); }
@@ -314,12 +606,23 @@
           ' <button class="g-del" data-cohost="' + esc(em) + '" title="Remove co-host" style="padding:0 2px">✕</button></span>';
       }).join(' ');
 
+      var poll = state.detail.date_poll;
+      var pollMax = poll ? Math.max.apply(null, [1].concat(poll.map(function (o) { return o.votes; }))) : 1;
+      var extras = [
+        ev.host_nickname ? '👑 Hosted by ' + esc(ev.host_nickname) : '',
+        ev.cost_text ? '💸 ' + esc(ev.cost_text) : '',
+        ev.dress_code ? '👗 ' + esc(ev.dress_code) : '',
+        ev.rsvp_deadline ? '⏳ RSVP by ' + esc(new Date(ev.rsvp_deadline).toLocaleDateString([], { month: 'short', day: 'numeric' })) : '',
+        ev.is_public === false ? '🔒 Invite-only' : '',
+      ].filter(Boolean).join(' · ');
+
       root.innerHTML =
         '<a class="back-link" id="back">← All events</a>' +
         '<div class="glass detail-head">' +
           '<span class="em">' + esc(ev.emoji || '🎉') + '</span>' +
-          '<h2>' + esc(ev.title) + (ev.status === 'cancelled' ? ' <span class="muted">(cancelled)</span>' : '') + '</h2>' +
+          '<h2 class="tf-' + esc(ev.title_font || 'classic') + '">' + esc(ev.title) + (ev.status === 'cancelled' ? ' <span class="muted">(cancelled)</span>' : '') + '</h2>' +
           '<div class="meta">' + esc(ev.when_text || 'Date TBD') + (ev.location ? ' · ' + esc(ev.location) : '') + '</div>' +
+          (extras ? '<div class="meta" style="margin-top:4px">' + extras + '</div>' : '') +
           '<div class="stat-row">' +
             '<div class="stat"><div class="num">' + (yes + plus) + '</div><div class="lab">going</div></div>' +
             '<div class="stat"><div class="num">' + maybe + '</div><div class="lab">maybe</div></div>' +
@@ -335,23 +638,50 @@
           '</div>' +
         '</div>' +
 
+        (poll && poll.length ? '<div class="glass sec-card">' +
+          '<h3>📊 Date poll — guests are voting</h3>' +
+          poll.map(function (o) {
+            return '<div class="poll-opt"><span style="min-width:210px">' + esc(o.when_text) + '</span>' +
+              '<span class="poll-bar" style="width:' + Math.round((o.votes / pollMax) * 160) + 'px"></span>' +
+              '<span class="muted">' + o.votes + ' vote' + (o.votes === 1 ? '' : 's') + '</span>' +
+              (ev.status === 'active' ? '<button class="copy-chip" style="font-size:12px;padding:4px 10px" data-pick="' + esc(o.id) + '">Use this date</button>' : '') +
+              '</div>';
+          }).join('') +
+          '<div class="hint">Picking a date locks it in as the event time and closes the poll.</div>' +
+        '</div>' : '') +
+
         '<div class="glass sec-card" id="settings-card" style="display:none">' +
           '<h3>Event settings</h3>' +
           '<div class="field"><label>Page theme</label><div class="emoji-row">' + themeRow(ev.cover_theme || 'confetti') + '</div></div>' +
-          '<div class="field"><label>Cover image URL (shows on the invite page and in text-message link previews)</label>' +
-            '<input type="text" id="s-cover" maxlength="500" placeholder="https://…/photo.jpg" value="' + esc(ev.cover_image_url || '') + '"></div>' +
+          '<div class="field"><label>Cover — pick an example or paste your own image URL</label>' + coverGridHtml(ev.cover_image_url || '') +
+            '<input type="text" id="s-cover" maxlength="500" placeholder="https://…/photo.jpg" value="' + esc(ev.cover_image_url || '') + '" style="margin-top:8px"></div>' +
           '<div class="row-2">' +
             '<div class="field"><label>Event name</label><input type="text" id="s-title" maxlength="120" value="' + esc(ev.title) + '"></div>' +
             '<div class="field"><label>Where</label><input type="text" id="s-loc" maxlength="300" value="' + esc(ev.location || '') + '"></div>' +
           '</div>' +
+          '<div class="field"><label>Title style</label>' + fontChipRow(ev.title_font || 'classic') + '</div>' +
           '<div class="field"><label>Details</label><textarea id="s-desc" maxlength="2000">' + esc(ev.description || '') + '</textarea></div>' +
           '<div class="row-2">' +
+            '<div class="field"><label>Link (website, tickets…)</label><input type="text" id="s-link" maxlength="500" value="' + esc(ev.link_url || '') + '" placeholder="https://…"></div>' +
+            '<div class="field"><label>Playlist link</label><input type="text" id="s-playlist" maxlength="500" value="' + esc(ev.playlist_url || '') + '" placeholder="https://open.spotify.com/…"></div>' +
+          '</div>' +
+          '<div class="row-2">' +
+            '<div class="field"><label>Registry / wishlist link</label><input type="text" id="s-registry" maxlength="500" value="' + esc(ev.registry_url || '') + '" placeholder="https://…"></div>' +
+            '<div class="field"><label>Dress code</label><input type="text" id="s-dress" maxlength="120" value="' + esc(ev.dress_code || '') + '" placeholder="Disco chic"></div>' +
+          '</div>' +
+          '<div class="row-2">' +
+            '<div class="field"><label>Cost per person</label><input type="text" id="s-cost" maxlength="120" value="' + esc(ev.cost_text || '') + '" placeholder="$15, Venmo @chris"></div>' +
+            '<div class="field"><label>Hosted by (nickname)</label><input type="text" id="s-nick" maxlength="80" value="' + esc(ev.host_nickname || '') + '" placeholder="The Rathbun Crew"></div>' +
+          '</div>' +
+          '<div class="row-2">' +
+            '<div class="field"><label>RSVP deadline</label><input type="datetime-local" id="s-deadline" value="' + esc(localDatetimeValue(ev.rsvp_deadline)) + '"></div>' +
             '<div class="field"><label>Max guests</label><input type="number" id="s-cap" min="1" max="1000" value="' + (ev.capacity || '') + '" placeholder="No limit"></div>' +
-            '<div class="field"><label>&nbsp;</label>' +
-              '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-guestlist" style="width:auto"' + (ev.show_guest_list ? ' checked' : '') + '> Guests can see who\'s going</label>' +
-              '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-comments" style="width:auto"' + (ev.allow_comments ? ' checked' : '') + '> Comment wall on</label>' +
-              '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-autorem" style="width:auto"' + (ev.auto_reminder ? ' checked' : '') + '> Auto text reminder 24h before</label>' +
-            '</div>' +
+          '</div>' +
+          '<div class="field">' +
+            '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-public" style="width:auto"' + (ev.is_public !== false ? ' checked' : '') + '> Public — anyone with the open invite link can RSVP</label>' +
+            '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-guestlist" style="width:auto"' + (ev.show_guest_list ? ' checked' : '') + '> Guests can see who\'s going</label>' +
+            '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-comments" style="width:auto"' + (ev.allow_comments ? ' checked' : '') + '> Comment wall on</label>' +
+            '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-autorem" style="width:auto"' + (ev.auto_reminder ? ' checked' : '') + '> Auto text reminder 24h before</label>' +
           '</div>' +
           '<button class="btn btn-sm" id="save-settings">Save settings</button>' +
           '<div style="margin-top:20px"><h3>Co-hosts</h3>' +
@@ -402,6 +732,11 @@
         card.style.display = card.style.display === 'none' ? '' : 'none';
         bindThemeRow();
       });
+      bindFontRow(null);
+      bindCoverGrid(document.getElementById('s-cover'));
+      Array.prototype.forEach.call(document.querySelectorAll('[data-pick]'), function (el) {
+        el.addEventListener('click', function () { pickPollDate(ev.id, el.getAttribute('data-pick')); });
+      });
       document.getElementById('save-settings').addEventListener('click', function () { saveSettings(ev.id); });
       document.getElementById('add-cohost').addEventListener('click', function () { addCohost(ev.id); });
       var cancelBtn = document.getElementById('cancel-ev');
@@ -431,6 +766,7 @@
 
     async function saveSettings(id) {
       var capVal = parseInt(document.getElementById('s-cap').value, 10);
+      var deadlineVal = document.getElementById('s-deadline').value;
       var payload = {
         title: document.getElementById('s-title').value,
         location: document.getElementById('s-loc').value,
@@ -441,12 +777,32 @@
         show_guest_list: document.getElementById('s-guestlist').checked,
         allow_comments: document.getElementById('s-comments').checked,
         auto_reminder: document.getElementById('s-autorem').checked,
+        title_font: selectedFont(),
+        is_public: document.getElementById('s-public').checked,
+        link_url: document.getElementById('s-link').value.trim(),
+        playlist_url: document.getElementById('s-playlist').value.trim(),
+        registry_url: document.getElementById('s-registry').value.trim(),
+        dress_code: document.getElementById('s-dress').value.trim(),
+        cost_text: document.getElementById('s-cost').value.trim(),
+        host_nickname: document.getElementById('s-nick').value.trim(),
+        rsvp_deadline: deadlineVal ? new Date(deadlineVal).toISOString() : null,
       };
       try {
         var res = await authFetch('/parties/api/events/' + id, { method: 'PATCH', body: JSON.stringify(payload) });
         var data = await res.json();
         if (!data.ok) { toast(data.error || 'Could not save.'); return; }
         toast('Settings saved.');
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
+    }
+
+    async function pickPollDate(id, optionId) {
+      if (!confirm('Lock this date in as the event time? The poll closes and guests see the final date.')) return;
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/date-options/' + optionId + '/pick', { method: 'POST' });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not set the date.'); return; }
+        toast('Date locked in! 🎉');
         openDetail(id);
       } catch (e) { toast('Network error — try again.'); }
     }

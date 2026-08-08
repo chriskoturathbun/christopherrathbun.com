@@ -1,0 +1,71 @@
+{
+  "buildCommand" : {
+    "command" : "build",
+    "skipDependencies" : false,
+    "style" : "buildOnly"
+  },
+  "configuredTargets" : [
+    {
+      "guid" : "cee15bac40b38d5d8e74705ba679c551d3fd5576039e5c2541c69f5bd41494ea"
+    }
+  ],
+  "containerPath" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/ClaudeApprove.xcodeproj",
+  "continueBuildingAfterErrors" : false,
+  "dependencyScope" : "workspace",
+  "enableIndexBuildArena" : false,
+  "hideShellScriptEnvironment" : false,
+  "parameters" : {
+    "action" : "build",
+    "activeArchitecture" : "undefined_arch",
+    "activeRunDestination" : {
+      "disableOnlyActiveArch" : true,
+      "platform" : "iphoneos",
+      "sdk" : "iphoneos26.2",
+      "sdkVariant" : "iphoneos",
+      "supportedArchitectures" : [
+        "armv4t",
+        "armv5",
+        "armv6",
+        "armv7",
+        "armv7f",
+        "armv7s",
+        "armv7k",
+        "arm64",
+        "arm64e"
+      ],
+      "targetArchitecture" : "undefined_arch"
+    },
+    "arenaInfo" : {
+      "buildIntermediatesPath" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex",
+      "buildProductsPath" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Products",
+      "derivedDataPath" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build",
+      "indexDataStoreFolderPath" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Index.noindex/DataStore",
+      "indexEnableDataStore" : true,
+      "indexPCHPath" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Index.noindex/PrecompiledHeaders",
+      "pchPath" : "/Users/christopherrathbun/christopherrathbun.com/apps/ClaudeApprove/build/Build/Intermediates.noindex/PrecompiledHeaders"
+    },
+    "configurationName" : "Debug",
+    "overrides" : {
+      "commandLine" : {
+        "table" : {
+          "CODE_SIGNING_ALLOWED" : "NO",
+          "CODE_SIGNING_REQUIRED" : "NO"
+        }
+      },
+      "synthesized" : {
+        "table" : {
+          "ACTION" : "build",
+          "ENABLE_PREVIEWS" : "NO",
+          "ENABLE_XOJIT_PREVIEWS" : "YES",
+          "ONLY_ACTIVE_ARCH" : "YES"
+        }
+      }
+    }
+  },
+  "schemeCommand" : "launch",
+  "showNonLoggedProgress" : true,
+  "useDryRun" : false,
+  "useImplicitDependencies" : true,
+  "useLegacyBuildLocations" : false,
+  "useParallelTargets" : true
+}
