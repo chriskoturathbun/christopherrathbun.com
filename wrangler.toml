@@ -8,14 +8,17 @@ routes = [
   { pattern = "christopherrathbun.com",       zone_name = "christopherrathbun.com" },
   { pattern = "christopherrathbun.com/*",      zone_name = "christopherrathbun.com" },
   { pattern = "www.christopherrathbun.com",    zone_name = "christopherrathbun.com" },
-  { pattern = "www.christopherrathbun.com/*",  zone_name = "christopherrathbun.com" }
+  { pattern = "www.christopherrathbun.com/*",  zone_name = "christopherrathbun.com" },
+  # Party Plus One — custom domains auto-create the DNS records in the zone.
+  { pattern = "partyplusone.com",     custom_domain = true },
+  { pattern = "www.partyplusone.com", custom_domain = true }
 ]
 
 [assets]
 directory = "./public"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/", "/vighnaatextllm", "/vighnaatextllm/*", "/users", "/users/*", "/api/users", "/api/users/*", "/reminders", "/reminders/*", "/api/menu-scan", "/parties", "/parties/*", "/e/*"]
+run_worker_first = ["/", "/twistedchess", "/twistedchess/*", "/sentry", "/sentry/*", "/stella-in-the-woods", "/stella-in-the-woods/", "/stella-in-the-woods-countdown", "/stella-in-the-woods-countdown/", "/vighnaatextllm", "/vighnaatextllm/*", "/users", "/users/*", "/api/users", "/api/users/*", "/reminders", "/reminders/*", "/api/menu-scan", "/parties", "/parties/*", "/e/*", "/app", "/app/*", "/landing", "/landing/*"]
 
 [vars]
 SENTRY_ORG = "lilac-impact-ventures-llc"
@@ -23,6 +26,7 @@ ALLOWED_EMAIL = "rathbunchristopher18@gmail.com"
 CLERK_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuY2hyaXN0b3BoZXJyYXRoYnVuLmNvbSQ"
 CLERK_ISSUER = "https://clerk.christopherrathbun.com"
 PUBLIC_BASE_URL = "https://christopherrathbun.com"
+PARTY_BASE_URL = "https://partyplusone.com"
 # CLERK_API_KEY is set via: wrangler secret put CLERK_API_KEY
 # It's automatically available in env.CLERK_API_KEY at runtime
 

@@ -252,7 +252,7 @@ const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
 });
 
 function baseUrl(env) {
-  return env.PUBLIC_BASE_URL || 'https://christopherrathbun.com';
+  return env.PARTY_BASE_URL || env.PUBLIC_BASE_URL || 'https://christopherrathbun.com';
 }
 
 function rsvpLink(env, token) {
@@ -260,7 +260,7 @@ function rsvpLink(env, token) {
 }
 
 function emailFrom(env) {
-  return env.PARTY_EMAIL_FROM || 'Invites <reminders@mail.giftanagent.com>';
+  return env.PARTY_EMAIL_FROM || 'Party Plus One <reminders@mail.giftanagent.com>';
 }
 
 function ogImageUrl(env, ev) {

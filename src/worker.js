@@ -97,6 +97,33 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
+    // Party Plus One — the party app's own domain (partyplusone.com).
+    if (url.hostname === 'www.partyplusone.com') {
+      url.hostname = 'partyplusone.com';
+      return Response.redirect(url.toString(), 301);
+    }
+    if (url.hostname === 'partyplusone.com') {
+      // Guest links + the app + its API keep their existing paths.
+      if (path.startsWith('/e/') || path === '/parties' || path === '/parties/' || path.startsWith('/parties/')) {
+        return handleParties(request, env, url);
+      }
+      // /app is the host dashboard on the new domain.
+      if (path === '/app' || path === '/app/' || path.startsWith('/app/')) {
+        const u = new URL(url); u.pathname = '/parties';
+        return handleParties(request, env, u);
+      }
+      // Real static files (the landing bundle lives under /landing/).
+      if (/\.(js|css|png|jpg|jpeg|svg|ico|webmanifest|map|webp|mp4|woff2?)$/.test(path)) {
+        return env.ASSETS.fetch(request);
+      }
+      // Everything else on this domain is the cinematic landing page.
+      const landing = await fetchAssetFollow(env, url.origin, '/landing/index.html');
+      return new Response(landing.body, {
+        status: 200,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
+    }
+
     // Users dashboard (Clerk-authenticated)
     if (path === '/users' || path === '/users/' || path.startsWith('/users/') || path === '/api/users' || path.startsWith('/api/users/')) {
       return handleUsers(request, env, url);

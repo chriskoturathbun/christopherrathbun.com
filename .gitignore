@@ -16,3 +16,4 @@ dist/
 
 # Local editor/agent config
 .claude/
+landing/node_modules/
