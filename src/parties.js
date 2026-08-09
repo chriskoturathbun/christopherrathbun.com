@@ -348,6 +348,13 @@ async function commentList(env, eventId) {
   return rows.results || [];
 }
 
+// Upload content types we accept for event covers, mapped to extensions.
+export function imageExtFor(contentType) {
+  const map = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' };
+  return map[String(contentType || '').toLowerCase().split(';')[0].trim()] || null;
+}
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
+
 // A user-supplied URL is only stored if it's a plausible https URL.
 export function httpsUrl(v) {
   const u = String(v || '').trim().slice(0, 500);
@@ -603,7 +610,7 @@ export function buildInviteEmail({ hostName, title, emoji, whenText, location, d
     `<h1 style="text-align:center;margin:0 0 6px;font-size:26px">${escapeHtml(title)}</h1>` +
     `<p style="text-align:center;color:#666;margin:0 0 20px">${escapeHtml(hostName)} invited you</p>` +
     (whenText ? `<p style="margin:4px 0"><strong>When:</strong> ${escapeHtml(whenText)}</p>` : '') +
-    (location ? `<p style="margin:4px 0"><strong>Where:</strong> ${escapeHtml(location)}</p>` : '') +
+    (location ? `<p style="margin:4px 0"><strong>Where:</strong> <a href="https://maps.google.com/?q=${encodeURIComponent(location)}" style="color:#7c5cff">${escapeHtml(location)}</a></p>` : '') +
     (description ? `<p style="white-space:pre-wrap;margin:14px 0">${escapeHtml(description)}</p>` : '') +
     `<p style="text-align:center;margin:26px 0"><a href="${escapeHtml(link)}" ` +
     `style="background:#7c5cff;color:#fff;text-decoration:none;padding:14px 34px;border-radius:999px;font-weight:600;display:inline-block">RSVP</a></p>` +
@@ -782,6 +789,48 @@ async function handleDeleteComment(request, env, eventId, commentId) {
   if (!ev) return json({ ok: false, error: 'not found' }, 404);
   await env.DB.prepare('DELETE FROM party_comments WHERE id = ? AND event_id = ?').bind(commentId, eventId).run();
   return json({ ok: true });
+}
+
+// --- Cover uploads (R2) ---
+
+// Host uploads a cover photo: raw image body, stored in R2, served back via
+// /parties/img/<key>. The event's cover_image_url is set to the new URL.
+async function handleUploadCover(request, env, eventId) {
+  const host = await requireHost(request, env);
+  if (!host) return json({ ok: false, error: 'unauthorized' }, 401);
+  const ev = await loadHostEvent(env, eventId, host);
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+  if (!env.PARTY_UPLOADS) return json({ ok: false, error: 'uploads are not configured' }, 500);
+
+  const ext = imageExtFor(request.headers.get('content-type'));
+  if (!ext) return json({ ok: false, error: 'upload a JPEG, PNG, WebP, or GIF' }, 400);
+  const len = parseInt(request.headers.get('content-length') || '0', 10);
+  if (len > MAX_UPLOAD_BYTES) return json({ ok: false, error: 'image too large — keep it under 4 MB' }, 413);
+  const buf = await request.arrayBuffer();
+  if (!buf.byteLength) return json({ ok: false, error: 'empty upload' }, 400);
+  if (buf.byteLength > MAX_UPLOAD_BYTES) return json({ ok: false, error: 'image too large — keep it under 4 MB' }, 413);
+
+  const key = `covers/${eventId}/${hexToken(8)}.${ext}`;
+  await env.PARTY_UPLOADS.put(key, buf, {
+    httpMetadata: { contentType: request.headers.get('content-type').split(';')[0].trim(), cacheControl: 'public, max-age=31536000, immutable' },
+  });
+  const url = `${baseUrl(env)}/parties/img/${key}`;
+  await env.DB.prepare(`UPDATE party_events SET cover_image_url = ?, updated_at = datetime('now') WHERE id = ?`)
+    .bind(url, eventId).run();
+  return json({ ok: true, cover_image_url: url });
+}
+
+async function serveUploadedImage(env, key) {
+  if (!env.PARTY_UPLOADS) return new Response('not found', { status: 404 });
+  const obj = await env.PARTY_UPLOADS.get(key);
+  if (!obj) return new Response('not found', { status: 404 });
+  return new Response(obj.body, {
+    headers: {
+      'content-type': obj.httpMetadata?.contentType || 'application/octet-stream',
+      'cache-control': obj.httpMetadata?.cacheControl || 'public, max-age=31536000, immutable',
+      etag: obj.httpEtag,
+    },
+  });
 }
 
 // --- Date poll ("Can't decide when? Poll your guests") ---
@@ -1063,6 +1112,11 @@ export async function runPartyReminders(env) {
 export async function handleParties(request, env, url) {
   const path = url.pathname;
 
+  // Uploaded cover images (R2) — must run before the static-asset passthrough,
+  // which would otherwise swallow these extensions.
+  let m0 = path.match(/^\/parties\/img\/([A-Za-z0-9/_.-]+)$/);
+  if (m0 && request.method === 'GET' && !m0[1].includes('..')) return serveUploadedImage(env, m0[1]);
+
   // Static assets (css/js/img) pass straight through.
   if (/\.(js|css|png|jpg|jpeg|svg|ico|webmanifest|map|webp)$/.test(path)) {
     return env.ASSETS.fetch(request);
@@ -1100,6 +1154,8 @@ export async function handleParties(request, env, url) {
     if (m && request.method === 'POST') return handleAdmitGuest(request, env, m[1], m[2]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/send$/);
     if (m && request.method === 'POST') return handleSend(request, env, m[1]);
+    m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/cover$/);
+    if (m && request.method === 'POST') return handleUploadCover(request, env, m[1]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/date-options$/);
     if (m && request.method === 'POST') return handleSetDateOptions(request, env, m[1]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/date-options\/([A-Za-z0-9]+)\/pick$/);

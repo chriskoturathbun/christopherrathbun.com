@@ -33,6 +33,10 @@ enabled = true
 name = "TWISTED_CHESS"
 class_name = "TwistedChessGame"
 
+[[r2_buckets]]
+binding = "PARTY_UPLOADS"
+bucket_name = "christopherrathbun-party-uploads"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "christopherrathbun_users"

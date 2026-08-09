@@ -3,7 +3,7 @@ import {
   isEmail, parseGuestLine, formatEventWhen,
   buildInviteSms, buildReminderSms, buildUpdateSms, buildAdmitSms,
   buildInviteEmail, buildOgMeta, firstName, COVER_THEMES,
-  TITLE_FONTS, httpsUrl, rsvpClosed,
+  TITLE_FONTS, httpsUrl, rsvpClosed, imageExtFor,
 } from '../src/parties.js';
 
 let pass = 0, fail = 0;
@@ -120,6 +120,14 @@ ok(!rsvpClosed(null), 'no event → open');
 ok(rsvpClosed({ rsvp_deadline: '2020-01-01T00:00:00.000Z' }, new Date('2020-06-01T00:00:00Z')), 'past deadline → closed');
 ok(!rsvpClosed({ rsvp_deadline: '2030-01-01T00:00:00.000Z' }, new Date('2020-06-01T00:00:00Z')), 'future deadline → open');
 ok(!rsvpClosed({ rsvp_deadline: 'garbage' }), 'unparseable deadline → open');
+
+// --- imageExtFor ---
+eq(imageExtFor('image/jpeg'), 'jpg', 'jpeg → jpg');
+eq(imageExtFor('image/PNG'), 'png', 'case-insensitive');
+eq(imageExtFor('image/jpeg; charset=utf-8'), 'jpg', 'params stripped');
+eq(imageExtFor('image/svg+xml'), null, 'svg rejected for uploads');
+eq(imageExtFor('text/html'), null, 'non-image rejected');
+eq(imageExtFor(null), null, 'null → null');
 
 console.log(`parties tests: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

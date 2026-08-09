@@ -267,6 +267,39 @@
       return inp ? inp.value.trim() : '';
     }
 
+    // Downscale an image file client-side (max 1600px, JPEG) so uploads stay
+    // small; PNGs with transparency survive as-is when already small.
+    function shrinkImage(file) {
+      return new Promise(function (resolve, reject) {
+        if (file.size < 400 * 1024) { resolve(file); return; }
+        var img = new Image();
+        var url = URL.createObjectURL(file);
+        img.onload = function () {
+          var max = 1600, w = img.width, h = img.height;
+          if (w > max || h > max) { var s = max / Math.max(w, h); w = Math.round(w * s); h = Math.round(h * s); }
+          var c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          c.toBlob(function (b) { b ? resolve(b) : reject(new Error('encode failed')); }, 'image/jpeg', 0.85);
+        };
+        img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('not an image')); };
+        img.src = url;
+      });
+    }
+
+    async function uploadCover(eventId, file) {
+      var blob = await shrinkImage(file);
+      var res = await authFetch('/parties/api/events/' + eventId + '/cover', {
+        method: 'POST',
+        headers: { 'content-type': blob.type || 'image/jpeg' },
+        body: blob,
+      });
+      var data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'upload failed');
+      return data.cover_image_url;
+    }
+
     // ISO string → value for a datetime-local input (browser-local wall clock).
     function localDatetimeValue(iso) {
       if (!iso) return '';
@@ -464,7 +497,12 @@
           '<div class="fn-field field" id="fnf-deadline"><label>RSVP deadline (RSVPs lock after this)</label><input type="datetime-local" id="f-deadline"></div>' +
           '<div class="fn-field field" id="fnf-nick"><label>Hosted by (a nickname or crew name shown on the invite)</label><input type="text" id="f-nick" maxlength="80" placeholder="The Rathbun Crew"></div>' +
 
-          '<div class="field"><label>Cover — pick an example or use your own image</label>' + coverGridHtml('') +
+          '<div class="field"><label>Cover — pick an example, upload a photo, or use an image URL</label>' + coverGridHtml('') +
+            '<div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">' +
+              '<button type="button" class="copy-chip" id="f-upload-btn">📷 Upload a photo</button>' +
+              '<span class="muted" style="font-size:13px" id="f-upload-name"></span>' +
+              '<input type="file" id="f-upload" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none">' +
+            '</div>' +
             '<input type="text" id="f-cover" maxlength="500" placeholder="https://…/photo.jpg" style="margin-top:8px"></div>' +
           '<div class="field"><label>Your name (shows on the invite)</label><input type="text" id="f-host" maxlength="80" placeholder="Chris"></div>' +
           '<div class="field"><label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:14px;color:var(--text)">' +
@@ -503,6 +541,15 @@
       bindFontRow(document.getElementById('f-title'));
       bindFnChips();
       bindCoverGrid(document.getElementById('f-cover'));
+      document.getElementById('f-upload-btn').addEventListener('click', function () { document.getElementById('f-upload').click(); });
+      document.getElementById('f-upload').addEventListener('change', function () {
+        var f = this.files[0];
+        document.getElementById('f-upload-name').textContent = f ? f.name + ' — uploads when you create the event' : '';
+        if (f) {
+          Array.prototype.forEach.call(document.querySelectorAll('.cover-thumb'), function (x) { x.classList.remove('sel'); });
+          document.getElementById('f-cover').value = '';
+        }
+      });
       function rerenderOpts() {
         document.getElementById('dopt-wrap').innerHTML = dateOptsHtml();
         bindDateOpts(rerenderOpts);
@@ -548,6 +595,12 @@
       try { res = await authFetch('/parties/api/events', { method: 'POST', body: JSON.stringify(payload) }); data = await res.json(); }
       catch (e) { toast('Network error — try again.'); btn.disabled = false; btn.textContent = 'Create event'; return; }
       if (!data.ok) { toast(data.error || 'Could not create the event.'); btn.disabled = false; btn.textContent = 'Create event'; return; }
+      var uploadFile = (document.getElementById('f-upload').files || [])[0];
+      if (uploadFile) {
+        btn.textContent = 'Uploading photo…';
+        try { await uploadCover(data.event.id, uploadFile); }
+        catch (e) { toast('Event created, but the photo upload failed — try again from settings.'); }
+      }
       openDetail(data.event.id);
     }
 
@@ -621,7 +674,8 @@
         '<div class="glass detail-head">' +
           '<span class="em">' + esc(ev.emoji || '🎉') + '</span>' +
           '<h2 class="tf-' + esc(ev.title_font || 'classic') + '">' + esc(ev.title) + (ev.status === 'cancelled' ? ' <span class="muted">(cancelled)</span>' : '') + '</h2>' +
-          '<div class="meta">' + esc(ev.when_text || 'Date TBD') + (ev.location ? ' · ' + esc(ev.location) : '') + '</div>' +
+          '<div class="meta">' + esc(ev.when_text || 'Date TBD') +
+            (ev.location ? ' · <a href="https://maps.google.com/?q=' + encodeURIComponent(ev.location) + '" target="_blank" rel="noopener" style="color:var(--accent)">' + esc(ev.location) + '</a>' : '') + '</div>' +
           (extras ? '<div class="meta" style="margin-top:4px">' + extras + '</div>' : '') +
           '<div class="stat-row">' +
             '<div class="stat"><div class="num">' + (yes + plus) + '</div><div class="lab">going</div></div>' +
@@ -653,7 +707,11 @@
         '<div class="glass sec-card" id="settings-card" style="display:none">' +
           '<h3>Event settings</h3>' +
           '<div class="field"><label>Page theme</label><div class="emoji-row">' + themeRow(ev.cover_theme || 'confetti') + '</div></div>' +
-          '<div class="field"><label>Cover — pick an example or paste your own image URL</label>' + coverGridHtml(ev.cover_image_url || '') +
+          '<div class="field"><label>Cover — pick an example, upload a photo, or paste an image URL</label>' + coverGridHtml(ev.cover_image_url || '') +
+            '<div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">' +
+              '<button type="button" class="copy-chip" id="s-upload-btn">📷 Upload a photo</button>' +
+              '<input type="file" id="s-upload" accept="image/jpeg,image/png,image/webp,image/gif" style="display:none">' +
+            '</div>' +
             '<input type="text" id="s-cover" maxlength="500" placeholder="https://…/photo.jpg" value="' + esc(ev.cover_image_url || '') + '" style="margin-top:8px"></div>' +
           '<div class="row-2">' +
             '<div class="field"><label>Event name</label><input type="text" id="s-title" maxlength="120" value="' + esc(ev.title) + '"></div>' +
@@ -734,6 +792,22 @@
       });
       bindFontRow(null);
       bindCoverGrid(document.getElementById('s-cover'));
+      document.getElementById('s-upload-btn').addEventListener('click', function () { document.getElementById('s-upload').click(); });
+      document.getElementById('s-upload').addEventListener('change', async function () {
+        var f = this.files[0];
+        if (!f) return;
+        var btn = document.getElementById('s-upload-btn');
+        btn.textContent = '⏳ Uploading…'; btn.disabled = true;
+        try {
+          var url = await uploadCover(ev.id, f);
+          document.getElementById('s-cover').value = url;
+          toast('Photo uploaded — it\'s your cover now.');
+          openDetail(ev.id);
+        } catch (e) {
+          toast(String(e.message || 'Upload failed — try a smaller image.'));
+          btn.textContent = '📷 Upload a photo'; btn.disabled = false;
+        }
+      });
       Array.prototype.forEach.call(document.querySelectorAll('[data-pick]'), function (el) {
         el.addEventListener('click', function () { pickPollDate(ev.id, el.getAttribute('data-pick')); });
       });

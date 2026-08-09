@@ -323,7 +323,9 @@
         html += '<div class="field"><label>Your name</label><input type="text" id="f-name" maxlength="80" placeholder="So the host knows it\'s you" value="' + esc(g.name || '') + '"></div>';
       }
       if (!isGuest) {
-        html += '<div class="field"><label>Phone (optional — for event updates by text)</label><input type="tel" id="f-phone" placeholder="(555) 555-0123"></div>';
+        html += '<div class="field"><label>Phone (for event updates by text)</label><input type="tel" id="f-phone" placeholder="(555) 555-0123"></div>';
+        html += '<div class="field"><label>Email (updates by email instead)</label><input type="email" id="f-email" maxlength="120" placeholder="you@example.com"></div>';
+        html += '<p class="muted" style="font-size:13px;margin:2px 0 0">Add at least one so the host can reach you with updates or reminders.</p>';
       }
       if (state.rsvp === 'yes' && !joiningWaitlist) {
         html += '<div class="field"><label>Bringing anyone?</label><div class="stepper">' +
@@ -361,6 +363,8 @@
       } else {
         url = '/parties/api/open/' + token;
         if (phoneEl && phoneEl.value.trim()) payload.phone = phoneEl.value;
+        var emailEl = document.getElementById('f-email');
+        if (emailEl && emailEl.value.trim()) payload.email = emailEl.value.trim();
         if (!payload.name || !payload.name.trim()) {
           toast('Please add your name so the host knows who this is.');
           btnEl.disabled = false; btnEl.textContent = 'Send RSVP';
