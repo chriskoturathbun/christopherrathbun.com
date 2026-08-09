@@ -107,15 +107,27 @@ export async function sendResendEmail({ to, subject, html, text, from }, env) {
   return { ok: res.ok, status: res.status };
 }
 
+// Basic-auth credentials for the Twilio REST API. Prefers a revocable API
+// key (TWILIO_API_KEY_SID "SK…" + TWILIO_API_KEY_SECRET) over the master
+// auth token; the account SID stays in the URL either way.
+export function twilioAuthPair(env) {
+  if (env.TWILIO_API_KEY_SID && env.TWILIO_API_KEY_SECRET) {
+    return `${env.TWILIO_API_KEY_SID}:${env.TWILIO_API_KEY_SECRET}`;
+  }
+  if (env.TWILIO_AUTH_TOKEN) return `${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`;
+  return null;
+}
+
 export async function sendTwilioSms({ to, body, statusCallback }, env) {
-  if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN || !env.TWILIO_PHONE_NUMBER || !to) return { ok: false, error: 'twilio not configured' };
+  const auth = env.TWILIO_ACCOUNT_SID && env.TWILIO_PHONE_NUMBER ? twilioAuthPair(env) : null;
+  if (!auth || !to) return { ok: false, error: 'twilio not configured' };
   const url = `https://api.twilio.com/2010-04-01/Accounts/${env.TWILIO_ACCOUNT_SID}/Messages.json`;
   const params = { To: to, From: env.TWILIO_PHONE_NUMBER, Body: body };
   if (statusCallback) params.StatusCallback = statusCallback;
   const form = new URLSearchParams(params);
   const res = await fetch(url, {
     method: 'POST',
-    headers: { authorization: 'Basic ' + btoa(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`), 'content-type': 'application/x-www-form-urlencoded' },
+    headers: { authorization: 'Basic ' + btoa(auth), 'content-type': 'application/x-www-form-urlencoded' },
     body: form.toString(),
   });
   let sid = null; try { sid = (await res.json()).sid || null; } catch {}

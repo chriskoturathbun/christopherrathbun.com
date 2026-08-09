@@ -1,5 +1,5 @@
 // Run: node test/reminders-alerts.test.mjs
-import { normalizeBlandWebhook, buildConcernPrompt, parseConcernResponse, formatAlert } from '../src/reminders-alerts.js';
+import { normalizeBlandWebhook, buildConcernPrompt, parseConcernResponse, formatAlert, twilioAuthPair } from '../src/reminders-alerts.js';
 
 let pass = 0, fail = 0;
 function ok(c,m){ if(c) pass++; else { fail++; console.error('FAIL:',m); } }
@@ -34,6 +34,12 @@ eq(c.concern, false, 'malformed → safe default no-concern'); eq(c.severity, 'n
 const al = formatAlert({ patientName:'Rose', kind:'concern', summary:'asked what a pill is for', transcript:'...', recordingUrl:'https://rec', detectedAtISO:'2026-06-26T15:00:00Z' });
 ok(al.subject.toLowerCase().includes('rose'), 'subject names patient');
 ok(al.text.includes('asked what a pill is for'), 'body includes summary');
+
+// twilioAuthPair — API key preferred, auth token fallback, null when neither.
+eq(twilioAuthPair({ TWILIO_ACCOUNT_SID: 'AC1', TWILIO_AUTH_TOKEN: 'tok', TWILIO_API_KEY_SID: 'SK1', TWILIO_API_KEY_SECRET: 'sec' }), 'SK1:sec', 'api key wins over auth token');
+eq(twilioAuthPair({ TWILIO_ACCOUNT_SID: 'AC1', TWILIO_AUTH_TOKEN: 'tok' }), 'AC1:tok', 'auth token fallback');
+eq(twilioAuthPair({ TWILIO_ACCOUNT_SID: 'AC1', TWILIO_API_KEY_SID: 'SK1' }), null, 'key sid without secret → null');
+eq(twilioAuthPair({ TWILIO_ACCOUNT_SID: 'AC1' }), null, 'no credentials → null');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
