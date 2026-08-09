@@ -143,7 +143,7 @@ function Features() {
     <section className="section wrap" id="features">
       <Reveal className="section-head">
         <motion.span className="eyebrow" variants={fadeUp}>Everything a host needs</motion.span>
-        <motion.h2 variants={fadeUp}>Partiful-level features, zero platform tax</motion.h2>
+        <motion.h2 variants={fadeUp}>Everything the big invite apps do — without the platform tax</motion.h2>
         <motion.p variants={fadeUp}>
           Built for real parties — birthdays, bar crawls, housewarmings — not for
           harvesting your guest list.
