@@ -413,6 +413,7 @@
       if (res.status === 401) { renderSignIn(window._clerk); return; }
       if (!data.ok) { renderMsg('Something went wrong loading your events.'); return; }
       state.events = data.events;
+      state.attending = data.attending || [];
       renderList();
     }
 
@@ -427,11 +428,24 @@
             '<span class="pill pending"><span class="dot"></span>' + ev.guest_count + ' invited</span>' +
           '</div></div>';
       }).join('');
+      var attending = (state.attending || []).map(function (a) {
+        var labels = { yes: "You're going", maybe: 'You said maybe', no: 'You declined', pending: 'Not answered yet', waitlist: 'Waitlisted' };
+        return '<a class="glass event-tile" href="' + esc(a.link) + '" style="text-decoration:none;color:inherit">' +
+          '<span class="em">' + esc(a.emoji || '🎉') + '</span>' +
+          '<h3>' + esc(a.title) + '</h3>' +
+          '<div class="meta">' + esc(a.when_text || 'Date TBD') + (a.host_name ? ' · hosted by ' + esc(a.host_name) : '') + '</div>' +
+          '<div class="counts"><span class="pill ' + esc(a.rsvp) + '"><span class="dot"></span>' + (labels[a.rsvp] || a.rsvp) + '</span></div>' +
+        '</a>';
+      }).join('');
       root.innerHTML =
         '<div class="topbar"><h1 style="margin:0">Your events</h1></div>' +
         '<div class="event-grid">' + tiles +
           '<div class="glass event-tile new-tile" id="new-tile">+ New event</div>' +
-        '</div>';
+        '</div>' +
+        (attending
+          ? '<div class="topbar" style="margin-top:34px"><h1 style="margin:0;font-size:22px">You\'re attending</h1></div>' +
+            '<div class="event-grid">' + attending + '</div>'
+          : '');
       document.getElementById('new-tile').addEventListener('click', renderCreate);
       Array.prototype.forEach.call(document.querySelectorAll('.event-tile[data-id]'), function (el) {
         el.addEventListener('click', function () { openDetail(el.getAttribute('data-id')); });

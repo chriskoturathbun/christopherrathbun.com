@@ -541,7 +541,24 @@ async function handleListEvents(request, env) {
     share_token: ev.share_token, cover_theme: ev.cover_theme,
     cohosted: ev.host_clerk_id !== host.clerkId,
   }));
-  return json({ ok: true, events });
+
+  // Events this account is a GUEST of (matched by the email they RSVP'd
+  // with) — what the post-RSVP "create an account" nudge unlocks.
+  let attending = [];
+  if (email) {
+    const att = await env.DB.prepare(
+      `SELECT g.token, g.rsvp, e.title, e.emoji, e.starts_at, e.timezone, e.location, e.status, e.host_name
+       FROM party_guests g JOIN party_events e ON e.id = g.event_id
+       WHERE g.email = ? AND e.host_clerk_id != ? AND e.status = 'active'
+       ORDER BY e.starts_at IS NULL, e.starts_at`
+    ).bind(email, host.clerkId).all();
+    attending = (att.results || []).map(a => ({
+      title: a.title, emoji: a.emoji, rsvp: a.rsvp, host_name: a.host_name,
+      when_text: formatEventWhen(a.starts_at, a.timezone), location: a.location,
+      link: rsvpLink(env, a.token),
+    }));
+  }
+  return json({ ok: true, events, attending });
 }
 
 async function handleEventDetail(request, env, eventId) {

@@ -152,6 +152,14 @@
         var mm = msgs[state.done] || msgs.yes;
         doneBanner = '<div class="glass done-inline"><div class="done-emoji">' + mm.e + '</div>' +
           '<h2>' + esc(mm.t) + '</h2><p class="muted" style="margin:6px 0 0">' + esc(mm.s) + '</p></div>';
+        // The last step: offer an account so this invite doesn't get lost.
+        if (state.done !== 'no') {
+          doneBanner += '<div class="glass done-inline" style="padding:20px 26px">' +
+            '<p style="margin:0;font-size:16px"><strong>Don\'t lose this invite.</strong></p>' +
+            '<p class="muted" style="margin:6px 0 14px;font-size:14px">Create a free account and every party you\'re invited to lives in one place — this one included. Use the same email you RSVP\'d with.</p>' +
+            '<a class="btn btn-sm" style="text-decoration:none" href="https://christopherrathbun.com/parties" target="_blank" rel="noopener">Create an account</a>' +
+            '</div>';
+        }
       }
 
       var closed = !!ev.rsvp_closed;
