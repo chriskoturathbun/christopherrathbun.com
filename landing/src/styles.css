@@ -104,6 +104,9 @@ h1, h2, h3 { font-weight: 500; letter-spacing: -0.01em; }
 .scrub { position: relative; height: 340vh; }
 .scrub-sticky { position: sticky; top: 0; height: 100vh; overflow: hidden; }
 .scrub-sticky video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* Poster stand-in shown until the video decoder is primed (iOS black-frame guard). */
+.scrub-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  transition: opacity 0.5s ease; pointer-events: none; }
 .scrub-shade { position: absolute; inset: 0; background: rgba(14, 13, 17, 0.5); }
 .scrub-caption {
   position: absolute; inset: 0; display: flex; flex-direction: column;

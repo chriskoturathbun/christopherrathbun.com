@@ -129,10 +129,38 @@ function ScrubCaption({ progress, range, step, title, body }) {
 function Scrub() {
   const wrap = useRef(null);
   const video = useRef(null);
+  // iOS Safari renders black frames if currentTime is touched before the
+  // video has decoded data (and seeking discards the poster). So: keep a
+  // poster overlay up until a muted play/pause "primes" the decoder, and
+  // never seek before readyState says frames exist.
+  const [primed, setPrimed] = useState(false);
+  useEffect(() => {
+    const v = video.current;
+    if (!v) return;
+    let done = false;
+    const prime = async () => {
+      if (done) return;
+      try {
+        await v.play();
+        v.pause();
+        v.currentTime = 0;
+        done = true;
+        setPrimed(true);
+      } catch (e) { /* autoplay blocked (low power mode) — poster stays */ }
+    };
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) prime();
+    }, { rootMargin: '300px' });
+    io.observe(v);
+    // A first touch anywhere also unlocks decoding when autoplay is blocked.
+    const touch = () => prime();
+    window.addEventListener('touchstart', touch, { once: true, passive: true });
+    return () => { io.disconnect(); window.removeEventListener('touchstart', touch); };
+  }, []);
   const { scrollYProgress } = useScroll({ target: wrap, offset: ['start start', 'end end'] });
   useMotionValueEvent(scrollYProgress, 'change', (p) => {
     const v = video.current;
-    if (v && v.duration && !isNaN(v.duration)) {
+    if (v && v.duration && !isNaN(v.duration) && v.readyState >= 2) {
       v.currentTime = Math.min(v.duration - 0.05, Math.max(0, p * v.duration));
     }
   });
@@ -141,6 +169,8 @@ function Scrub() {
       <div className="scrub-sticky">
         <video ref={video} muted playsInline preload="auto"
           poster={`${BASE}aerial-poster.jpg`} src={`${BASE}aerial.mp4`} />
+        <img className="scrub-poster" src={`${BASE}aerial-poster.jpg`} alt=""
+          style={{ opacity: primed ? 0 : 1 }} />
         <div className="scrub-shade" />
         {SCRUB_STEPS.map((s) => (
           <ScrubCaption key={s.step} progress={scrollYProgress} {...s} />
