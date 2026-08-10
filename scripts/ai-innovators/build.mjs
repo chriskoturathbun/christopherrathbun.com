@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const people = JSON.parse(readFileSync(join(here, 'people.json'), 'utf8'));
 const BASE = (process.env.BASE || '/ai-innovators').replace(/\/$/, '');
+const BRAND = process.env.BRAND || 'Christopher Rathbun';
 const outDir = process.env.OUT || join(here, '..', '..', 'public', 'ai-innovators');
 mkdirSync(outDir, { recursive: true });
 // clear stale generated pages (keep nothing hand-authored in this dir)
@@ -98,7 +99,7 @@ ${BASE_CSS}
   </style>
 </head>
 <body>
-  <nav><a class="nav-name" href="/">Christopher Rathbun</a><span class="nav-right">AI Innovators / 100</span></nav>
+  <nav><a class="nav-name" href="/">${esc(BRAND)}</a><span class="nav-right">AI Innovators / 100</span></nav>
   <main class="wrap">
     <header class="hero">
       <h1>AI<br/>Innovators<br/><span class="dim">US × China</span></h1>
@@ -119,7 +120,7 @@ ${CATEGORY_ORDER.map(c => `      <button class="fbtn" data-f="category" data-v="
 ${people.map(cardHTML).join('\n')}
     </div>
   </main>
-  <footer>Headshots load live from Wikipedia / Wikimedia Commons and remain the property of their photographers — each profile page carries the full credit and license. · <a href="/">christopherrathbun.com</a></footer>
+  <footer>Headshots load live from Wikipedia / Wikimedia Commons and remain the property of their photographers — each profile page carries the full credit and license.</footer>
   <script>
 ${PHOTO_JS}
   (function(){
@@ -189,7 +190,7 @@ h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(2rem,5vw,3.4rem);font-
   </style>
 </head>
 <body>
-  <nav><a class="nav-name" href="/">Christopher Rathbun</a><span class="nav-right">Global Innovators in Business · Longlist</span></nav>
+  <nav><a class="nav-name" href="/">${esc(BRAND)}</a><span class="nav-right">Global Innovators in Business · Longlist</span></nav>
   <main class="wrap">
     <a class="back" href="${BASE}/">← All 100 innovators</a>
     <div class="layout">
