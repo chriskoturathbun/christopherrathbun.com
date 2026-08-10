@@ -741,6 +741,7 @@
             '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-guestlist" style="width:auto"' + (ev.show_guest_list ? ' checked' : '') + '> Guests can see who\'s going</label>' +
             '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-comments" style="width:auto"' + (ev.allow_comments ? ' checked' : '') + '> Comment wall on</label>' +
             '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-autorem" style="width:auto"' + (ev.auto_reminder ? ' checked' : '') + '> Auto text reminder 24h before</label>' +
+            '<label style="display:flex;gap:8px;align-items:center;color:var(--text)"><input type="checkbox" id="s-notify" style="width:auto"' + (ev.notify_on_rsvp ? ' checked' : '') + '> Email me the moment someone RSVPs</label>' +
           '</div>' +
           '<button class="btn btn-sm" id="save-settings">Save settings</button>' +
           '<div style="margin-top:20px"><h3>Co-hosts</h3>' +
@@ -852,6 +853,7 @@
         show_guest_list: document.getElementById('s-guestlist').checked,
         allow_comments: document.getElementById('s-comments').checked,
         auto_reminder: document.getElementById('s-autorem').checked,
+        notify_on_rsvp: document.getElementById('s-notify').checked,
         title_font: selectedFont(),
         is_public: document.getElementById('s-public').checked,
         link_url: document.getElementById('s-link').value.trim(),

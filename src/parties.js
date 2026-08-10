@@ -97,6 +97,22 @@ export function buildAdmitSms({ title, emoji, whenText, link }) {
   return `${lead}A spot opened up — you're in for ${title}!${when} Details: ${link}`;
 }
 
+// Instant "someone RSVP'd" email to the host.
+export function buildRsvpAlertEmail({ guestName, rsvp, plusOnes, title, emoji, yesTotal, link }) {
+  const verb = { yes: 'is in', maybe: 'is a maybe', no: "can't make it", waitlist: 'joined the waitlist' }[rsvp] || 'responded';
+  const plus = rsvp === 'yes' && plusOnes ? ` (+${plusOnes})` : '';
+  const subject = `${emoji ? emoji + ' ' : ''}${guestName} ${verb}${plus} — ${title}`;
+  const text = `${guestName} ${verb}${plus} for ${title}.\n${yesTotal} going so far.\n\nGuest list: ${link}`;
+  const html =
+    `<div style="font-family:system-ui,sans-serif;line-height:1.55;max-width:560px;margin:0 auto">` +
+    `<p style="font-size:17px"><strong>${escapeHtml(guestName)}</strong> ${escapeHtml(verb)}${escapeHtml(plus)} for ` +
+    `<strong>${escapeHtml(title)}</strong>.</p>` +
+    `<p style="color:#666">${yesTotal} going so far.</p>` +
+    `<p><a href="${escapeHtml(link)}" style="color:#7c5cff">Open the guest list</a></p>` +
+    `</div>`;
+  return { subject, text, html };
+}
+
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, c => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
@@ -243,6 +259,7 @@ async function ensureSchema(env) {
     "ALTER TABLE party_events ADD COLUMN dress_code TEXT",
     "ALTER TABLE party_events ADD COLUMN is_public INTEGER DEFAULT 1",
     "ALTER TABLE party_events ADD COLUMN title_font TEXT DEFAULT 'classic'",
+    "ALTER TABLE party_events ADD COLUMN notify_on_rsvp INTEGER DEFAULT 1",
   ]) { try { await db.prepare(stmt).run(); } catch (e) { /* column exists */ } }
   schemaReady = true;
 }
@@ -417,7 +434,7 @@ function sanitizeEventFields(body, { partial }) {
     const u = String(body.cover_image_url || '').trim().slice(0, 500);
     fields.cover_image_url = /^https:\/\/.+/.test(u) ? u : null;
   }
-  for (const flag of ['show_guest_list', 'allow_comments', 'auto_reminder']) {
+  for (const flag of ['show_guest_list', 'allow_comments', 'auto_reminder', 'notify_on_rsvp']) {
     if (has(flag)) fields[flag] = body[flag] ? 1 : 0;
   }
   if (partial && has('status') && ['active', 'cancelled'].includes(body.status)) fields.status = body.status;
@@ -501,6 +518,7 @@ async function handleEventDetail(request, env, eventId) {
     ok: true,
     event: {
       ...publicEvent(ev), id: ev.id, capacity: ev.capacity, auto_reminder: !!ev.auto_reminder,
+      notify_on_rsvp: !!ev.notify_on_rsvp,
       share_token: ev.share_token, share_link: rsvpLink(env, ev.share_token),
       og_image: ogImageUrl(env, ev),
     },
@@ -925,9 +943,28 @@ async function handleDateVote(request, env, token) {
 
 // --- Handlers: public guest API ---
 
+// The guest list stays blurred until the viewer has RSVP'd themselves —
+// this returns either real names or just the counts to blur with.
+async function guestListPayload(env, ev, viewerHasRsvpd) {
+  if (!ev.show_guest_list) return {};
+  if (viewerHasRsvpd) return await goingList(env, ev.id);
+  const counts = await env.DB.prepare(
+    `SELECT SUM(CASE WHEN rsvp = 'yes' THEN 1 ELSE 0 END) AS yes_n,
+            COALESCE(SUM(CASE WHEN rsvp = 'yes' THEN plus_ones ELSE 0 END), 0) AS yes_p,
+            SUM(CASE WHEN rsvp = 'maybe' THEN 1 ELSE 0 END) AS maybe_n
+     FROM party_guests WHERE event_id = ?`
+  ).bind(ev.id).first();
+  return {
+    guest_list_locked: true,
+    going_count: (counts?.yes_n || 0) + (counts?.yes_p || 0),
+    maybe_count: counts?.maybe_n || 0,
+  };
+}
+
 // One endpoint resolves both link types: a personal guest token or the
-// event's open share token (prefixed 's').
-async function handleLinkLookup(env, token) {
+// event's open share token (prefixed 's'). Open-link visitors can prove
+// they RSVP'd by passing the personal token they got back (?viewer=).
+async function handleLinkLookup(env, token, url) {
   await ensureSchema(env);
   if (!token || token.length < 8 || token.length > 64) return json({ ok: false, error: 'not found' }, 404);
 
@@ -937,10 +974,17 @@ async function handleLinkLookup(env, token) {
       `SELECT COUNT(*) AS n, COALESCE(SUM(plus_ones), 0) AS p FROM party_guests WHERE event_id = ? AND rsvp = 'yes'`
     ).bind(shared.id).first();
     const atCapacity = shared.capacity ? ((yes?.n || 0) + (yes?.p || 0)) >= shared.capacity : false;
+    let viewer = null;
+    const viewerToken = url ? String(url.searchParams.get('viewer') || '') : '';
+    if (viewerToken && viewerToken.length >= 8 && viewerToken.length <= 64) {
+      viewer = await env.DB.prepare('SELECT rsvp FROM party_guests WHERE token = ? AND event_id = ?')
+        .bind(viewerToken, shared.id).first();
+    }
+    const seen = !!(viewer && viewer.rsvp !== 'pending');
     return json({
       ok: true, type: 'open', event: publicEvent(shared), at_capacity: atCapacity,
       date_poll: await datePoll(env, shared, null),
-      ...(shared.show_guest_list ? await goingList(env, shared.id) : {}),
+      ...(await guestListPayload(env, shared, seen)),
       comments: shared.allow_comments ? await commentList(env, shared.id) : [],
     });
   }
@@ -953,9 +997,31 @@ async function handleLinkLookup(env, token) {
     ok: true, type: 'guest', event: publicEvent(ev),
     guest: { name: guest.name, rsvp: guest.rsvp, plus_ones: guest.plus_ones, note: guest.note },
     date_poll: await datePoll(env, ev, guest.id),
-    ...(ev.show_guest_list ? await goingList(env, ev.id) : {}),
+    ...(await guestListPayload(env, ev, guest.rsvp !== 'pending')),
     comments: ev.allow_comments ? await commentList(env, ev.id) : [],
   });
+}
+
+// Email the host the moment a guest responds (toggleable per event).
+async function notifyHostOfRsvp(env, ev, { guestName, rsvp, plusOnes }) {
+  try {
+    if (!ev.notify_on_rsvp || !ev.host_email) return;
+    const yes = await env.DB.prepare(
+      `SELECT COUNT(*) AS n, COALESCE(SUM(plus_ones), 0) AS p FROM party_guests WHERE event_id = ? AND rsvp = 'yes'`
+    ).bind(ev.id).first();
+    const email = buildRsvpAlertEmail({
+      guestName: guestName || 'A guest', rsvp, plusOnes: plusOnes || 0,
+      title: ev.title, emoji: ev.emoji,
+      yesTotal: (yes?.n || 0) + (yes?.p || 0),
+      link: `${baseUrl(env)}/parties`,
+    });
+    const res = await sendResendEmail({
+      to: ev.host_email, subject: email.subject, html: email.html, text: email.text, from: emailFrom(env),
+    }, env);
+    await env.DB.prepare(
+      `INSERT INTO party_sends (event_id, guest_id, channel, kind, ok, error) VALUES (?, NULL, 'email', 'rsvp_alert', ?, ?)`
+    ).bind(ev.id, res.ok ? 1 : 0, res.ok ? null : String(res.error || res.status || 'send failed')).run();
+  } catch (e) { /* never let a host alert break the guest's RSVP */ }
 }
 
 async function handleRsvp(request, env, token) {
@@ -976,6 +1042,7 @@ async function handleRsvp(request, env, token) {
   await env.DB.prepare(
     `UPDATE party_guests SET rsvp = ?, plus_ones = ?, note = ?, name = COALESCE(?, name), responded_at = datetime('now') WHERE id = ?`
   ).bind(rsvp, plusOnes, note, name, guest.id).run();
+  await notifyHostOfRsvp(env, ev, { guestName: name || guest.name, rsvp, plusOnes });
   return json({ ok: true, rsvp });
 }
 
@@ -1031,6 +1098,7 @@ async function handleOpenRsvp(request, env, shareToken) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'share_link', datetime('now'))`
     ).bind(shortId(12), ev.id, name, phone, email, token, rsvp, plusOnes, note).run();
   }
+  await notifyHostOfRsvp(env, ev, { guestName: name, rsvp, plusOnes });
   return json({ ok: true, rsvp, token });
 }
 
@@ -1128,7 +1196,7 @@ export async function handleParties(request, env, url) {
 
   // Public API.
   let m = path.match(/^\/parties\/api\/link\/([A-Za-z0-9]+)$/);
-  if (m && request.method === 'GET') return handleLinkLookup(env, m[1]);
+  if (m && request.method === 'GET') return handleLinkLookup(env, m[1], url);
   m = path.match(/^\/parties\/api\/rsvp\/([A-Za-z0-9]+)$/);
   if (m && request.method === 'POST') return handleRsvp(request, env, m[1]);
   m = path.match(/^\/parties\/api\/open\/([A-Za-z0-9]+)$/);

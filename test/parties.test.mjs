@@ -3,7 +3,7 @@ import {
   isEmail, parseGuestLine, formatEventWhen,
   buildInviteSms, buildReminderSms, buildUpdateSms, buildAdmitSms,
   buildInviteEmail, buildOgMeta, firstName, COVER_THEMES,
-  TITLE_FONTS, httpsUrl, rsvpClosed, imageExtFor,
+  TITLE_FONTS, httpsUrl, rsvpClosed, imageExtFor, buildRsvpAlertEmail,
 } from '../src/parties.js';
 
 let pass = 0, fail = 0;
@@ -128,6 +128,16 @@ eq(imageExtFor('image/jpeg; charset=utf-8'), 'jpg', 'params stripped');
 eq(imageExtFor('image/svg+xml'), null, 'svg rejected for uploads');
 eq(imageExtFor('text/html'), null, 'non-image rejected');
 eq(imageExtFor(null), null, 'null → null');
+
+// --- RSVP alert email ---
+const alertEm = buildRsvpAlertEmail({ guestName: 'Sam & Co', rsvp: 'yes', plusOnes: 2, title: 'Bar Crawl', emoji: '🍷', yesTotal: 7, link: 'https://x/parties' });
+ok(alertEm.subject.includes('Sam & Co is in (+2) — Bar Crawl'), 'alert subject names guest, verb, plus-ones');
+ok(alertEm.subject.startsWith('🍷'), 'alert subject leads with emoji');
+ok(alertEm.html.includes('Sam &amp; Co'), 'alert html escapes guest name');
+ok(alertEm.text.includes('7 going so far'), 'alert text has running total');
+const alertNo = buildRsvpAlertEmail({ guestName: 'Dana', rsvp: 'no', plusOnes: 0, title: 'T', emoji: '', yesTotal: 0, link: 'x' });
+ok(alertNo.subject.includes("Dana can't make it"), 'declines phrased correctly');
+ok(!alertNo.subject.includes('(+'), 'no plus-ones on a decline');
 
 console.log(`parties tests: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

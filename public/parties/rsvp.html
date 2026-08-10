@@ -54,6 +54,8 @@
       background: linear-gradient(120deg, var(--accent), var(--accent-2)); color: #140a1c; font-size: 12px; font-weight: 700;
     }
     .maybe-line { margin-top: 10px; font-size: 13px; color: var(--muted); }
+    .going-chip.blurred { filter: blur(5px); user-select: none; pointer-events: none; }
+    .lock-note { margin-top: 12px; font-size: 13px; color: var(--muted); }
     .comment { padding: 10px 0; border-top: 1px solid rgba(255,255,255,0.07); font-size: 14px; }
     .comment:first-of-type { border-top: none; }
     .comment .who { font-weight: 700; margin-right: 8px; }
@@ -253,7 +255,25 @@
     }
 
     function guestListHtml() {
-      if (!state.event.show_guest_list || (!state.going.length && !state.maybe.length)) return '';
+      if (!state.event.show_guest_list) return '';
+      // Blurred until the viewer RSVPs — the server only sends counts, so the
+      // chips here are decoys; real names never reach the page.
+      if (state.locked) {
+        if (!state.goingCount && !state.maybeCount) return '';
+        var fakes = ['Someone Fun', 'A Friend', 'Mystery Guest', 'Good Company', 'Plus One', 'The Life of It'];
+        var blurChips = '';
+        for (var i = 0; i < Math.min(state.goingCount, 12); i++) {
+          var nm = fakes[i % fakes.length];
+          blurChips += '<span class="going-chip blurred" aria-hidden="true"><span class="av">' + nm[0] + '</span>' + nm + '</span>';
+        }
+        return '<div class="glass side-card">' +
+          '<h3>Who\'s going · ' + state.goingCount + '</h3>' +
+          '<div class="going-row">' + blurChips + '</div>' +
+          '<div class="lock-note">🔒 RSVP to see who\'s coming' +
+          (state.maybeCount ? ' — plus ' + state.maybeCount + ' maybe' + (state.maybeCount === 1 ? '' : 's') : '') + '.</div>' +
+          '</div>';
+      }
+      if (!state.going.length && !state.maybe.length) return '';
       var chips = state.going.map(function (p) {
         var initial = (p.name || 'G')[0].toUpperCase();
         return '<span class="going-chip"><span class="av">' + esc(initial) + '</span>' + esc(p.name) +
@@ -396,7 +416,8 @@
       if (!token) { renderError('This invite link looks incomplete. Ask your host to resend it.'); return; }
       var res, data;
       try {
-        res = await fetch('/parties/api/link/' + token);
+        var viewer = commentToken();
+        res = await fetch('/parties/api/link/' + token + (viewer && viewer !== token ? '?viewer=' + encodeURIComponent(viewer) : ''));
         data = await res.json();
       } catch (e) { renderError('Network hiccup — please refresh to try again.'); return; }
       if (!res.ok || !data.ok) { renderError("We couldn't find this invite. Double-check the link from your text or email."); return; }
@@ -406,6 +427,9 @@
       state.atCapacity = !!data.at_capacity;
       state.going = data.going || [];
       state.maybe = data.maybe || [];
+      state.locked = !!data.guest_list_locked;
+      state.goingCount = data.going_count || 0;
+      state.maybeCount = data.maybe_count || 0;
       state.comments = data.comments || [];
       state.datePoll = data.date_poll || null;
       state.plusOnes = (data.guest && data.guest.plus_ones) || 0;
