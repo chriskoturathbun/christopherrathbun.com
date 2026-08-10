@@ -263,7 +263,6 @@ export default function App() {
       <Finale />
       <footer className="footer">
         <span>© {new Date().getFullYear()} Party Plus One</span>
-        <span><a href="https://christopherrathbun.com" target="_blank" rel="noopener noreferrer">Built by Christopher Rathbun</a></span>
       </footer>
       <Dock />
     </MotionConfig>
