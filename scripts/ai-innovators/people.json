@@ -881,7 +881,7 @@
   "category": "Robotics & Autonomy",
   "role": "Founder & CEO",
   "org": "Li Auto",
-  "wiki": "Li Xiang (entrepreneur)",
+  "wiki": null,
   "blurb": "Li Xiang built Li Auto into one of China's top EV makers and pushed it aggressively into AI with the MindVLA driving model and Li Xiang Tongxue assistant — treating the car as an embodied AI agent for families."
  },
  {
@@ -892,7 +892,7 @@
   "category": "Robotics & Autonomy",
   "role": "Founder & CEO",
   "org": "NIO",
-  "wiki": "William Li (entrepreneur)",
+  "wiki": "William Li",
   "blurb": "William Li founded NIO, pioneering battery-swap EVs and shipping the in-house Shenji NX9031 autonomous-driving chip — one of the first 5nm automotive AI processors designed by a carmaker anywhere."
  },
  {
@@ -903,7 +903,7 @@
   "category": "Robotics & Autonomy",
   "role": "CEO & co-founder",
   "org": "Pony.ai",
-  "wiki": "James Peng",
+  "wiki": null,
   "blurb": "James Peng co-founded Pony.ai, which operates fully driverless robotaxi fleets in multiple Chinese megacities and listed on Nasdaq in 2024 — one of the first pure-play autonomous-driving companies to reach public markets."
  },
  {
@@ -925,7 +925,7 @@
   "category": "Robotics & Autonomy",
   "role": "Founder & CEO",
   "org": "Horizon Robotics",
-  "wiki": "Yu Kai (scientist)",
+  "wiki": null,
   "blurb": "Yu Kai, who founded Baidu's deep-learning institute before starting Horizon Robotics, built China's leading automotive AI-chip company — its Journey processors power smart driving in millions of vehicles from dozens of automakers."
  },
  {
@@ -936,7 +936,7 @@
   "category": "Robotics & Autonomy",
   "role": "CEO",
   "org": "Cheetah Mobile / OrionStar",
-  "wiki": "Fu Sheng (entrepreneur)",
+  "wiki": null,
   "blurb": "Fu Sheng pivoted Cheetah Mobile into service robotics through OrionStar, whose reception, delivery, and coffee robots are deployed across thousands of hotels, hospitals, and restaurants in dozens of countries."
  },
  {
@@ -958,7 +958,7 @@
   "category": "Chips & Research",
   "role": "Director",
   "org": "Shanghai AI Laboratory",
-  "wiki": "Zhou Bowen",
+  "wiki": "Bowen Zhou",
   "blurb": "Zhou Bowen, former JD.com AI head and IBM researcher, directs the Shanghai AI Laboratory — China's premier state AI lab — overseeing the InternLM open models and national research on safe, scientific AI."
  },
  {
@@ -1002,7 +1002,7 @@
   "category": "Chips & Research",
   "role": "CEO & co-founder",
   "org": "SenseTime",
-  "wiki": "Xu Li (businessman)",
+  "wiki": "Xu Li (computer scientist)",
   "blurb": "Xu Li co-founded SenseTime, once the world's most valuable AI startup, and led its pivot from computer vision to the SenseNova foundation-model platform and large-scale AI data centers across China."
  },
  {
@@ -1013,7 +1013,7 @@
   "category": "Chips & Research",
   "role": "CEO & co-founder",
   "org": "Megvii",
-  "wiki": "Yin Qi",
+  "wiki": null,
   "blurb": "Yin Qi co-founded Megvii (Face++), one of the companies that made China a computer-vision superpower, and has steered it toward AIoT and, more recently, intelligent-driving systems."
  },
  {
@@ -1024,7 +1024,7 @@
   "category": "Chips & Research",
   "role": "Chief Scientist",
   "org": "Kunlun Tech (Skywork)",
-  "wiki": "Yan Shuicheng",
+  "wiki": null,
   "blurb": "Yan Shuicheng, one of the world's most-cited AI researchers, is chief scientist behind Kunlun Tech's Skywork models — a prolific open-source line spanning reasoning, agents, and AI music that punches far above the company's size."
  },
  {
@@ -1046,7 +1046,7 @@
   "category": "Chips & Research",
   "role": "Founder & CEO",
   "org": "MiraclePlus",
-  "wiki": "Qi Lu (computer scientist)",
+  "wiki": "Lu Qi (computer scientist)",
   "blurb": "Qi Lu — former Microsoft EVP and Baidu COO who launched Baidu's Apollo self-driving platform — runs MiraclePlus (Y Combinator China's successor), the accelerator seeding hundreds of Chinese AI and hard-tech startups."
  }
 ]
