@@ -107,10 +107,12 @@ export default {
       if (path.startsWith('/e/') || path === '/parties' || path === '/parties/' || path.startsWith('/parties/')) {
         return handleParties(request, env, url);
       }
-      // /app is the host dashboard on the new domain.
+      // /app is the host dashboard. Clerk production keys are bound to the
+      // christopherrathbun.com root domain, so sign-in only works there —
+      // send hosts across. Guests never sign in, so everything guest-facing
+      // stays on this domain. (Proper fix later: Clerk satellite domain.)
       if (path === '/app' || path === '/app/' || path.startsWith('/app/')) {
-        const u = new URL(url); u.pathname = '/parties';
-        return handleParties(request, env, u);
+        return Response.redirect('https://christopherrathbun.com/parties', 302);
       }
       // Real static files (the landing bundle lives under /landing/).
       if (/\.(js|css|png|jpg|jpeg|svg|ico|webmanifest|map|webp|mp4|woff2?)$/.test(path)) {
