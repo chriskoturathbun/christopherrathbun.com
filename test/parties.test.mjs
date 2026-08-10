@@ -130,14 +130,19 @@ eq(imageExtFor('text/html'), null, 'non-image rejected');
 eq(imageExtFor(null), null, 'null → null');
 
 // --- RSVP alert email ---
-const alertEm = buildRsvpAlertEmail({ guestName: 'Sam & Co', rsvp: 'yes', plusOnes: 2, title: 'Bar Crawl', emoji: '🍷', yesTotal: 7, link: 'https://x/parties' });
-ok(alertEm.subject.includes('Sam & Co is in (+2) — Bar Crawl'), 'alert subject names guest, verb, plus-ones');
+const alertEm = buildRsvpAlertEmail({ guestName: 'Sam & Co', rsvp: 'yes', plusOnes: 2, note: 'bringing <cake>', title: 'Bar Crawl', emoji: '🍷', yesTotal: 7, eventLink: 'https://x/e/stok', dashboardLink: 'https://x/app' });
+ok(alertEm.subject.includes('Sam & Co is in (+2) · Bar Crawl'), 'alert subject names guest, verb, plus-ones');
 ok(alertEm.subject.startsWith('🍷'), 'alert subject leads with emoji');
 ok(alertEm.html.includes('Sam &amp; Co'), 'alert html escapes guest name');
-ok(alertEm.text.includes('7 going so far'), 'alert text has running total');
-const alertNo = buildRsvpAlertEmail({ guestName: 'Dana', rsvp: 'no', plusOnes: 0, title: 'T', emoji: '', yesTotal: 0, link: 'x' });
+ok(alertEm.html.includes('bringing &lt;cake&gt;'), 'guest note included and escaped');
+ok(alertEm.html.includes('https://x/e/stok'), 'event page link present');
+ok(alertEm.html.includes('https://x/app'), 'dashboard link present');
+ok(alertEm.text.includes('That makes 7 going'), 'yes RSVP phrases the running total');
+ok(!alertEm.subject.includes('—'), 'no em dash in subject');
+const alertNo = buildRsvpAlertEmail({ guestName: 'Dana', rsvp: 'no', plusOnes: 0, note: null, title: 'T', emoji: '', yesTotal: 0, eventLink: 'x', dashboardLink: 'y' });
 ok(alertNo.subject.includes("Dana can't make it"), 'declines phrased correctly');
 ok(!alertNo.subject.includes('(+'), 'no plus-ones on a decline');
+ok(alertNo.text.includes('0 going so far'), 'non-yes keeps neutral count line');
 
 console.log(`parties tests: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

@@ -97,19 +97,58 @@ export function buildAdmitSms({ title, emoji, whenText, link }) {
   return `${lead}A spot opened up — you're in for ${title}!${when} Details: ${link}`;
 }
 
-// Instant "someone RSVP'd" email to the host.
-export function buildRsvpAlertEmail({ guestName, rsvp, plusOnes, title, emoji, yesTotal, link }) {
+// Instant "someone RSVP'd" email to the host — Party Plus One branded
+// (ink header, amber accents, the +1 balloon drawn in email-safe HTML).
+export function buildRsvpAlertEmail({ guestName, rsvp, plusOnes, note, title, emoji, yesTotal, eventLink, dashboardLink }) {
   const verb = { yes: 'is in', maybe: 'is a maybe', no: "can't make it", waitlist: 'joined the waitlist' }[rsvp] || 'responded';
   const plus = rsvp === 'yes' && plusOnes ? ` (+${plusOnes})` : '';
-  const subject = `${emoji ? emoji + ' ' : ''}${guestName} ${verb}${plus} — ${title}`;
-  const text = `${guestName} ${verb}${plus} for ${title}.\n${yesTotal} going so far.\n\nGuest list: ${link}`;
+  const burst = { yes: ' 🎉', waitlist: ' ⏳' }[rsvp] || '';
+  const subject = `${emoji ? emoji + ' ' : ''}${guestName} ${verb}${plus} · ${title}`;
+  const countLine = rsvp === 'yes'
+    ? `That makes ${yesTotal} going.`
+    : `${yesTotal} going so far.`;
+  const text = [
+    `${guestName} ${verb}${plus} for ${title}.`,
+    countLine,
+    note ? `Their note: "${note}"` : '',
+    '',
+    `Event page: ${eventLink}`,
+    `Guest list: ${dashboardLink}`,
+    '',
+    'Instant RSVP alerts are on for this event. You can turn them off in event settings.',
+  ].filter(l => l !== '').join('\n');
   const html =
-    `<div style="font-family:system-ui,sans-serif;line-height:1.55;max-width:560px;margin:0 auto">` +
-    `<p style="font-size:17px"><strong>${escapeHtml(guestName)}</strong> ${escapeHtml(verb)}${escapeHtml(plus)} for ` +
-    `<strong>${escapeHtml(title)}</strong>.</p>` +
-    `<p style="color:#666">${yesTotal} going so far.</p>` +
-    `<p><a href="${escapeHtml(link)}" style="color:#7c5cff">Open the guest list</a></p>` +
-    `</div>`;
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ea;padding:32px 16px">` +
+    `<tr><td align="center">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:14px;overflow:hidden;border:1px solid #e5e0d5">` +
+    // Ink header with the balloon mark and wordmark.
+    `<tr><td style="background:#141216;padding:18px 28px">` +
+    `<table role="presentation" cellpadding="0" cellspacing="0"><tr>` +
+    `<td style="width:34px;height:34px;background:#f5b25e;border-radius:999px;text-align:center;vertical-align:middle;` +
+    `font-family:system-ui,-apple-system,sans-serif;font-weight:700;font-size:14px;color:#141216">+1</td>` +
+    `<td style="padding-left:10px;font-family:system-ui,-apple-system,sans-serif;font-weight:600;font-size:16px;color:#f4f1ea">Party Plus One</td>` +
+    `</tr></table></td></tr>` +
+    // Body.
+    `<tr><td style="padding:30px 28px 8px;font-family:system-ui,-apple-system,sans-serif">` +
+    `<p style="margin:0 0 6px;font-size:22px;line-height:1.3;color:#141216"><strong>${escapeHtml(guestName)}</strong> ${escapeHtml(verb)}${escapeHtml(plus)}${burst}</p>` +
+    `<p style="margin:0 0 4px;font-size:15px;color:#6b665e">${escapeHtml(emoji ? emoji + ' ' : '')}${escapeHtml(title)}</p>` +
+    `<p style="margin:14px 0 0;font-size:16px;color:#141216">${escapeHtml(countLine)}</p>` +
+    (note
+      ? `<p style="margin:16px 0 0;padding:12px 16px;background:#faf7f1;border-radius:10px;font-size:15px;color:#4d483f">&ldquo;${escapeHtml(note)}&rdquo;</p>`
+      : '') +
+    `</td></tr>` +
+    // Actions: the event page first, the dashboard second.
+    `<tr><td style="padding:22px 28px 8px;font-family:system-ui,-apple-system,sans-serif">` +
+    `<a href="${escapeHtml(eventLink)}" style="display:inline-block;background:#f5b25e;color:#141216;text-decoration:none;` +
+    `font-weight:700;font-size:13px;letter-spacing:0.08em;text-transform:uppercase;padding:13px 22px;border-radius:8px">View the event</a>` +
+    `&nbsp;&nbsp;<a href="${escapeHtml(dashboardLink)}" style="display:inline-block;color:#141216;text-decoration:none;font-weight:600;` +
+    `font-size:13px;letter-spacing:0.08em;text-transform:uppercase;padding:13px 10px">Guest list &rarr;</a>` +
+    `</td></tr>` +
+    // Footer.
+    `<tr><td style="padding:20px 28px 26px;font-family:system-ui,-apple-system,sans-serif;font-size:12px;line-height:1.5;color:#a39d92">` +
+    `Instant RSVP alerts are on for this event. You can turn them off in event settings.` +
+    `</td></tr>` +
+    `</table></td></tr></table>`;
   return { subject, text, html };
 }
 
@@ -1003,17 +1042,18 @@ async function handleLinkLookup(env, token, url) {
 }
 
 // Email the host the moment a guest responds (toggleable per event).
-async function notifyHostOfRsvp(env, ev, { guestName, rsvp, plusOnes }) {
+async function notifyHostOfRsvp(env, ev, { guestName, rsvp, plusOnes, note }) {
   try {
     if (!ev.notify_on_rsvp || !ev.host_email) return;
     const yes = await env.DB.prepare(
       `SELECT COUNT(*) AS n, COALESCE(SUM(plus_ones), 0) AS p FROM party_guests WHERE event_id = ? AND rsvp = 'yes'`
     ).bind(ev.id).first();
     const email = buildRsvpAlertEmail({
-      guestName: guestName || 'A guest', rsvp, plusOnes: plusOnes || 0,
+      guestName: guestName || 'A guest', rsvp, plusOnes: plusOnes || 0, note: note || null,
       title: ev.title, emoji: ev.emoji,
       yesTotal: (yes?.n || 0) + (yes?.p || 0),
-      link: `${baseUrl(env)}/parties`,
+      eventLink: rsvpLink(env, ev.share_token),
+      dashboardLink: `${baseUrl(env)}/app`,
     });
     const res = await sendResendEmail({
       to: ev.host_email, subject: email.subject, html: email.html, text: email.text, from: emailFrom(env),
@@ -1042,7 +1082,7 @@ async function handleRsvp(request, env, token) {
   await env.DB.prepare(
     `UPDATE party_guests SET rsvp = ?, plus_ones = ?, note = ?, name = COALESCE(?, name), responded_at = datetime('now') WHERE id = ?`
   ).bind(rsvp, plusOnes, note, name, guest.id).run();
-  await notifyHostOfRsvp(env, ev, { guestName: name || guest.name, rsvp, plusOnes });
+  await notifyHostOfRsvp(env, ev, { guestName: name || guest.name, rsvp, plusOnes, note });
   return json({ ok: true, rsvp });
 }
 
@@ -1098,7 +1138,7 @@ async function handleOpenRsvp(request, env, shareToken) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'share_link', datetime('now'))`
     ).bind(shortId(12), ev.id, name, phone, email, token, rsvp, plusOnes, note).run();
   }
-  await notifyHostOfRsvp(env, ev, { guestName: name, rsvp, plusOnes });
+  await notifyHostOfRsvp(env, ev, { guestName: name, rsvp, plusOnes, note });
   return json({ ok: true, rsvp, token });
 }
 
