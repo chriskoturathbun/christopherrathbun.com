@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Party Plus One mark: a balloon carrying "+1", drawn geometrically so it
+       renders crisply at favicon sizes with no font dependencies. -->
+  <circle cx="32" cy="27" r="21" fill="#F5B25E"/>
+  <path d="M28.8 46.5 L32 51.5 L35.2 46.5 Z" fill="#F5B25E"/>
+  <path d="M32 51.5 q-2.4 4 0.6 7.6" stroke="#F5B25E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <rect x="18" y="24.8" width="12.4" height="4.4" rx="1.8" fill="#141216"/>
+  <rect x="22" y="20.8" width="4.4" height="12.4" rx="1.8" fill="#141216"/>
+  <path d="M39.2 20.5 L43.6 18.5 L43.6 35.5 L39.2 35.5 L39.2 24.8 L36.4 26 L36.4 22 Z" fill="#141216"/>
+</svg>
