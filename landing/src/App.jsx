@@ -89,7 +89,7 @@ function Hero() {
       <motion.div className="hero-content" style={{ y: textY, opacity: textOpacity }}
         initial="hidden" animate="show" variants={stagger}>
         <motion.span className="mono eyebrow" variants={fadeUp}>◆ Invites people actually answer</motion.span>
-        <motion.h1 variants={fadeUp}>Throw the party.<br />We'll text the invites.</motion.h1>
+        <motion.h1 variants={fadeUp}>Throw the party.{' '}<br />We'll text the invites.</motion.h1>
         <motion.p className="sub" variants={fadeUp}>
           Create an event in a minute. Every guest gets a personal link by text
           or email and RSVPs in one tap. No app, no account, no ads.
