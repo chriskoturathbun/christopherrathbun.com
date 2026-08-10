@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Innovators — Global Innovators in Business Longlist</title>
+  <meta name="description" content="100 AI innovators across the United States and China — the outreach longlist for the Global Innovators in Business annual award." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0c0c0c;--card:#111;--card-hover:#161616;--border:#222;--text:#e8e8e8;--text-muted:#666;--text-dim:#333;--accent:#e8e8e8}
+body{font-family:'Space Mono','Courier New',monospace;background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1200px;margin:0 auto;padding:0 28px}
+nav{padding:20px 28px;display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto}
+.nav-name{font-size:.75rem;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+.nav-name:hover{color:var(--text)}
+.nav-right{font-size:.72rem;letter-spacing:.08em;color:var(--text-muted)}
+.grotesk{font-family:'Space Grotesk',sans-serif}
+.tag{display:inline-block;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);border:1px solid var(--border);padding:3px 8px;border-radius:2px}
+footer{border-top:1px solid var(--border);margin-top:80px;padding:28px;text-align:center;font-size:.7rem;color:var(--text-muted);letter-spacing:.08em}
+footer a{text-decoration:underline}
+img.headshot{width:100%;height:100%;object-fit:cover;display:block;opacity:0;transition:opacity .4s}
+img.headshot.loaded{opacity:1}
+.ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--text-dim);background:linear-gradient(135deg,#141414,#0e0e0e)}
+
+.hero{padding:70px 0 40px}
+.hero h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(2.6rem,7vw,5.5rem);font-weight:700;letter-spacing:-.03em;line-height:.95;text-transform:uppercase}
+.hero h1 .dim{color:#202020}
+.hero p{margin-top:22px;font-size:.85rem;color:var(--text-muted);max-width:640px}
+.controls{display:flex;flex-wrap:wrap;gap:10px;margin:34px 0 8px;align-items:center}
+.fbtn{font-family:inherit;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;background:none;border:1px solid var(--border);color:var(--text-muted);padding:7px 14px;border-radius:2px;cursor:pointer}
+.fbtn:hover{color:var(--text);border-color:#444}
+.fbtn.on{color:var(--bg);background:var(--text);border-color:var(--text)}
+#q{font-family:inherit;font-size:.75rem;background:var(--card);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:2px;min-width:220px;flex:1;max-width:340px}
+#q:focus{outline:none;border-color:#444}
+.count{font-size:.68rem;color:var(--text-muted);letter-spacing:.08em;margin-left:auto}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;margin-top:26px}
+.pcard{background:var(--card);border:1px solid var(--border);border-radius:3px;overflow:hidden;display:flex;flex-direction:column;transition:background .15s,border-color .15s,transform .15s}
+.pcard:hover{background:var(--card-hover);border-color:#3a3a3a;transform:translateY(-2px)}
+.pcard-img{position:relative;aspect-ratio:1/1;background:#101010;overflow:hidden}
+.pcard-body{padding:14px 16px 16px}
+.pcard-num{font-size:.62rem;color:var(--text-dim);letter-spacing:.1em}
+.pcard-name{font-size:1.05rem;font-weight:600;margin-top:6px;line-height:1.25}
+.pcard-name .zh{font-weight:400;color:var(--text-muted);font-size:.85em}
+.pcard-role{font-size:.68rem;color:var(--text-muted);margin-top:5px;line-height:1.45}
+.pcard-tags{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.hidden{display:none}
+  </style>
+</head>
+<body>
+  <nav><a class="nav-name" href="/">Christopher Rathbun</a><span class="nav-right">AI Innovators / 100</span></nav>
+  <main class="wrap">
+    <header class="hero">
+      <h1>AI<br/>Innovators<br/><span class="dim">US × China</span></h1>
+      <p>The outreach longlist for the <strong>Global Innovators in Business</strong> annual award — 100 people building the AI era across the United States and China. Ten will be selected.</p>
+    </header>
+    <div class="controls">
+      <button class="fbtn on" data-f="country" data-v="">All</button>
+      <button class="fbtn" data-f="country" data-v="US">United States</button>
+      <button class="fbtn" data-f="country" data-v="China">China</button>
+      <input id="q" type="search" placeholder="Search name / company…" />
+      <span class="count" id="count">100 / 100</span>
+    </div>
+    <div class="controls" id="catRow">
+      <button class="fbtn on" data-f="category" data-v="">All categories</button>
+      <button class="fbtn" data-f="category" data-v="Frontier Labs">Frontier Labs</button>
+      <button class="fbtn" data-f="category" data-v="Foundation Models">Foundation Models</button>
+      <button class="fbtn" data-f="category" data-v="Big Tech">Big Tech</button>
+      <button class="fbtn" data-f="category" data-v="Startups">Startups</button>
+      <button class="fbtn" data-f="category" data-v="Robotics &amp; Autonomy">Robotics &amp; Autonomy</button>
+      <button class="fbtn" data-f="category" data-v="Research &amp; Science">Research &amp; Science</button>
+      <button class="fbtn" data-f="category" data-v="Chips &amp; Research">Chips &amp; Research</button>
+    </div>
+    <div class="grid" id="grid">
+      <a class="pcard" href="/ai-innovators/sam-altman" data-country="US" data-category="Frontier Labs" data-name="sam altman  openai">
+        <div class="pcard-img" data-wiki="Sam Altman"><div class="ph" style="font-size:2rem">SA</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 001 ]</div>
+          <div class="pcard-name grotesk">Sam Altman</div>
+          <div class="pcard-role">CEO &amp; co-founder · OpenAI</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/greg-brockman" data-country="US" data-category="Frontier Labs" data-name="greg brockman  openai">
+        <div class="pcard-img" data-wiki="Greg Brockman"><div class="ph" style="font-size:2rem">GB</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 002 ]</div>
+          <div class="pcard-name grotesk">Greg Brockman</div>
+          <div class="pcard-role">President &amp; co-founder · OpenAI</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/dario-amodei" data-country="US" data-category="Frontier Labs" data-name="dario amodei  anthropic">
+        <div class="pcard-img" data-wiki="Dario Amodei"><div class="ph" style="font-size:2rem">DA</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 003 ]</div>
+          <div class="pcard-name grotesk">Dario Amodei</div>
+          <div class="pcard-role">CEO &amp; co-founder · Anthropic</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/daniela-amodei" data-country="US" data-category="Frontier Labs" data-name="daniela amodei  anthropic">
+        <div class="pcard-img" data-wiki="Daniela Amodei"><div class="ph" style="font-size:2rem">DA</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 004 ]</div>
+          <div class="pcard-name grotesk">Daniela Amodei</div>
+          <div class="pcard-role">President &amp; co-founder · Anthropic</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/jared-kaplan" data-country="US" data-category="Frontier Labs" data-name="jared kaplan  anthropic">
+        <div class="pcard-img" data-wiki="Jared Kaplan"><div class="ph" style="font-size:2rem">JK</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 005 ]</div>
+          <div class="pcard-name grotesk">Jared Kaplan</div>
+          <div class="pcard-role">Chief Science Officer &amp; co-founder · Anthropic</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/ilya-sutskever" data-country="US" data-category="Frontier Labs" data-name="ilya sutskever  safe superintelligence">
+        <div class="pcard-img" data-wiki="Ilya Sutskever"><div class="ph" style="font-size:2rem">IS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 006 ]</div>
+          <div class="pcard-name grotesk">Ilya Sutskever</div>
+          <div class="pcard-role">CEO &amp; co-founder · Safe Superintelligence</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/mira-murati" data-country="US" data-category="Frontier Labs" data-name="mira murati  thinking machines lab">
+        <div class="pcard-img" data-wiki="Mira Murati"><div class="ph" style="font-size:2rem">MM</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 007 ]</div>
+          <div class="pcard-name grotesk">Mira Murati</div>
+          <div class="pcard-role">Founder &amp; CEO · Thinking Machines Lab</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/demis-hassabis" data-country="US" data-category="Frontier Labs" data-name="demis hassabis  google deepmind">
+        <div class="pcard-img" data-wiki="Demis Hassabis"><div class="ph" style="font-size:2rem">DH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 008 ]</div>
+          <div class="pcard-name grotesk">Demis Hassabis</div>
+          <div class="pcard-role">CEO &amp; co-founder · Google DeepMind</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/noam-shazeer" data-country="US" data-category="Frontier Labs" data-name="noam shazeer  google deepmind">
+        <div class="pcard-img" data-wiki="Noam Shazeer"><div class="ph" style="font-size:2rem">NS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 009 ]</div>
+          <div class="pcard-name grotesk">Noam Shazeer</div>
+          <div class="pcard-role">Co-lead, Gemini · Google DeepMind</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/elon-musk" data-country="US" data-category="Frontier Labs" data-name="elon musk  xai / tesla">
+        <div class="pcard-img" data-wiki="Elon Musk"><div class="ph" style="font-size:2rem">EM</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 010 ]</div>
+          <div class="pcard-name grotesk">Elon Musk</div>
+          <div class="pcard-role">Founder · xAI / Tesla</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Frontier Labs</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/jensen-huang" data-country="US" data-category="Big Tech" data-name="jensen huang  nvidia">
+        <div class="pcard-img" data-wiki="Jensen Huang"><div class="ph" style="font-size:2rem">JH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 011 ]</div>
+          <div class="pcard-name grotesk">Jensen Huang</div>
+          <div class="pcard-role">CEO &amp; co-founder · NVIDIA</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/lisa-su" data-country="US" data-category="Big Tech" data-name="lisa su  amd">
+        <div class="pcard-img" data-wiki="Lisa Su"><div class="ph" style="font-size:2rem">LS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 012 ]</div>
+          <div class="pcard-name grotesk">Lisa Su</div>
+          <div class="pcard-role">CEO · AMD</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/satya-nadella" data-country="US" data-category="Big Tech" data-name="satya nadella  microsoft">
+        <div class="pcard-img" data-wiki="Satya Nadella"><div class="ph" style="font-size:2rem">SN</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 013 ]</div>
+          <div class="pcard-name grotesk">Satya Nadella</div>
+          <div class="pcard-role">Chairman &amp; CEO · Microsoft</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/mustafa-suleyman" data-country="US" data-category="Big Tech" data-name="mustafa suleyman  microsoft">
+        <div class="pcard-img" data-wiki="Mustafa Suleyman"><div class="ph" style="font-size:2rem">MS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 014 ]</div>
+          <div class="pcard-name grotesk">Mustafa Suleyman</div>
+          <div class="pcard-role">CEO, Microsoft AI · Microsoft</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/kevin-scott" data-country="US" data-category="Big Tech" data-name="kevin scott  microsoft">
+        <div class="pcard-img" data-wiki="Kevin Scott (computer scientist)"><div class="ph" style="font-size:2rem">KS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 015 ]</div>
+          <div class="pcard-name grotesk">Kevin Scott</div>
+          <div class="pcard-role">CTO &amp; EVP of AI · Microsoft</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/sundar-pichai" data-country="US" data-category="Big Tech" data-name="sundar pichai  google / alphabet">
+        <div class="pcard-img" data-wiki="Sundar Pichai"><div class="ph" style="font-size:2rem">SP</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 016 ]</div>
+          <div class="pcard-name grotesk">Sundar Pichai</div>
+          <div class="pcard-role">CEO · Google / Alphabet</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/jeff-dean" data-country="US" data-category="Big Tech" data-name="jeff dean  google">
+        <div class="pcard-img" data-wiki="Jeff Dean"><div class="ph" style="font-size:2rem">JD</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 017 ]</div>
+          <div class="pcard-name grotesk">Jeff Dean</div>
+          <div class="pcard-role">Chief Scientist · Google</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/mark-zuckerberg" data-country="US" data-category="Big Tech" data-name="mark zuckerberg  meta">
+        <div class="pcard-img" data-wiki="Mark Zuckerberg"><div class="ph" style="font-size:2rem">MZ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 018 ]</div>
+          <div class="pcard-name grotesk">Mark Zuckerberg</div>
+          <div class="pcard-role">Founder &amp; CEO · Meta</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/yann-lecun" data-country="US" data-category="Big Tech" data-name="yann lecun  meta">
+        <div class="pcard-img" data-wiki="Yann LeCun"><div class="ph" style="font-size:2rem">YL</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 019 ]</div>
+          <div class="pcard-name grotesk">Yann LeCun</div>
+          <div class="pcard-role">Chief AI Scientist · Meta</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/alexandr-wang" data-country="US" data-category="Big Tech" data-name="alexandr wang  meta">
+        <div class="pcard-img" data-wiki="Alexandr Wang"><div class="ph" style="font-size:2rem">AW</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 020 ]</div>
+          <div class="pcard-name grotesk">Alexandr Wang</div>
+          <div class="pcard-role">Founder, Scale AI; Chief AI Officer · Meta</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/nat-friedman" data-country="US" data-category="Big Tech" data-name="nat friedman  meta">
+        <div class="pcard-img" data-wiki="Nat Friedman"><div class="ph" style="font-size:2rem">NF</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 021 ]</div>
+          <div class="pcard-name grotesk">Nat Friedman</div>
+          <div class="pcard-role">AI leadership · Meta</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/andy-jassy" data-country="US" data-category="Big Tech" data-name="andy jassy  amazon">
+        <div class="pcard-img" data-wiki="Andy Jassy"><div class="ph" style="font-size:2rem">AJ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 022 ]</div>
+          <div class="pcard-name grotesk">Andy Jassy</div>
+          <div class="pcard-role">CEO · Amazon</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/rohit-prasad" data-country="US" data-category="Big Tech" data-name="rohit prasad  amazon">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">RP</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 023 ]</div>
+          <div class="pcard-name grotesk">Rohit Prasad</div>
+          <div class="pcard-role">SVP &amp; Head Scientist, AGI · Amazon</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/marc-benioff" data-country="US" data-category="Big Tech" data-name="marc benioff  salesforce">
+        <div class="pcard-img" data-wiki="Marc Benioff"><div class="ph" style="font-size:2rem">MB</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 024 ]</div>
+          <div class="pcard-name grotesk">Marc Benioff</div>
+          <div class="pcard-role">Chair &amp; CEO · Salesforce</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/alex-karp" data-country="US" data-category="Big Tech" data-name="alex karp  palantir">
+        <div class="pcard-img" data-wiki="Alex Karp"><div class="ph" style="font-size:2rem">AK</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 025 ]</div>
+          <div class="pcard-name grotesk">Alex Karp</div>
+          <div class="pcard-role">CEO &amp; co-founder · Palantir</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/aravind-srinivas" data-country="US" data-category="Startups" data-name="aravind srinivas  perplexity">
+        <div class="pcard-img" data-wiki="Aravind Srinivas"><div class="ph" style="font-size:2rem">AS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 026 ]</div>
+          <div class="pcard-name grotesk">Aravind Srinivas</div>
+          <div class="pcard-role">CEO &amp; co-founder · Perplexity</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/clement-delangue" data-country="US" data-category="Startups" data-name="clément delangue  hugging face">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">CD</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 027 ]</div>
+          <div class="pcard-name grotesk">Clément Delangue</div>
+          <div class="pcard-role">CEO &amp; co-founder · Hugging Face</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/ali-ghodsi" data-country="US" data-category="Startups" data-name="ali ghodsi  databricks">
+        <div class="pcard-img" data-wiki="Ali Ghodsi"><div class="ph" style="font-size:2rem">AG</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 028 ]</div>
+          <div class="pcard-name grotesk">Ali Ghodsi</div>
+          <div class="pcard-role">CEO &amp; co-founder · Databricks</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/matei-zaharia" data-country="US" data-category="Startups" data-name="matei zaharia  databricks">
+        <div class="pcard-img" data-wiki="Matei Zaharia"><div class="ph" style="font-size:2rem">MZ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 029 ]</div>
+          <div class="pcard-name grotesk">Matei Zaharia</div>
+          <div class="pcard-role">CTO &amp; co-founder · Databricks</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/sridhar-ramaswamy" data-country="US" data-category="Startups" data-name="sridhar ramaswamy  snowflake">
+        <div class="pcard-img" data-wiki="Sridhar Ramaswamy"><div class="ph" style="font-size:2rem">SR</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 030 ]</div>
+          <div class="pcard-name grotesk">Sridhar Ramaswamy</div>
+          <div class="pcard-role">CEO · Snowflake</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/bret-taylor" data-country="US" data-category="Startups" data-name="bret taylor  sierra">
+        <div class="pcard-img" data-wiki="Bret Taylor"><div class="ph" style="font-size:2rem">BT</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 031 ]</div>
+          <div class="pcard-name grotesk">Bret Taylor</div>
+          <div class="pcard-role">CEO &amp; co-founder · Sierra</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/michael-truell" data-country="US" data-category="Startups" data-name="michael truell  anysphere (cursor)">
+        <div class="pcard-img" data-wiki="Michael Truell"><div class="ph" style="font-size:2rem">MT</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 032 ]</div>
+          <div class="pcard-name grotesk">Michael Truell</div>
+          <div class="pcard-role">CEO &amp; co-founder · Anysphere (Cursor)</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/scott-wu" data-country="US" data-category="Startups" data-name="scott wu  cognition">
+        <div class="pcard-img" data-wiki="Scott Wu"><div class="ph" style="font-size:2rem">SW</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 033 ]</div>
+          <div class="pcard-name grotesk">Scott Wu</div>
+          <div class="pcard-role">CEO &amp; co-founder · Cognition</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/amjad-masad" data-country="US" data-category="Startups" data-name="amjad masad  replit">
+        <div class="pcard-img" data-wiki="Amjad Masad"><div class="ph" style="font-size:2rem">AM</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 034 ]</div>
+          <div class="pcard-name grotesk">Amjad Masad</div>
+          <div class="pcard-role">CEO &amp; co-founder · Replit</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/harrison-chase" data-country="US" data-category="Startups" data-name="harrison chase  langchain">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">HC</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 035 ]</div>
+          <div class="pcard-name grotesk">Harrison Chase</div>
+          <div class="pcard-role">CEO &amp; co-founder · LangChain</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/tri-dao" data-country="US" data-category="Startups" data-name="tri dao  together ai">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">TD</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 036 ]</div>
+          <div class="pcard-name grotesk">Tri Dao</div>
+          <div class="pcard-role">Chief Scientist · Together AI</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/vipul-ved-prakash" data-country="US" data-category="Startups" data-name="vipul ved prakash  together ai">
+        <div class="pcard-img" data-wiki="Vipul Ved Prakash"><div class="ph" style="font-size:2rem">VV</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 037 ]</div>
+          <div class="pcard-name grotesk">Vipul Ved Prakash</div>
+          <div class="pcard-role">CEO &amp; co-founder · Together AI</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/ion-stoica" data-country="US" data-category="Startups" data-name="ion stoica  databricks / anyscale / uc berkeley">
+        <div class="pcard-img" data-wiki="Ion Stoica"><div class="ph" style="font-size:2rem">IS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 038 ]</div>
+          <div class="pcard-name grotesk">Ion Stoica</div>
+          <div class="pcard-role">Co-founder; Professor · Databricks / Anyscale / UC Berkeley</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/may-habib" data-country="US" data-category="Startups" data-name="may habib  writer">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">MH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 039 ]</div>
+          <div class="pcard-name grotesk">May Habib</div>
+          <div class="pcard-role">CEO &amp; co-founder · Writer</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Startups</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/daphne-koller" data-country="US" data-category="Research &amp; Science" data-name="daphne koller  insitro">
+        <div class="pcard-img" data-wiki="Daphne Koller"><div class="ph" style="font-size:2rem">DK</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 040 ]</div>
+          <div class="pcard-name grotesk">Daphne Koller</div>
+          <div class="pcard-role">Founder &amp; CEO · insitro</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/fei-fei-li" data-country="US" data-category="Research &amp; Science" data-name="fei-fei li  world labs / stanford">
+        <div class="pcard-img" data-wiki="Fei-Fei Li"><div class="ph" style="font-size:2rem">FL</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 041 ]</div>
+          <div class="pcard-name grotesk">Fei-Fei Li</div>
+          <div class="pcard-role">Co-founder &amp; CEO, World Labs; Professor · World Labs / Stanford</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/andrew-ng" data-country="US" data-category="Research &amp; Science" data-name="andrew ng  ai fund / deeplearning.ai">
+        <div class="pcard-img" data-wiki="Andrew Ng"><div class="ph" style="font-size:2rem">AN</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 042 ]</div>
+          <div class="pcard-name grotesk">Andrew Ng</div>
+          <div class="pcard-role">Founder · AI Fund / DeepLearning.AI</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/andrej-karpathy" data-country="US" data-category="Research &amp; Science" data-name="andrej karpathy  eureka labs">
+        <div class="pcard-img" data-wiki="Andrej Karpathy"><div class="ph" style="font-size:2rem">AK</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 043 ]</div>
+          <div class="pcard-name grotesk">Andrej Karpathy</div>
+          <div class="pcard-role">Founder · Eureka Labs</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/chelsea-finn" data-country="US" data-category="Research &amp; Science" data-name="chelsea finn  physical intelligence / stanford">
+        <div class="pcard-img" data-wiki="Chelsea Finn"><div class="ph" style="font-size:2rem">CF</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 044 ]</div>
+          <div class="pcard-name grotesk">Chelsea Finn</div>
+          <div class="pcard-role">Co-founder; Professor · Physical Intelligence / Stanford</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/brett-adcock" data-country="US" data-category="Research &amp; Science" data-name="brett adcock  figure">
+        <div class="pcard-img" data-wiki="Brett Adcock"><div class="ph" style="font-size:2rem">BA</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 045 ]</div>
+          <div class="pcard-name grotesk">Brett Adcock</div>
+          <div class="pcard-role">Founder &amp; CEO · Figure</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/marc-raibert" data-country="US" data-category="Research &amp; Science" data-name="marc raibert  boston dynamics / rai institute">
+        <div class="pcard-img" data-wiki="Marc Raibert"><div class="ph" style="font-size:2rem">MR</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 046 ]</div>
+          <div class="pcard-name grotesk">Marc Raibert</div>
+          <div class="pcard-role">Founder, Boston Dynamics; ED, The AI Institute · Boston Dynamics / RAI Institute</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/pieter-abbeel" data-country="US" data-category="Research &amp; Science" data-name="pieter abbeel  uc berkeley / amazon">
+        <div class="pcard-img" data-wiki="Pieter Abbeel"><div class="ph" style="font-size:2rem">PA</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 047 ]</div>
+          <div class="pcard-name grotesk">Pieter Abbeel</div>
+          <div class="pcard-role">Professor; co-founder, Covariant · UC Berkeley / Amazon</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/david-baker" data-country="US" data-category="Research &amp; Science" data-name="david baker  university of washington">
+        <div class="pcard-img" data-wiki="David Baker (biochemist)"><div class="ph" style="font-size:2rem">DB</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 048 ]</div>
+          <div class="pcard-name grotesk">David Baker</div>
+          <div class="pcard-role">Professor; Nobel laureate · University of Washington</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/percy-liang" data-country="US" data-category="Research &amp; Science" data-name="percy liang  stanford">
+        <div class="pcard-img" data-wiki="Percy Liang"><div class="ph" style="font-size:2rem">PL</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 049 ]</div>
+          <div class="pcard-name grotesk">Percy Liang</div>
+          <div class="pcard-role">Professor; Director, CRFM · Stanford</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/kaiming-he" data-country="US" data-category="Research &amp; Science" data-name="kaiming he  mit">
+        <div class="pcard-img" data-wiki="Kaiming He"><div class="ph" style="font-size:2rem">KH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 050 ]</div>
+          <div class="pcard-name grotesk">Kaiming He</div>
+          <div class="pcard-role">Professor · MIT</div>
+          <div class="pcard-tags"><span class="tag">United States</span><span class="tag">Research &amp; Science</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/liang-wenfeng" data-country="China" data-category="Foundation Models" data-name="liang wenfeng 梁文锋 deepseek">
+        <div class="pcard-img" data-wiki="Liang Wenfeng"><div class="ph" style="font-size:2rem">LW</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 051 ]</div>
+          <div class="pcard-name grotesk">Liang Wenfeng <span class="zh">梁文锋</span></div>
+          <div class="pcard-role">Founder &amp; CEO · DeepSeek</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/yang-zhilin" data-country="China" data-category="Foundation Models" data-name="yang zhilin 杨植麟 moonshot ai">
+        <div class="pcard-img" data-wiki="Yang Zhilin"><div class="ph" style="font-size:2rem">YZ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 052 ]</div>
+          <div class="pcard-name grotesk">Yang Zhilin <span class="zh">杨植麟</span></div>
+          <div class="pcard-role">CEO &amp; co-founder · Moonshot AI</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/zhang-peng-zhipu" data-country="China" data-category="Foundation Models" data-name="zhang peng 张鹏 zhipu ai (z.ai)">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">ZP</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 053 ]</div>
+          <div class="pcard-name grotesk">Zhang Peng <span class="zh">张鹏</span></div>
+          <div class="pcard-role">CEO · Zhipu AI (Z.ai)</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/tang-jie" data-country="China" data-category="Foundation Models" data-name="tang jie 唐杰 zhipu ai / tsinghua">
+        <div class="pcard-img" data-wiki="Jie Tang"><div class="ph" style="font-size:2rem">TJ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 054 ]</div>
+          <div class="pcard-name grotesk">Tang Jie <span class="zh">唐杰</span></div>
+          <div class="pcard-role">Chief Scientist, Zhipu AI; Professor · Zhipu AI / Tsinghua</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/yan-junjie" data-country="China" data-category="Foundation Models" data-name="yan junjie 闫俊杰 minimax">
+        <div class="pcard-img" data-wiki="Yan Junjie"><div class="ph" style="font-size:2rem">YJ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 055 ]</div>
+          <div class="pcard-name grotesk">Yan Junjie <span class="zh">闫俊杰</span></div>
+          <div class="pcard-role">CEO &amp; founder · MiniMax</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/jiang-daxin" data-country="China" data-category="Foundation Models" data-name="jiang daxin 姜大昕 stepfun">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">JD</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 056 ]</div>
+          <div class="pcard-name grotesk">Jiang Daxin <span class="zh">姜大昕</span></div>
+          <div class="pcard-role">CEO &amp; founder · StepFun</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/wang-xiaochuan" data-country="China" data-category="Foundation Models" data-name="wang xiaochuan 王小川 baichuan ai">
+        <div class="pcard-img" data-wiki="Wang Xiaochuan"><div class="ph" style="font-size:2rem">WX</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 057 ]</div>
+          <div class="pcard-name grotesk">Wang Xiaochuan <span class="zh">王小川</span></div>
+          <div class="pcard-role">CEO &amp; founder · Baichuan AI</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/kai-fu-lee" data-country="China" data-category="Foundation Models" data-name="kai-fu lee 李开复 01.ai / sinovation ventures">
+        <div class="pcard-img" data-wiki="Kai-Fu Lee"><div class="ph" style="font-size:2rem">KL</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 058 ]</div>
+          <div class="pcard-name grotesk">Kai-Fu Lee <span class="zh">李开复</span></div>
+          <div class="pcard-role">Founder · 01.AI / Sinovation Ventures</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/li-dahai" data-country="China" data-category="Foundation Models" data-name="li dahai 李大海 modelbest">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">LD</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 059 ]</div>
+          <div class="pcard-name grotesk">Li Dahai <span class="zh">李大海</span></div>
+          <div class="pcard-role">CEO &amp; co-founder · ModelBest</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/liu-zhiyuan" data-country="China" data-category="Foundation Models" data-name="liu zhiyuan 刘知远 modelbest / tsinghua">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">LZ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 060 ]</div>
+          <div class="pcard-name grotesk">Liu Zhiyuan <span class="zh">刘知远</span></div>
+          <div class="pcard-role">Chief Scientist, ModelBest; Professor · ModelBest / Tsinghua</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Foundation Models</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/robin-li" data-country="China" data-category="Big Tech" data-name="robin li 李彦宏 baidu">
+        <div class="pcard-img" data-wiki="Robin Li"><div class="ph" style="font-size:2rem">RL</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 061 ]</div>
+          <div class="pcard-name grotesk">Robin Li <span class="zh">李彦宏</span></div>
+          <div class="pcard-role">CEO &amp; co-founder · Baidu</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/wang-haifeng" data-country="China" data-category="Big Tech" data-name="wang haifeng 王海峰 baidu">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">WH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 062 ]</div>
+          <div class="pcard-name grotesk">Wang Haifeng <span class="zh">王海峰</span></div>
+          <div class="pcard-role">CTO · Baidu</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/shen-dou" data-country="China" data-category="Big Tech" data-name="shen dou 沈抖 baidu">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">SD</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 063 ]</div>
+          <div class="pcard-name grotesk">Shen Dou <span class="zh">沈抖</span></div>
+          <div class="pcard-role">EVP; President, AI Cloud · Baidu</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/eddie-wu" data-country="China" data-category="Big Tech" data-name="eddie wu (wu yongming) 吴泳铭 alibaba group">
+        <div class="pcard-img" data-wiki="Eddie Wu"><div class="ph" style="font-size:2rem">EW</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 064 ]</div>
+          <div class="pcard-name grotesk">Eddie Wu (Wu Yongming) <span class="zh">吴泳铭</span></div>
+          <div class="pcard-role">CEO · Alibaba Group</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/joe-tsai" data-country="China" data-category="Big Tech" data-name="joe tsai 蔡崇信 alibaba group">
+        <div class="pcard-img" data-wiki="Joseph Tsai"><div class="ph" style="font-size:2rem">JT</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 065 ]</div>
+          <div class="pcard-name grotesk">Joe Tsai <span class="zh">蔡崇信</span></div>
+          <div class="pcard-role">Chairman · Alibaba Group</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/zhou-jingren" data-country="China" data-category="Big Tech" data-name="zhou jingren 周靖人 alibaba">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">ZJ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 066 ]</div>
+          <div class="pcard-name grotesk">Zhou Jingren <span class="zh">周靖人</span></div>
+          <div class="pcard-role">CTO, Alibaba Cloud · Alibaba</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/lin-junyang" data-country="China" data-category="Big Tech" data-name="lin junyang 林俊旸 alibaba">
+        <div class="pcard-img" data-wiki="Junyang Lin"><div class="ph" style="font-size:2rem">LJ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 067 ]</div>
+          <div class="pcard-name grotesk">Lin Junyang <span class="zh">林俊旸</span></div>
+          <div class="pcard-role">Technical lead, Qwen · Alibaba</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/wang-jian" data-country="China" data-category="Big Tech" data-name="wang jian 王坚 alibaba / zhejiang lab">
+        <div class="pcard-img" data-wiki="Wang Jian (computer scientist)"><div class="ph" style="font-size:2rem">WJ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 068 ]</div>
+          <div class="pcard-name grotesk">Wang Jian <span class="zh">王坚</span></div>
+          <div class="pcard-role">Founder, Alibaba Cloud · Alibaba / Zhejiang Lab</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/pony-ma" data-country="China" data-category="Big Tech" data-name="pony ma 马化腾 tencent">
+        <div class="pcard-img" data-wiki="Pony Ma"><div class="ph" style="font-size:2rem">PM</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 069 ]</div>
+          <div class="pcard-name grotesk">Pony Ma <span class="zh">马化腾</span></div>
+          <div class="pcard-role">Chairman &amp; CEO · Tencent</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/zhang-zhengyou" data-country="China" data-category="Big Tech" data-name="zhang zhengyou 张正友 tencent">
+        <div class="pcard-img" data-wiki="Zhengyou Zhang"><div class="ph" style="font-size:2rem">ZZ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 070 ]</div>
+          <div class="pcard-name grotesk">Zhang Zhengyou <span class="zh">张正友</span></div>
+          <div class="pcard-role">Chief Scientist; Director, Robotics X · Tencent</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/zhang-yiming" data-country="China" data-category="Big Tech" data-name="zhang yiming 张一鸣 bytedance">
+        <div class="pcard-img" data-wiki="Zhang Yiming"><div class="ph" style="font-size:2rem">ZY</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 071 ]</div>
+          <div class="pcard-name grotesk">Zhang Yiming <span class="zh">张一鸣</span></div>
+          <div class="pcard-role">Founder · ByteDance</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/liang-rubo" data-country="China" data-category="Big Tech" data-name="liang rubo 梁汝波 bytedance">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">LR</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 072 ]</div>
+          <div class="pcard-name grotesk">Liang Rubo <span class="zh">梁汝波</span></div>
+          <div class="pcard-role">CEO · ByteDance</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/wu-yonghui" data-country="China" data-category="Big Tech" data-name="wu yonghui 吴永辉 bytedance">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">WY</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 073 ]</div>
+          <div class="pcard-name grotesk">Wu Yonghui <span class="zh">吴永辉</span></div>
+          <div class="pcard-role">Head of Seed foundation-model research · ByteDance</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/ren-zhengfei" data-country="China" data-category="Big Tech" data-name="ren zhengfei 任正非 huawei">
+        <div class="pcard-img" data-wiki="Ren Zhengfei"><div class="ph" style="font-size:2rem">RZ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 074 ]</div>
+          <div class="pcard-name grotesk">Ren Zhengfei <span class="zh">任正非</span></div>
+          <div class="pcard-role">Founder &amp; CEO · Huawei</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/eric-xu" data-country="China" data-category="Big Tech" data-name="eric xu (xu zhijun) 徐直军 huawei">
+        <div class="pcard-img" data-wiki="Xu Zhijun"><div class="ph" style="font-size:2rem">EX</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 075 ]</div>
+          <div class="pcard-name grotesk">Eric Xu (Xu Zhijun) <span class="zh">徐直军</span></div>
+          <div class="pcard-role">Deputy Chairman &amp; Rotating Chairman · Huawei</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/lei-jun" data-country="China" data-category="Big Tech" data-name="lei jun 雷军 xiaomi">
+        <div class="pcard-img" data-wiki="Lei Jun"><div class="ph" style="font-size:2rem">LJ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 076 ]</div>
+          <div class="pcard-name grotesk">Lei Jun <span class="zh">雷军</span></div>
+          <div class="pcard-role">Founder &amp; CEO · Xiaomi</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/luo-fuli" data-country="China" data-category="Big Tech" data-name="luo fuli 罗福莉 xiaomi">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">LF</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 077 ]</div>
+          <div class="pcard-name grotesk">Luo Fuli <span class="zh">罗福莉</span></div>
+          <div class="pcard-role">AI researcher · Xiaomi</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/zhou-hongyi" data-country="China" data-category="Big Tech" data-name="zhou hongyi 周鸿祎 360 group">
+        <div class="pcard-img" data-wiki="Zhou Hongyi"><div class="ph" style="font-size:2rem">ZH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 078 ]</div>
+          <div class="pcard-name grotesk">Zhou Hongyi <span class="zh">周鸿祎</span></div>
+          <div class="pcard-role">Founder &amp; Chairman · 360 Group</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/su-hua" data-country="China" data-category="Big Tech" data-name="su hua 宿华 kuaishou">
+        <div class="pcard-img" data-wiki="Su Hua"><div class="ph" style="font-size:2rem">SH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 079 ]</div>
+          <div class="pcard-name grotesk">Su Hua <span class="zh">宿华</span></div>
+          <div class="pcard-role">Co-founder &amp; Chairman · Kuaishou</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/liu-qingfeng" data-country="China" data-category="Big Tech" data-name="liu qingfeng 刘庆峰 iflytek">
+        <div class="pcard-img" data-wiki="Liu Qingfeng"><div class="ph" style="font-size:2rem">LQ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 080 ]</div>
+          <div class="pcard-name grotesk">Liu Qingfeng <span class="zh">刘庆峰</span></div>
+          <div class="pcard-role">Founder &amp; Chairman · iFlytek</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Big Tech</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/wang-xingxing" data-country="China" data-category="Robotics &amp; Autonomy" data-name="wang xingxing 王兴兴 unitree robotics">
+        <div class="pcard-img" data-wiki="Wang Xingxing"><div class="ph" style="font-size:2rem">WX</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 081 ]</div>
+          <div class="pcard-name grotesk">Wang Xingxing <span class="zh">王兴兴</span></div>
+          <div class="pcard-role">Founder &amp; CEO · Unitree Robotics</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/peng-zhihui" data-country="China" data-category="Robotics &amp; Autonomy" data-name="peng zhihui 彭志辉 agibot (zhiyuan robotics)">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">PZ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 082 ]</div>
+          <div class="pcard-name grotesk">Peng Zhihui <span class="zh">彭志辉</span></div>
+          <div class="pcard-role">Co-founder &amp; CTO · AgiBot (Zhiyuan Robotics)</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/wang-he" data-country="China" data-category="Robotics &amp; Autonomy" data-name="wang he 王鹤 galbot / peking university">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">WH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 083 ]</div>
+          <div class="pcard-name grotesk">Wang He <span class="zh">王鹤</span></div>
+          <div class="pcard-role">Founder &amp; CTO; Professor · Galbot / Peking University</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/he-xiaopeng" data-country="China" data-category="Robotics &amp; Autonomy" data-name="he xiaopeng 何小鹏 xpeng">
+        <div class="pcard-img" data-wiki="He Xiaopeng"><div class="ph" style="font-size:2rem">HX</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 084 ]</div>
+          <div class="pcard-name grotesk">He Xiaopeng <span class="zh">何小鹏</span></div>
+          <div class="pcard-role">Chairman &amp; CEO · XPeng</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/li-xiang" data-country="China" data-category="Robotics &amp; Autonomy" data-name="li xiang 李想 li auto">
+        <div class="pcard-img" data-wiki="Li Xiang (entrepreneur)"><div class="ph" style="font-size:2rem">LX</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 085 ]</div>
+          <div class="pcard-name grotesk">Li Xiang <span class="zh">李想</span></div>
+          <div class="pcard-role">Founder &amp; CEO · Li Auto</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/william-li" data-country="China" data-category="Robotics &amp; Autonomy" data-name="william li (li bin) 李斌 nio">
+        <div class="pcard-img" data-wiki="William Li (entrepreneur)"><div class="ph" style="font-size:2rem">WL</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 086 ]</div>
+          <div class="pcard-name grotesk">William Li (Li Bin) <span class="zh">李斌</span></div>
+          <div class="pcard-role">Founder &amp; CEO · NIO</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/james-peng" data-country="China" data-category="Robotics &amp; Autonomy" data-name="james peng 彭军 pony.ai">
+        <div class="pcard-img" data-wiki="James Peng"><div class="ph" style="font-size:2rem">JP</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 087 ]</div>
+          <div class="pcard-name grotesk">James Peng <span class="zh">彭军</span></div>
+          <div class="pcard-role">CEO &amp; co-founder · Pony.ai</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/tony-han" data-country="China" data-category="Robotics &amp; Autonomy" data-name="tony han 韩旭 weride">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">TH</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 088 ]</div>
+          <div class="pcard-name grotesk">Tony Han <span class="zh">韩旭</span></div>
+          <div class="pcard-role">Founder &amp; CEO · WeRide</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/yu-kai" data-country="China" data-category="Robotics &amp; Autonomy" data-name="yu kai 余凯 horizon robotics">
+        <div class="pcard-img" data-wiki="Yu Kai (scientist)"><div class="ph" style="font-size:2rem">YK</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 089 ]</div>
+          <div class="pcard-name grotesk">Yu Kai <span class="zh">余凯</span></div>
+          <div class="pcard-role">Founder &amp; CEO · Horizon Robotics</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/fu-sheng" data-country="China" data-category="Robotics &amp; Autonomy" data-name="fu sheng 傅盛 cheetah mobile / orionstar">
+        <div class="pcard-img" data-wiki="Fu Sheng (entrepreneur)"><div class="ph" style="font-size:2rem">FS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 090 ]</div>
+          <div class="pcard-name grotesk">Fu Sheng <span class="zh">傅盛</span></div>
+          <div class="pcard-role">CEO · Cheetah Mobile / OrionStar</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Robotics &amp; Autonomy</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/chen-tianshi" data-country="China" data-category="Chips &amp; Research" data-name="chen tianshi 陈天石 cambricon">
+        <div class="pcard-img" data-wiki="Chen Tianshi"><div class="ph" style="font-size:2rem">CT</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 091 ]</div>
+          <div class="pcard-name grotesk">Chen Tianshi <span class="zh">陈天石</span></div>
+          <div class="pcard-role">Founder &amp; CEO · Cambricon</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/zhou-bowen" data-country="China" data-category="Chips &amp; Research" data-name="zhou bowen 周伯文 shanghai ai laboratory">
+        <div class="pcard-img" data-wiki="Zhou Bowen"><div class="ph" style="font-size:2rem">ZB</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 092 ]</div>
+          <div class="pcard-name grotesk">Zhou Bowen <span class="zh">周伯文</span></div>
+          <div class="pcard-role">Director · Shanghai AI Laboratory</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/harry-shum" data-country="China" data-category="Chips &amp; Research" data-name="harry shum (shen xiangyang) 沈向洋 idea research">
+        <div class="pcard-img" data-wiki="Harry Shum"><div class="ph" style="font-size:2rem">HS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 093 ]</div>
+          <div class="pcard-name grotesk">Harry Shum (Shen Xiangyang) <span class="zh">沈向洋</span></div>
+          <div class="pcard-role">Chairman · IDEA Research</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/zhang-yaqin" data-country="China" data-category="Chips &amp; Research" data-name="zhang yaqin 张亚勤 tsinghua university">
+        <div class="pcard-img" data-wiki="Ya-Qin Zhang"><div class="ph" style="font-size:2rem">ZY</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 094 ]</div>
+          <div class="pcard-name grotesk">Zhang Yaqin <span class="zh">张亚勤</span></div>
+          <div class="pcard-role">Dean, Institute for AI Industry Research · Tsinghua University</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/andrew-yao" data-country="China" data-category="Chips &amp; Research" data-name="andrew chi-chih yao 姚期智 tsinghua university">
+        <div class="pcard-img" data-wiki="Andrew Yao"><div class="ph" style="font-size:2rem">AC</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 095 ]</div>
+          <div class="pcard-name grotesk">Andrew Chi-Chih Yao <span class="zh">姚期智</span></div>
+          <div class="pcard-role">Turing Award laureate; Dean · Tsinghua University</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/xu-li" data-country="China" data-category="Chips &amp; Research" data-name="xu li 徐立 sensetime">
+        <div class="pcard-img" data-wiki="Xu Li (businessman)"><div class="ph" style="font-size:2rem">XL</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 096 ]</div>
+          <div class="pcard-name grotesk">Xu Li <span class="zh">徐立</span></div>
+          <div class="pcard-role">CEO &amp; co-founder · SenseTime</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/yin-qi" data-country="China" data-category="Chips &amp; Research" data-name="yin qi 印奇 megvii">
+        <div class="pcard-img" data-wiki="Yin Qi"><div class="ph" style="font-size:2rem">YQ</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 097 ]</div>
+          <div class="pcard-name grotesk">Yin Qi <span class="zh">印奇</span></div>
+          <div class="pcard-role">CEO &amp; co-founder · Megvii</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/yan-shuicheng" data-country="China" data-category="Chips &amp; Research" data-name="yan shuicheng 颜水成 kunlun tech (skywork)">
+        <div class="pcard-img" data-wiki="Yan Shuicheng"><div class="ph" style="font-size:2rem">YS</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 098 ]</div>
+          <div class="pcard-name grotesk">Yan Shuicheng <span class="zh">颜水成</span></div>
+          <div class="pcard-role">Chief Scientist · Kunlun Tech (Skywork)</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/dai-wenyuan" data-country="China" data-category="Chips &amp; Research" data-name="dai wenyuan 戴文渊 4paradigm">
+        <div class="pcard-img" data-wiki=""><div class="ph" style="font-size:2rem">DW</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 099 ]</div>
+          <div class="pcard-name grotesk">Dai Wenyuan <span class="zh">戴文渊</span></div>
+          <div class="pcard-role">Founder &amp; CEO · 4Paradigm</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+      <a class="pcard" href="/ai-innovators/qi-lu" data-country="China" data-category="Chips &amp; Research" data-name="qi lu 陆奇 miracleplus">
+        <div class="pcard-img" data-wiki="Qi Lu (computer scientist)"><div class="ph" style="font-size:2rem">QL</div></div>
+        <div class="pcard-body">
+          <div class="pcard-num">[ 100 ]</div>
+          <div class="pcard-name grotesk">Qi Lu <span class="zh">陆奇</span></div>
+          <div class="pcard-role">Founder &amp; CEO · MiraclePlus</div>
+          <div class="pcard-tags"><span class="tag">China</span><span class="tag">Chips &amp; Research</span></div>
+        </div>
+      </a>
+    </div>
+  </main>
+  <footer>Headshots load live from Wikipedia / Wikimedia Commons and remain the property of their photographers — each profile page carries the full credit and license. · <a href="/">christopherrathbun.com</a></footer>
+  <script>
+/* WikiPhoto — loads freely licensed lead images + photographer credits
+   live from the Wikipedia / Wikimedia Commons APIs (CORS via origin=*).
+   Images stay hotlinked from upload.wikimedia.org; nothing is rehosted. */
+var WikiPhoto = (function () {
+  var WP = 'https://en.wikipedia.org/w/api.php';
+  var COMMONS = 'https://commons.wikimedia.org/w/api.php';
+
+  function api(base, params) {
+    var qs = 'action=query&format=json&origin=*';
+    for (var k in params) qs += '&' + k + '=' + encodeURIComponent(params[k]);
+    return fetch(base + '?' + qs).then(function (r) { return r.json(); });
+  }
+
+  // Resolve requested titles through the API's normalization + redirect maps.
+  function titleMap(query) {
+    var fwd = {};
+    (query.normalized || []).forEach(function (n) { fwd[n.from] = n.to; });
+    (query.redirects || []).forEach(function (n) { fwd[n.from] = n.to; });
+    return function (t) {
+      var seen = {};
+      while (fwd[t] && !seen[t]) { seen[t] = 1; t = fwd[t]; }
+      return t;
+    };
+  }
+
+  function attach(slot, url, alt) {
+    var img = new Image();
+    img.className = 'headshot';
+    img.alt = alt || '';
+    img.referrerPolicy = 'no-referrer';
+    img.onload = function () { img.classList.add('loaded'); };
+    img.onerror = function () { img.remove(); };
+    img.src = url;
+    img.style.position = 'absolute';
+    img.style.inset = '0';
+    slot.style.position = 'relative';
+    slot.appendChild(img);
+  }
+
+  function stripHtml(html) {
+    var d = document.createElement('div');
+    d.innerHTML = html;
+    var t = (d.textContent || '').replace(/\s+/g, ' ').trim();
+    return t.length > 80 ? t.slice(0, 77) + '…' : t;
+  }
+
+  /* Index grid: batch-load thumbnails, ≤50 titles per request. */
+  function loadThumbs(slots, size) {
+    var byTitle = {};
+    slots.forEach(function (s) { (byTitle[s.dataset.wiki] = byTitle[s.dataset.wiki] || []).push(s); });
+    var titles = Object.keys(byTitle);
+    for (var i = 0; i < titles.length; i += 50) {
+      (function (chunk) {
+        api(WP, { titles: chunk.join('|'), prop: 'pageimages', piprop: 'thumbnail', pithumbsize: size, redirects: 1 })
+          .then(function (data) {
+            if (!data.query) return;
+            var resolve = titleMap(data.query);
+            var pages = {};
+            Object.keys(data.query.pages || {}).forEach(function (id) {
+              var p = data.query.pages[id];
+              if (p.thumbnail) pages[p.title] = p.thumbnail.source;
+            });
+            chunk.forEach(function (t) {
+              var url = pages[resolve(t)];
+              if (url) byTitle[t].forEach(function (slot) { attach(slot, url, t); });
+            });
+          })
+          .catch(function () { /* placeholders already visible */ });
+      })(titles.slice(i, i + 50));
+    }
+  }
+
+  /* Person page: load a large portrait plus artist/license credit. */
+  function loadPortrait(box, creditEl, googleUrl) {
+    var title = box.dataset.wiki;
+    var fallback = 'No freely licensed photo found — <a href="' + googleUrl + '" target="_blank" rel="noopener">search Google Images ↗</a>';
+    if (!title) { creditEl.innerHTML = fallback; return; }
+
+    api(WP, { titles: title, prop: 'pageimages', piprop: 'thumbnail|name', pithumbsize: 800, redirects: 1 })
+      .then(function (data) {
+        var pages = (data.query && data.query.pages) || {};
+        var page = pages[Object.keys(pages)[0]];
+        if (!page || !page.thumbnail) { creditEl.innerHTML = fallback; return; }
+        attach(box, page.thumbnail.source, title);
+        return credit(page.pageimage, creditEl);
+      })
+      .catch(function () { creditEl.innerHTML = fallback; });
+
+    function credit(fileName, el) {
+      if (!fileName) { el.textContent = 'Photo via Wikipedia'; return; }
+      var params = {
+        titles: 'File:' + fileName,
+        prop: 'imageinfo',
+        iiprop: 'extmetadata|url',
+        iiextmetadatafilter: 'Artist|LicenseShortName|LicenseUrl'
+      };
+      return api(COMMONS, params).then(function (data) {
+        var pages = (data.query && data.query.pages) || {};
+        var key = Object.keys(pages)[0];
+        if (key === '-1' || !pages[key].imageinfo) {
+          // file hosted on en.wikipedia rather than Commons
+          return api(WP, params).then(function (d2) {
+            var p2 = (d2.query && d2.query.pages) || {};
+            var k2 = Object.keys(p2)[0];
+            render(k2 !== '-1' && p2[k2].imageinfo ? p2[k2].imageinfo[0] : null, 'Wikipedia');
+          });
+        }
+        render(pages[key].imageinfo[0], 'Wikimedia Commons');
+      }).catch(function () { el.textContent = 'Photo via Wikimedia Commons'; });
+
+      function render(info, host) {
+        if (!info) { el.textContent = 'Photo via ' + host; return; }
+        var md = info.extmetadata || {};
+        var artist = md.Artist ? stripHtml(md.Artist.value) : 'Unknown photographer';
+        var lic = md.LicenseShortName ? md.LicenseShortName.value : '';
+        var licUrl = md.LicenseUrl ? md.LicenseUrl.value : '';
+        var filePage = info.descriptionurl || '#';
+        var html = 'Photo: <a href="' + filePage + '" target="_blank" rel="noopener">' + artist + '</a>';
+        if (lic) html += ' · ' + (licUrl ? '<a href="' + licUrl + '" target="_blank" rel="noopener">' + lic + '</a>' : lic);
+        html += ' · via ' + host;
+        el.innerHTML = html;
+      }
+    }
+  }
+
+  return { loadThumbs: loadThumbs, loadPortrait: loadPortrait };
+})();
+
+  (function(){
+    var state={country:'',category:'',q:''};
+    var cards=[].slice.call(document.querySelectorAll('.pcard'));
+    function apply(){
+      var n=0;
+      cards.forEach(function(c){
+        var ok=(!state.country||c.dataset.country===state.country)&&(!state.category||c.dataset.category===state.category)&&(!state.q||c.dataset.name.indexOf(state.q)!==-1);
+        c.classList.toggle('hidden',!ok); if(ok)n++;
+      });
+      document.getElementById('count').textContent=n+' / '+cards.length;
+    }
+    [].forEach.call(document.querySelectorAll('.fbtn'),function(b){
+      b.addEventListener('click',function(){
+        state[b.dataset.f]=b.dataset.v;
+        [].forEach.call(document.querySelectorAll('.fbtn[data-f='+b.dataset.f+']'),function(x){x.classList.toggle('on',x===b);});
+        apply();
+      });
+    });
+    document.getElementById('q').addEventListener('input',function(e){state.q=e.target.value.toLowerCase().trim();apply();});
+    // lazy-load headshot thumbnails in batches via the Wikipedia API
+    var slots=[].slice.call(document.querySelectorAll('.pcard-img[data-wiki]')).filter(function(s){return s.dataset.wiki;});
+    WikiPhoto.loadThumbs(slots,400);
+  })();
+  </script>
+</body>
+</html>
