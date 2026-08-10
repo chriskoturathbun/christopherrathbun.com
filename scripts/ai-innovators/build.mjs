@@ -1,13 +1,16 @@
 #!/usr/bin/env node
-// Generates the static /ai-innovators section from people.json.
+// Generates the static AI-innovators section from people.json.
 // Usage: node scripts/ai-innovators/build.mjs
+//   BASE=/20under20 OUT=/path/to/site/20under20 node scripts/ai-innovators/build.mjs
+// BASE is the URL mount path (default /ai-innovators); OUT is the output dir.
 import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const people = JSON.parse(readFileSync(join(here, 'people.json'), 'utf8'));
-const outDir = join(here, '..', '..', 'public', 'ai-innovators');
+const BASE = (process.env.BASE || '/ai-innovators').replace(/\/$/, '');
+const outDir = process.env.OUT || join(here, '..', '..', 'public', 'ai-innovators');
 mkdirSync(outDir, { recursive: true });
 // clear stale generated pages (keep nothing hand-authored in this dir)
 for (const f of readdirSync(outDir)) rmSync(join(outDir, f), { recursive: true });
@@ -49,7 +52,7 @@ const PHOTO_JS = readFileSync(join(here, 'wiki-photo.js'), 'utf8');
 
 function cardHTML(p, i) {
   const num = String(i + 1).padStart(3, '0');
-  return `      <a class="pcard" href="/ai-innovators/${p.slug}" data-country="${p.country}" data-category="${esc(p.category)}" data-name="${esc((p.name + ' ' + (p.zh || '') + ' ' + p.org).toLowerCase())}">
+  return `      <a class="pcard" href="${BASE}/${p.slug}" data-country="${p.country}" data-category="${esc(p.category)}" data-name="${esc((p.name + ' ' + (p.zh || '') + ' ' + p.org).toLowerCase())}">
         <div class="pcard-img" data-wiki="${p.wiki ? esc(p.wiki) : ''}"><div class="ph" style="font-size:2rem">${esc(initials(p.name))}</div></div>
         <div class="pcard-body">
           <div class="pcard-num">[ ${num} ]</div>
@@ -188,7 +191,7 @@ h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(2rem,5vw,3.4rem);font-
 <body>
   <nav><a class="nav-name" href="/">Christopher Rathbun</a><span class="nav-right">Global Innovators in Business · Longlist</span></nav>
   <main class="wrap">
-    <a class="back" href="/ai-innovators/">← All 100 innovators</a>
+    <a class="back" href="${BASE}/">← All 100 innovators</a>
     <div class="layout">
       <div>
         <div class="photo" id="photoBox" data-wiki="${p.wiki ? esc(p.wiki) : ''}"><div class="ph" style="font-size:4.5rem">${esc(initials(p.name))}</div></div>
@@ -208,11 +211,11 @@ h1{font-family:'Space Grotesk',sans-serif;font-size:clamp(2rem,5vw,3.4rem);font-
       </div>
     </div>
     <div class="pn">
-      <a href="/ai-innovators/${prev.slug}">← ${esc(prev.name)}</a>
-      <a href="/ai-innovators/${next.slug}">${esc(next.name)} →</a>
+      <a href="${BASE}/${prev.slug}">← ${esc(prev.name)}</a>
+      <a href="${BASE}/${next.slug}">${esc(next.name)} →</a>
     </div>
   </main>
-  <footer>Photo loads live from Wikipedia / Wikimedia Commons; it remains the property of its photographer under the license shown above. · <a href="/ai-innovators/">AI Innovators index</a></footer>
+  <footer>Photo loads live from Wikipedia / Wikimedia Commons; it remains the property of its photographer under the license shown above. · <a href="${BASE}/">AI Innovators index</a></footer>
   <script>
 ${PHOTO_JS}
   WikiPhoto.loadPortrait(document.getElementById('photoBox'), document.getElementById('credit'), ${JSON.stringify(googleImages(p))});
@@ -224,5 +227,5 @@ ${PHOTO_JS}
 
 people.forEach((p, i) => writeFileSync(join(outDir, `${p.slug}.html`), personHTML(p, i)));
 
-console.log(`Built ${people.length} person pages + index into public/ai-innovators/`);
+console.log(`Built ${people.length} person pages + index into ${outDir} (base ${BASE})`);
 console.log(`${people.filter(p => p.wiki).length} with Wikipedia photos, ${people.filter(p => !p.wiki).length} with placeholder fallback`);
