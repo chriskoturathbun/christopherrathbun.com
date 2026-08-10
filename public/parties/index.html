@@ -372,7 +372,11 @@
       window._clerk = Clerk;
       document.getElementById('brand-right').innerHTML = '<button class="btn btn-ghost btn-sm" id="signout-btn">Sign out</button>';
       document.getElementById('signout-btn').addEventListener('click', function () { Clerk.signOut().then(function () { location.reload(); }); });
-      loadEvents();
+      // Deep link from an invite page: /parties?e=<eventId> opens that event
+      // right after sign-in (guest pages link here via "Sign in to manage").
+      var deepId = new URLSearchParams(location.search).get('e');
+      await loadEvents();
+      if (deepId && /^[A-Za-z0-9]+$/.test(deepId)) openDetail(deepId);
     }
 
     function renderMsg(msg) {

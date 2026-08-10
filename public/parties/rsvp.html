@@ -187,6 +187,8 @@
             '<div class="extra" id="extra"></div>') +
           (state.done ? '<div style="margin-top:14px"><button class="btn btn-ghost btn-sm" id="change-btn">Change my RSVP</button></div>' : '') +
           '<p class="privacy">No account needed. Your info is only used for this event — nothing else, ever.</p>' +
+          '<p class="privacy" style="margin-top:6px">Hosting this party? ' +
+            '<a style="color:var(--accent)" href="https://christopherrathbun.com/parties?e=' + esc(ev.id || '') + '">Sign in to manage it</a>.</p>' +
         '</div>' +
         datePollHtml() +
         guestListHtml() +

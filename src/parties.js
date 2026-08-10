@@ -356,6 +356,7 @@ async function loadHostEvent(env, eventId, host) {
 // Public projection of an event (never leaks host ids or contact info).
 function publicEvent(ev) {
   return {
+    id: ev.id,
     title: ev.title,
     emoji: ev.emoji,
     description: ev.description,
