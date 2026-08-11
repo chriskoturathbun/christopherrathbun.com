@@ -662,7 +662,9 @@
             (g.rsvp === 'waitlist' ? ' <button class="copy-chip" style="font-size:12px;padding:4px 10px" data-admit="' + esc(g.id) + '">Admit</button>' : '') + '</td>' +
           '<td>' + (g.note ? esc(g.note) : '<span class="muted">—</span>') + '</td>' +
           '<td>' + (g.invited_at ? '<span class="muted">sent</span>' : '<span class="muted">not sent</span>') + '</td>' +
-          '<td style="white-space:nowrap"><button class="g-del" data-copy="' + esc(g.link) + '" title="Copy their personal link">🔗</button>' +
+          '<td style="white-space:nowrap">' +
+          ((g.phone_e164 || g.email) ? '<button class="g-del" data-send="' + esc(g.id) + '" data-gname="' + esc(g.name || 'this guest') + '" title="' + (g.invited_at ? 'Resend their invite' : 'Send their invite now — just this guest') + '">📨</button>' : '') +
+          '<button class="g-del" data-copy="' + esc(g.link) + '" title="Copy their personal link">🔗</button>' +
           '<button class="g-del" data-gid="' + esc(g.id) + '" title="Remove guest">✕</button></td>' +
         '</tr>';
       }).join('');
@@ -849,6 +851,20 @@
       });
       Array.prototype.forEach.call(document.querySelectorAll('[data-admit]'), function (el) {
         el.addEventListener('click', function () { admitGuest(ev.id, el.getAttribute('data-admit')); });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-send]'), function (el) {
+        el.addEventListener('click', async function () {
+          if (!confirm('Send the invite to ' + el.getAttribute('data-gname') + ' now? Just this one guest gets it.')) return;
+          try {
+            var res = await authFetch('/parties/api/events/' + ev.id + '/send', {
+              method: 'POST', body: JSON.stringify({ kind: 'invite', guestIds: [el.getAttribute('data-send')] }),
+            });
+            var data = await res.json();
+            if (!data.ok) { toast(data.error || 'Could not send.'); return; }
+            toast('Invite sent to ' + el.getAttribute('data-gname') + '.');
+            openDetail(ev.id);
+          } catch (e) { toast('Network error — try again.'); }
+        });
       });
       Array.prototype.forEach.call(document.querySelectorAll('[data-cid]'), function (el) {
         el.addEventListener('click', function () { deleteComment(ev.id, el.getAttribute('data-cid')); });
