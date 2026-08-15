@@ -199,6 +199,7 @@
             '<a style="color:var(--accent)" href="https://christopherrathbun.com/parties?e=' + esc(ev.id || '') + '">Sign in to manage it</a>.</p>' +
         '</div>' +
         datePollHtml() +
+        surveyHtml() +
         guestListHtml() +
         commentsHtml();
       root.innerHTML = html;
@@ -214,7 +215,68 @@
         renderExtra();
       }
       bindDatePoll();
+      bindSurvey();
       bindSocial();
+    }
+
+    /* ---- Event survey (the host is asking questions / running a vote) ---- */
+    function surveyHtml() {
+      var sv = state.survey;
+      if (!sv || !sv.questions || !sv.questions.length) return '';
+      var canAnswer = !!commentToken();
+      var body = sv.questions.map(function (q) {
+        if (q.kind === 'choice') {
+          var max = Math.max.apply(null, [1].concat(q.counts || []));
+          return '<div style="padding:12px 0 4px"><strong style="font-size:15px">' + esc(q.prompt) + '</strong>' +
+            (q.options || []).map(function (o, i) {
+              var n = q.counts ? (q.counts[i] || 0) : null;
+              return '<label class="poll-opt" style="cursor:pointer">' +
+                (canAnswer ? '<input type="radio" name="sq-' + esc(q.id) + '" value="' + esc(o) + '"' + (q.my_answer === o ? ' checked' : '') + '>' : '') +
+                '<span style="min-width:140px">' + esc(o) + '</span>' +
+                (n !== null ? '<span class="poll-bar" style="width:' + Math.round((n / max) * 100) + 'px"></span><span class="muted">' + n + '</span>' : '') +
+                '</label>';
+            }).join('') + '</div>';
+        }
+        return '<div class="field" style="margin-top:12px"><label style="text-transform:none;letter-spacing:0;font-size:15px;color:var(--text);font-weight:700">' + esc(q.prompt) + '</label>' +
+          (canAnswer
+            ? '<input type="text" maxlength="500" class="sq-text" data-q="' + esc(q.id) + '" value="' + esc(q.my_answer || '') + '" placeholder="Your answer">'
+            : '<p class="muted" style="font-size:14px;margin:4px 0 0">RSVP to answer.</p>') +
+          '</div>';
+      }).join('');
+      return '<div class="glass side-card"><h3>📊 ' + (sv.answered ? 'The vote so far' : 'Your host wants a vote') + '</h3>' +
+        body +
+        (canAnswer
+          ? '<button class="btn btn-sm" id="survey-save" style="margin-top:14px">' + (sv.answered ? 'Update my answers' : 'Submit answers') + '</button>' +
+            (sv.answered ? '' : '<p class="muted" style="font-size:13px;margin:10px 0 0">Results show once you\'ve answered.</p>')
+          : '<p class="muted" style="font-size:13px;margin:12px 0 0">RSVP first, then vote.</p>') +
+        '</div>';
+    }
+    function bindSurvey() {
+      var btn = document.getElementById('survey-save');
+      if (!btn) return;
+      btn.addEventListener('click', async function () {
+        var answers = {};
+        state.survey.questions.forEach(function (q) {
+          if (q.kind === 'choice') {
+            var sel = document.querySelector('input[name="sq-' + q.id + '"]:checked');
+            if (sel) answers[q.id] = sel.value;
+          } else {
+            var inp = document.querySelector('.sq-text[data-q="' + q.id + '"]');
+            if (inp && inp.value.trim()) answers[q.id] = inp.value.trim();
+          }
+        });
+        if (!Object.keys(answers).length) { toast('Pick or type at least one answer first.'); return; }
+        btn.disabled = true; btn.textContent = 'Saving…';
+        try {
+          var res = await fetch('/parties/api/survey/' + commentToken(), {
+            method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ answers: answers }),
+          });
+          var data = await res.json();
+          if (!data.ok) { toast(data.error || 'Could not save.'); }
+          else { state.survey = data.survey; toast('Answers in — thanks! 🗳️'); render(); return; }
+        } catch (e) { toast('Network hiccup — try again.'); }
+        btn.disabled = false; btn.textContent = 'Submit answers';
+      });
     }
 
     /* ---- Date poll (host is polling for the best date) ---- */
@@ -442,6 +504,7 @@
       state.maybeCount = data.maybe_count || 0;
       state.comments = data.comments || [];
       state.datePoll = data.date_poll || null;
+      state.survey = data.survey || null;
       state.plusOnes = (data.guest && data.guest.plus_ones) || 0;
       state.rsvp = null;
       if (!keepDone) state.done = null;

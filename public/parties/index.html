@@ -727,6 +727,46 @@
           '<div class="hint">Picking a date locks it in as the event time and closes the poll.</div>' +
         '</div>' : '') +
 
+        '<div class="glass sec-card">' +
+          '<h3>📊 Survey — ask your guests anything</h3>' +
+          (function () {
+            var sv = state.detail.survey || [];
+            var results = sv.map(function (q) {
+              if (q.kind === 'choice') {
+                var max = Math.max.apply(null, [1].concat(q.counts || []));
+                return '<div style="padding:12px 0;border-top:1px solid rgba(255,255,255,0.07)">' +
+                  '<strong>' + esc(q.prompt) + '</strong> <span class="muted" style="font-size:13px">· ' + q.answered + ' answered</span>' +
+                  (q.options || []).map(function (o, i) {
+                    var n = (q.counts || [])[i] || 0;
+                    return '<div class="poll-opt"><span style="min-width:160px">' + esc(o) + '</span>' +
+                      '<span class="poll-bar" style="width:' + Math.round((n / max) * 140) + 'px"></span><span class="muted">' + n + '</span></div>';
+                  }).join('') + '</div>';
+              }
+              return '<div style="padding:12px 0;border-top:1px solid rgba(255,255,255,0.07)">' +
+                '<strong>' + esc(q.prompt) + '</strong> <span class="muted" style="font-size:13px">· ' + q.answered + ' answered</span>' +
+                ((q.responses || []).map(function (r) {
+                  return '<div style="font-size:14px;padding:4px 0"><span class="muted">' + esc(r.name) + ':</span> ' + esc(r.value) + '</div>';
+                }).join('') || '<div class="muted" style="font-size:14px;padding:4px 0">No answers yet.</div>') + '</div>';
+            }).join('');
+            return (sv.length ? results : '<p class="muted" style="margin:0 0 10px;font-size:14px">No survey yet — add a question below. Great for end-of-night votes like "which apartment hosted it best?"</p>') +
+              '<div id="sq-editor" style="margin-top:14px">' +
+              sv.map(function (q) {
+                return '<div class="sq-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">' +
+                  '<input type="text" class="sq-prompt" maxlength="200" value="' + esc(q.prompt) + '" placeholder="Question" style="flex:2;min-width:180px">' +
+                  '<select class="sq-kind" style="width:auto"><option value="choice"' + (q.kind === 'choice' ? ' selected' : '') + '>Multiple choice</option><option value="text"' + (q.kind === 'text' ? ' selected' : '') + '>Free text</option></select>' +
+                  '<input type="text" class="sq-options" value="' + esc((q.options || []).join(', ')) + '" placeholder="Options, comma-separated" style="flex:2;min-width:180px' + (q.kind === 'text' ? ';display:none' : '') + '">' +
+                  '<button type="button" class="g-del sq-del" title="Remove question">✕</button></div>';
+              }).join('') +
+              '</div>' +
+              '<div class="head-actions" style="margin-top:6px">' +
+                '<button class="copy-chip" id="sq-add">+ Add question</button>' +
+                '<button class="btn btn-sm" id="sq-save">Save survey</button>' +
+                (sv.length ? '<button class="btn btn-ghost btn-sm" id="sq-blast">📣 Text everyone to vote</button>' : '') +
+              '</div>' +
+              '<div class="hint">Guests answer right on their invite page. They see the tallies after they vote; you see everything here, including who said what.</div>';
+          })() +
+        '</div>' +
+
         '<div class="glass sec-card" id="settings-card" style="display:none">' +
           '<h3>Event settings</h3>' +
           '<div class="field"><label>Page theme</label><div class="emoji-row">' + themeRow(ev.cover_theme || 'confetti') + '</div></div>' +
@@ -856,6 +896,50 @@
       Array.prototype.forEach.call(document.querySelectorAll('[data-admit]'), function (el) {
         el.addEventListener('click', function () { admitGuest(ev.id, el.getAttribute('data-admit')); });
       });
+      // --- Survey editor bindings ---
+      function sqRowHtml() {
+        return '<div class="sq-row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">' +
+          '<input type="text" class="sq-prompt" maxlength="200" placeholder="Question — e.g. Which apartment hosted it best?" style="flex:2;min-width:180px">' +
+          '<select class="sq-kind" style="width:auto"><option value="choice" selected>Multiple choice</option><option value="text">Free text</option></select>' +
+          '<input type="text" class="sq-options" placeholder="Options, comma-separated — e.g. Bryan\'s, Jeff\'s, Chris\'s" style="flex:2;min-width:180px">' +
+          '<button type="button" class="g-del sq-del" title="Remove question">✕</button></div>';
+      }
+      function bindSqRows() {
+        Array.prototype.forEach.call(document.querySelectorAll('#sq-editor .sq-row'), function (row) {
+          var kind = row.querySelector('.sq-kind'), opts = row.querySelector('.sq-options');
+          kind.onchange = function () { opts.style.display = kind.value === 'text' ? 'none' : ''; };
+          row.querySelector('.sq-del').onclick = function () { row.remove(); };
+        });
+      }
+      bindSqRows();
+      document.getElementById('sq-add').addEventListener('click', function () {
+        document.getElementById('sq-editor').insertAdjacentHTML('beforeend', sqRowHtml());
+        bindSqRows();
+      });
+      document.getElementById('sq-save').addEventListener('click', async function () {
+        var questions = Array.prototype.map.call(document.querySelectorAll('#sq-editor .sq-row'), function (row) {
+          return {
+            prompt: row.querySelector('.sq-prompt').value,
+            kind: row.querySelector('.sq-kind').value,
+            options: row.querySelector('.sq-options').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean),
+          };
+        }).filter(function (q) { return q.prompt.trim(); });
+        var hadAnswers = (state.detail.survey || []).some(function (q) { return q.answered > 0; });
+        if (hadAnswers && !confirm('Saving replaces the survey and clears the answers collected so far. Continue?')) return;
+        try {
+          var res = await authFetch('/parties/api/events/' + ev.id + '/survey', { method: 'POST', body: JSON.stringify({ questions: questions }) });
+          var data = await res.json();
+          if (!data.ok) { toast(data.error || 'Could not save the survey.'); return; }
+          toast(questions.length ? 'Survey saved — guests can vote from their invite page.' : 'Survey removed.');
+          openDetail(ev.id);
+        } catch (e) { toast('Network error — try again.'); }
+      });
+      var sqBlast = document.getElementById('sq-blast');
+      if (sqBlast) sqBlast.addEventListener('click', function () {
+        if (!confirm('Text/email everyone (except decliners): "📊 Your host wants a vote — open your invite link to answer the survey"?')) return;
+        sendBatched(ev.id, 'update', '📊 Your host wants a vote — open your invite link to answer the survey');
+      });
+
       function selectedIds() {
         return Array.prototype.map.call(document.querySelectorAll('.g-sel:checked'), function (el) {
           return el.getAttribute('data-sel');

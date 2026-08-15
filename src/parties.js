@@ -17,6 +17,7 @@ const MAX_COMMENTS_PER_GUEST = 20;
 const AUTO_REMINDER_BATCH = 12;
 
 const RSVP_CHOICES = ['yes', 'maybe', 'no'];
+const MAX_SURVEY_QUESTIONS = 10;
 export const COVER_THEMES = ['confetti', 'sunset', 'neon', 'ocean', 'garden', 'gold', 'midnight', 'cherry'];
 export const TITLE_FONTS = ['classic', 'eclectic', 'fancy', 'literary'];
 const MAX_DATE_OPTIONS = 8;
@@ -266,6 +267,24 @@ async function ensureSchema(env) {
       email TEXT NOT NULL,
       added_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (event_id, email))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS party_survey_questions (
+      id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL,
+      idx INTEGER NOT NULL DEFAULT 0,
+      prompt TEXT NOT NULL,
+      kind TEXT NOT NULL DEFAULT 'choice',
+      options TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_party_survey_q_event ON party_survey_questions (event_id, idx)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS party_survey_answers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      question_id TEXT NOT NULL,
+      event_id TEXT NOT NULL,
+      guest_id TEXT NOT NULL,
+      value TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE (question_id, guest_id))`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_party_survey_a_event ON party_survey_answers (event_id)`),
     db.prepare(`CREATE TABLE IF NOT EXISTS party_date_options (
       id TEXT PRIMARY KEY,
       event_id TEXT NOT NULL,
@@ -583,6 +602,7 @@ async function handleEventDetail(request, env, eventId) {
     comments: await commentList(env, eventId),
     cohosts: (cohosts.results || []).map(c => c.email),
     date_poll: await datePoll(env, ev, null),
+    survey: await surveyForHost(env, eventId),
   });
 }
 
@@ -908,6 +928,145 @@ async function serveUploadedImage(env, key) {
   });
 }
 
+// --- Event survey ("vote for the best apartment") ---
+
+// Validate host-authored survey questions. Returns clean rows or an error.
+export function sanitizeSurveyQuestions(raw) {
+  if (!Array.isArray(raw)) return { error: 'questions must be an array' };
+  const out = [];
+  for (const q of raw.slice(0, MAX_SURVEY_QUESTIONS)) {
+    const prompt = String(q?.prompt || '').trim().slice(0, 200);
+    if (!prompt) continue;
+    const kind = q?.kind === 'text' ? 'text' : 'choice';
+    let options = null;
+    if (kind === 'choice') {
+      const opts = (Array.isArray(q.options) ? q.options : [])
+        .map(o => String(o || '').trim().slice(0, 80)).filter(Boolean).slice(0, 12);
+      if (opts.length < 2) return { error: `"${prompt}" needs at least 2 choices` };
+      options = opts;
+    }
+    out.push({ prompt, kind, options });
+  }
+  if (!out.length) return { error: 'add at least one question' };
+  return { questions: out };
+}
+
+async function surveyForHost(env, eventId) {
+  const qs = await env.DB.prepare(
+    'SELECT * FROM party_survey_questions WHERE event_id = ? ORDER BY idx'
+  ).bind(eventId).all();
+  const questions = [];
+  for (const q of (qs.results || [])) {
+    const rows = await env.DB.prepare(
+      `SELECT a.value, g.name FROM party_survey_answers a
+       LEFT JOIN party_guests g ON g.id = a.guest_id
+       WHERE a.question_id = ? ORDER BY a.created_at`
+    ).bind(q.id).all();
+    const answers = rows.results || [];
+    const options = q.options ? JSON.parse(q.options) : null;
+    const counts = options ? options.map(o => answers.filter(a => a.value === o).length) : null;
+    questions.push({
+      id: q.id, prompt: q.prompt, kind: q.kind, options, counts,
+      responses: q.kind === 'text' ? answers.map(a => ({ name: firstName(a.name) || 'Guest', value: a.value })) : null,
+      answered: answers.length,
+    });
+  }
+  return questions;
+}
+
+// Guest view: questions + their own answers; counts only after they answer.
+async function surveyForGuest(env, ev, guestId) {
+  const qs = await env.DB.prepare(
+    'SELECT * FROM party_survey_questions WHERE event_id = ? ORDER BY idx'
+  ).bind(ev.id).all();
+  const list = qs.results || [];
+  if (!list.length) return null;
+  let mine = {};
+  if (guestId) {
+    const my = await env.DB.prepare(
+      'SELECT question_id, value FROM party_survey_answers WHERE event_id = ? AND guest_id = ?'
+    ).bind(ev.id, guestId).all();
+    for (const r of (my.results || [])) mine[r.question_id] = r.value;
+  }
+  const answered = Object.keys(mine).length > 0;
+  const questions = [];
+  for (const q of list) {
+    const options = q.options ? JSON.parse(q.options) : null;
+    let counts = null;
+    if (answered && options) {
+      const rows = await env.DB.prepare(
+        'SELECT value, COUNT(*) AS n FROM party_survey_answers WHERE question_id = ? GROUP BY value'
+      ).bind(q.id).all();
+      const byVal = {};
+      for (const r of (rows.results || [])) byVal[r.value] = r.n;
+      counts = options.map(o => byVal[o] || 0);
+    }
+    questions.push({ id: q.id, prompt: q.prompt, kind: q.kind, options, counts, my_answer: mine[q.id] || null });
+  }
+  return { questions, answered };
+}
+
+// Host replaces the survey wholesale. Existing answers are dropped — the
+// UI warns before saving over a survey that already has responses.
+async function handleSaveSurvey(request, env, eventId) {
+  const host = await requireHost(request, env);
+  if (!host) return json({ ok: false, error: 'unauthorized' }, 401);
+  const ev = await loadHostEvent(env, eventId, host);
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+
+  if (Array.isArray(body.questions) && body.questions.length === 0) {
+    await env.DB.prepare('DELETE FROM party_survey_questions WHERE event_id = ?').bind(eventId).run();
+    await env.DB.prepare('DELETE FROM party_survey_answers WHERE event_id = ?').bind(eventId).run();
+    return json({ ok: true, survey: [] });
+  }
+  const { questions, error } = sanitizeSurveyQuestions(body.questions);
+  if (error) return json({ ok: false, error }, 400);
+
+  await env.DB.prepare('DELETE FROM party_survey_questions WHERE event_id = ?').bind(eventId).run();
+  await env.DB.prepare('DELETE FROM party_survey_answers WHERE event_id = ?').bind(eventId).run();
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    await env.DB.prepare(
+      'INSERT INTO party_survey_questions (id, event_id, idx, prompt, kind, options) VALUES (?, ?, ?, ?, ?, ?)'
+    ).bind(shortId(12), eventId, i, q.prompt, q.kind, q.options ? JSON.stringify(q.options) : null).run();
+  }
+  return json({ ok: true, survey: await surveyForHost(env, eventId) });
+}
+
+// Guest submits answers with their personal token (checkbox semantics:
+// the submitted set replaces their previous answers per question).
+async function handleSurveyAnswer(request, env, token) {
+  await ensureSchema(env);
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+  const answers = body.answers && typeof body.answers === 'object' ? body.answers : {};
+
+  const g = await env.DB.prepare('SELECT * FROM party_guests WHERE token = ?').bind(token).first();
+  if (!g) return json({ ok: false, error: 'not found' }, 404);
+  const ev = await env.DB.prepare('SELECT * FROM party_events WHERE id = ?').bind(g.event_id).first();
+  if (!ev || ev.status !== 'active') return json({ ok: false, error: 'event is not active' }, 400);
+
+  const qs = await env.DB.prepare('SELECT * FROM party_survey_questions WHERE event_id = ?').bind(ev.id).all();
+  let saved = 0;
+  for (const q of (qs.results || [])) {
+    const raw = answers[q.id];
+    if (raw === undefined || raw === null || raw === '') continue;
+    const value = String(raw).trim().slice(0, 500);
+    if (!value) continue;
+    if (q.kind === 'choice') {
+      const options = q.options ? JSON.parse(q.options) : [];
+      if (!options.includes(value)) continue;
+    }
+    await env.DB.prepare(
+      `INSERT INTO party_survey_answers (question_id, event_id, guest_id, value) VALUES (?, ?, ?, ?)
+       ON CONFLICT (question_id, guest_id) DO UPDATE SET value = excluded.value, created_at = datetime('now')`
+    ).bind(q.id, ev.id, g.id, value).run();
+    saved++;
+  }
+  if (!saved) return json({ ok: false, error: 'no valid answers' }, 400);
+  return json({ ok: true, survey: await surveyForGuest(env, ev, g.id) });
+}
+
 // --- Date poll ("Can't decide when? Poll your guests") ---
 
 // Replace an event's candidate dates wholesale. Votes for options that
@@ -1041,6 +1200,7 @@ async function handleLinkLookup(env, token, url) {
     return json({
       ok: true, type: 'open', event: publicEvent(shared), at_capacity: atCapacity,
       date_poll: await datePoll(env, shared, null),
+      survey: await surveyForGuest(env, shared, null),
       ...(await guestListPayload(env, shared, seen)),
       comments: shared.allow_comments ? await commentList(env, shared.id) : [],
     });
@@ -1054,6 +1214,7 @@ async function handleLinkLookup(env, token, url) {
     ok: true, type: 'guest', event: publicEvent(ev),
     guest: { name: guest.name, rsvp: guest.rsvp, plus_ones: guest.plus_ones, note: guest.note },
     date_poll: await datePoll(env, ev, guest.id),
+    survey: await surveyForGuest(env, ev, guest.id),
     ...(await guestListPayload(env, ev, guest.rsvp !== 'pending')),
     comments: ev.allow_comments ? await commentList(env, ev.id) : [],
   });
@@ -1263,6 +1424,8 @@ export async function handleParties(request, env, url) {
   if (m && request.method === 'POST') return handlePostComment(request, env, m[1]);
   m = path.match(/^\/parties\/api\/datevote\/([A-Za-z0-9]+)$/);
   if (m && request.method === 'POST') return handleDateVote(request, env, m[1]);
+  m = path.match(/^\/parties\/api\/survey\/([A-Za-z0-9]+)$/);
+  if (m && request.method === 'POST') return handleSurveyAnswer(request, env, m[1]);
 
   // Host API (Clerk-gated).
   if (path.startsWith('/parties/api/')) {
@@ -1282,6 +1445,8 @@ export async function handleParties(request, env, url) {
     if (m && request.method === 'POST') return handleSend(request, env, m[1]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/cover$/);
     if (m && request.method === 'POST') return handleUploadCover(request, env, m[1]);
+    m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/survey$/);
+    if (m && request.method === 'POST') return handleSaveSurvey(request, env, m[1]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/date-options$/);
     if (m && request.method === 'POST') return handleSetDateOptions(request, env, m[1]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/date-options\/([A-Za-z0-9]+)\/pick$/);

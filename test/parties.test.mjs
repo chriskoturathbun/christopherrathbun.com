@@ -4,6 +4,7 @@ import {
   buildInviteSms, buildReminderSms, buildUpdateSms, buildAdmitSms,
   buildInviteEmail, buildOgMeta, firstName, COVER_THEMES,
   TITLE_FONTS, httpsUrl, rsvpClosed, imageExtFor, buildRsvpAlertEmail,
+  sanitizeSurveyQuestions,
 } from '../src/parties.js';
 
 let pass = 0, fail = 0;
@@ -143,6 +144,22 @@ const alertNo = buildRsvpAlertEmail({ guestName: 'Dana', rsvp: 'no', plusOnes: 0
 ok(alertNo.subject.includes("Dana can't make it"), 'declines phrased correctly');
 ok(!alertNo.subject.includes('(+'), 'no plus-ones on a decline');
 ok(alertNo.text.includes('0 going so far'), 'non-yes keeps neutral count line');
+
+// --- survey sanitizer ---
+let sq = sanitizeSurveyQuestions([{ prompt: 'Best apartment?', kind: 'choice', options: ["Bryan's", "Jeff's", "Chris's"] }]);
+eq(sq.questions.length, 1, 'valid choice question accepted');
+eq(sq.questions[0].options.length, 3, 'options preserved');
+sq = sanitizeSurveyQuestions([{ prompt: 'Only one option', kind: 'choice', options: ['Just this'] }]);
+ok(sq.error && sq.error.includes('at least 2'), 'single-option choice rejected');
+sq = sanitizeSurveyQuestions([{ prompt: 'Favorite moment?', kind: 'text' }]);
+eq(sq.questions[0].kind, 'text', 'text question needs no options');
+eq(sq.questions[0].options, null, 'text question has null options');
+sq = sanitizeSurveyQuestions([{ prompt: '   ', kind: 'text' }, { prompt: '', kind: 'choice' }]);
+ok(sq.error, 'all-empty survey rejected');
+sq = sanitizeSurveyQuestions([{ prompt: 'Q', kind: 'choice', options: [' a ', '', 'b ', 'a'.repeat(200)] }]);
+eq(sq.questions[0].options[0], 'a', 'options trimmed');
+ok(sq.questions[0].options[2].length <= 80, 'long option clipped');
+ok(sanitizeSurveyQuestions('nope').error, 'non-array rejected');
 
 console.log(`parties tests: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);
