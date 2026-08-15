@@ -656,7 +656,9 @@
 
       var rows = guests.map(function (g) {
         var contact = [g.phone_e164, g.email].filter(Boolean).join(' · ');
+        var reachable = !!(g.phone_e164 || g.email);
         return '<tr>' +
+          '<td style="width:28px"><input type="checkbox" class="g-sel" data-sel="' + esc(g.id) + '" style="width:auto"' + (reachable ? '' : ' disabled title="No phone or email"') + '></td>' +
           '<td>' + esc(g.name || '—') + '<div class="contact">' + esc(contact) + '</div></td>' +
           '<td>' + rsvpPill(g.rsvp) + (g.plus_ones ? ' +' + g.plus_ones : '') +
             (g.rsvp === 'waitlist' ? ' <button class="copy-chip" style="font-size:12px;padding:4px 10px" data-admit="' + esc(g.id) + '">Admit</button>' : '') + '</td>' +
@@ -784,7 +786,9 @@
           '<div class="head-actions" style="margin-top:0">' +
             '<button class="btn btn-sm" id="send-invites-btn"' + (uninvited ? '' : ' disabled') + '>Send invites (' + uninvited + ' waiting)</button>' +
             '<button class="btn btn-ghost btn-sm" id="send-reminder-btn">Send reminder to non-decliners</button>' +
+            '<button class="btn btn-ghost btn-sm" id="send-selected-btn" disabled>⏰ Remind selected (<span id="sel-count">0</span>)</button>' +
           '</div>' +
+          '<div class="hint">Tick guests in the list below, then "Remind selected" nudges just them.</div>' +
           '<div class="field" style="margin-top:16px"><label>Or blast a custom update to everyone (except decliners)</label>' +
             '<input type="text" id="blast-input" maxlength="300" placeholder="Change of plans — we start at 8pm now!"></div>' +
           '<button class="btn btn-ghost btn-sm" id="blast-btn">Send update</button>' +
@@ -794,7 +798,7 @@
         '<div class="glass sec-card">' +
           '<h3>Guest list (' + guests.length + ')</h3>' +
           (guests.length
-            ? '<div class="table-scroll"><table class="guest-table"><thead><tr><th>Guest</th><th>RSVP</th><th>Note</th><th>Invite</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+            ? '<div class="table-scroll"><table class="guest-table"><thead><tr><th><input type="checkbox" id="sel-all" style="width:auto" title="Select everyone reachable"></th><th>Guest</th><th>RSVP</th><th>Note</th><th>Invite</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
             : '<p class="muted">No guests yet — paste some above.</p>') +
         '</div>' +
 
@@ -851,6 +855,30 @@
       });
       Array.prototype.forEach.call(document.querySelectorAll('[data-admit]'), function (el) {
         el.addEventListener('click', function () { admitGuest(ev.id, el.getAttribute('data-admit')); });
+      });
+      function selectedIds() {
+        return Array.prototype.map.call(document.querySelectorAll('.g-sel:checked'), function (el) {
+          return el.getAttribute('data-sel');
+        });
+      }
+      function refreshSelected() {
+        var n = selectedIds().length;
+        document.getElementById('sel-count').textContent = n;
+        document.getElementById('send-selected-btn').disabled = !n;
+      }
+      Array.prototype.forEach.call(document.querySelectorAll('.g-sel'), function (el) {
+        el.addEventListener('change', refreshSelected);
+      });
+      var selAll = document.getElementById('sel-all');
+      if (selAll) selAll.addEventListener('change', function () {
+        Array.prototype.forEach.call(document.querySelectorAll('.g-sel:not(:disabled)'), function (el) { el.checked = selAll.checked; });
+        refreshSelected();
+      });
+      document.getElementById('send-selected-btn').addEventListener('click', function () {
+        var ids = selectedIds();
+        if (!ids.length) return;
+        if (!confirm('Send a reminder text/email to ' + ids.length + ' selected guest' + (ids.length === 1 ? '' : 's') + '?')) return;
+        sendBatched(ev.id, 'reminder', null, ids);
       });
       Array.prototype.forEach.call(document.querySelectorAll('[data-send]'), function (el) {
         el.addEventListener('click', async function () {
@@ -1018,10 +1046,10 @@
 
     // The server caps each call at 25 sends, so chunk explicit guest IDs and
     // walk through them with a progress line.
-    async function sendBatched(id, kind, message) {
+    async function sendBatched(id, kind, message, explicitIds) {
       if (state.sending) return;
       var guests = state.detail.guests;
-      var targets = guests.filter(function (g) {
+      var targets = explicitIds && explicitIds.length ? explicitIds : guests.filter(function (g) {
         if (!g.phone_e164 && !g.email) return false;
         if (g.rsvp === 'waitlist') return false;
         if (kind === 'invite') return !g.invited_at;
