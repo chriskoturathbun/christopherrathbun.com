@@ -788,7 +788,7 @@
             '<button class="btn btn-ghost btn-sm" id="send-reminder-btn">Send reminder to non-decliners</button>' +
             '<button class="btn btn-ghost btn-sm" id="send-selected-btn" disabled>⏰ Remind selected (<span id="sel-count">0</span>)</button>' +
           '</div>' +
-          '<div class="hint">Tick guests in the list below, then "Remind selected" nudges just them.</div>' +
+          '<div class="hint">Tick guests in the list below, then "Remind selected" nudges just them — and if you\'ve typed a custom update, your message is what they get.</div>' +
           '<div class="field" style="margin-top:16px"><label>Or blast a custom update to everyone (except decliners)</label>' +
             '<input type="text" id="blast-input" maxlength="300" placeholder="Change of plans — we start at 8pm now!"></div>' +
           '<button class="btn btn-ghost btn-sm" id="blast-btn">Send update</button>' +
@@ -877,8 +877,18 @@
       document.getElementById('send-selected-btn').addEventListener('click', function () {
         var ids = selectedIds();
         if (!ids.length) return;
-        if (!confirm('Send a reminder text/email to ' + ids.length + ' selected guest' + (ids.length === 1 ? '' : 's') + '?')) return;
-        sendBatched(ev.id, 'reminder', null, ids);
+        var who = ids.length + ' selected guest' + (ids.length === 1 ? '' : 's');
+        // If the host typed a custom message, that's what the selected
+        // guests get; otherwise the standard reminder.
+        var msg = (document.getElementById('blast-input').value || '').trim();
+        if (msg) {
+          if (!confirm('Send your message to ' + who + '?\n\n"' + msg + '"')) return;
+          sendBatched(ev.id, 'update', msg, ids);
+          document.getElementById('blast-input').value = '';
+        } else {
+          if (!confirm('Send the standard reminder to ' + who + '? (Type a message in the update box first to send your own words instead.)')) return;
+          sendBatched(ev.id, 'reminder', null, ids);
+        }
       });
       Array.prototype.forEach.call(document.querySelectorAll('[data-send]'), function (el) {
         el.addEventListener('click', async function () {
