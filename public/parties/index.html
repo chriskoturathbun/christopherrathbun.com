@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Parties — throw a party, text the invites</title>
+  <title>Part Plus One — throw a party, text the invites</title>
   <meta name="description" content="Create an event, invite people by text or email, and watch RSVPs roll in. No apps, no data harvesting." />
   <link rel="stylesheet" href="/parties/parties.css" />
   <script
@@ -67,7 +67,7 @@
 <body>
   <div class="fluid-bg"></div>
   <header class="wrap brand">
-    <strong>🎈 Parties</strong>
+    <strong>🥂 Part Plus One</strong>
     <span id="brand-right"></span>
   </header>
   <main class="app-main" id="root">
@@ -123,8 +123,8 @@
     function renderSignIn(Clerk) {
       root.innerHTML =
         '<div class="center-wrap"><div class="glass signin-card">' +
-          '<div style="font-size:44px;margin-bottom:8px">🎈</div>' +
-          '<h2>Throw a party</h2>' +
+          '<div style="font-size:44px;margin-bottom:8px">🥂</div>' +
+          '<h2>Part Plus One</h2>' +
           '<p class="muted">Create an event, text the invites, watch RSVPs roll in. Your guests never need an account — and nobody\'s data gets harvested.</p>' +
           '<button class="btn" id="signin-btn">Sign in to get started</button>' +
         '</div></div>';
@@ -309,6 +309,24 @@
           '<button class="g-del" data-cid="' + esc(c.id) + '" title="Delete comment">✕</button></div>';
       }).join('');
 
+      var surveys = state.detail.surveys || [];
+      var surveyRows = surveys.map(function (s) {
+        return '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid rgba(255,255,255,0.07);flex-wrap:wrap">' +
+          '<div><strong>' + esc(s.title) + '</strong> <span class="muted" style="font-size:13px">' +
+            s.question_count + ' question' + (s.question_count === 1 ? '' : 's') + ' · ' +
+            s.response_count + ' response' + (s.response_count === 1 ? '' : 's') +
+            (s.status === 'closed' ? ' · closed' : '') + '</span></div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+            '<button class="copy-chip" data-svcopy="' + esc(s.link) + '">🔗 Copy link</button>' +
+            (s.status === 'active' ? '<button class="copy-chip" data-svsend="' + esc(s.id) + '">📤 Send to guests</button>' : '') +
+            '<button class="copy-chip" data-svres="' + esc(s.id) + '">📊 Results</button>' +
+            (s.status === 'active'
+              ? '<button class="copy-chip" data-svclose="' + esc(s.id) + '">Close</button>'
+              : '<button class="copy-chip" data-svreopen="' + esc(s.id) + '">Reopen</button>') +
+            '<button class="g-del" data-svdel="' + esc(s.id) + '" title="Delete survey">✕</button>' +
+          '</div></div>';
+      }).join('');
+
       var cohostRows = cohosts.map(function (em) {
         return '<span class="copy-chip" style="cursor:default">' + esc(em) +
           ' <button class="g-del" data-cohost="' + esc(em) + '" title="Remove co-host" style="padding:0 2px">✕</button></span>';
@@ -382,6 +400,22 @@
         '</div>' +
 
         '<div class="glass sec-card">' +
+          '<h3>Surveys</h3>' +
+          (surveyRows || '<p class="muted" style="margin:0 0 12px">Ask your guests anything — song requests, food preferences, which date works best.</p>') +
+          '<div id="sv-results" style="display:none;margin:14px 0"></div>' +
+          '<button class="btn btn-ghost btn-sm" id="new-survey-btn">+ New survey</button>' +
+          '<div id="sv-builder" style="display:none;margin-top:16px">' +
+            '<div class="field"><label>Survey title</label><input type="text" id="sv-title" maxlength="120" placeholder="Help me plan the menu"></div>' +
+            '<div id="sv-questions"></div>' +
+            '<div class="head-actions" style="margin-top:10px">' +
+              '<button class="copy-chip" id="sv-add-q">+ Add question</button>' +
+              '<button class="btn btn-sm" id="sv-save">Create survey</button>' +
+            '</div>' +
+            '<div class="hint">Guests answer from a link — no account. Send it by text/email to the guest list (answers arrive with their name attached) or copy the link anywhere.</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="glass sec-card">' +
           '<h3>Guest list (' + guests.length + ')</h3>' +
           (guests.length
             ? '<div class="table-scroll"><table class="guest-table"><thead><tr><th>Guest</th><th>RSVP</th><th>Note</th><th>Invite</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>'
@@ -427,6 +461,152 @@
       Array.prototype.forEach.call(document.querySelectorAll('[data-cohost]'), function (el) {
         el.addEventListener('click', function () { removeCohost(ev.id, el.getAttribute('data-cohost')); });
       });
+      document.getElementById('new-survey-btn').addEventListener('click', function () {
+        var b = document.getElementById('sv-builder');
+        var opening = b.style.display === 'none';
+        b.style.display = opening ? '' : 'none';
+        if (opening && !document.querySelector('.sv-qrow')) svAddQuestion();
+      });
+      document.getElementById('sv-add-q').addEventListener('click', svAddQuestion);
+      document.getElementById('sv-save').addEventListener('click', function () { svSave(ev.id); });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-svcopy]'), function (el) {
+        el.addEventListener('click', function () {
+          navigator.clipboard.writeText(el.getAttribute('data-svcopy')).then(function () { toast('Survey link copied — anyone with it can answer.'); });
+        });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-svsend]'), function (el) {
+        el.addEventListener('click', function () { sendBatched(ev.id, 'survey', null, el.getAttribute('data-svsend')); });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-svres]'), function (el) {
+        el.addEventListener('click', function () { svResults(ev.id, el.getAttribute('data-svres')); });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-svclose]'), function (el) {
+        el.addEventListener('click', function () { svSetStatus(ev.id, el.getAttribute('data-svclose'), 'closed'); });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-svreopen]'), function (el) {
+        el.addEventListener('click', function () { svSetStatus(ev.id, el.getAttribute('data-svreopen'), 'active'); });
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-svdel]'), function (el) {
+        el.addEventListener('click', function () { svDelete(ev.id, el.getAttribute('data-svdel')); });
+      });
+    }
+
+    /* ---- Survey builder + results ---- */
+
+    function svAddQuestion() {
+      var wrap = document.getElementById('sv-questions');
+      var row = document.createElement('div');
+      row.className = 'sv-qrow';
+      row.style.cssText = 'border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;background:rgba(255,255,255,0.035)';
+      row.innerHTML =
+        '<div class="field"><label>Question</label><input type="text" class="sv-prompt" maxlength="300" placeholder="What should I put on the playlist?"></div>' +
+        '<div class="row-2">' +
+          '<div class="field"><label>Type</label><select class="sv-kind">' +
+            '<option value="choice">Multiple choice (pick one)</option>' +
+            '<option value="multi">Checkboxes (pick many)</option>' +
+            '<option value="text">Free text</option>' +
+          '</select></div>' +
+          '<div class="field"><label style="display:flex;gap:8px;align-items:center;margin-top:26px;color:var(--text)"><input type="checkbox" class="sv-req" style="width:auto"> Required</label></div>' +
+        '</div>' +
+        '<div class="field sv-opts-field"><label>Choices (one per line)</label><textarea class="sv-opts" rows="3" placeholder="Pizza\nTacos\nSushi"></textarea></div>' +
+        '<button class="g-del sv-remove" title="Remove question" style="position:absolute">✕ remove question</button>';
+      row.querySelector('.sv-kind').addEventListener('change', function (e) {
+        row.querySelector('.sv-opts-field').style.display = e.target.value === 'text' ? 'none' : '';
+      });
+      row.querySelector('.sv-remove').style.cssText = 'position:static;font-size:12px;color:var(--muted)';
+      row.querySelector('.sv-remove').addEventListener('click', function () { row.remove(); });
+      wrap.appendChild(row);
+    }
+
+    async function svSave(id) {
+      var title = document.getElementById('sv-title').value.trim();
+      if (!title) { toast('Give the survey a title.'); return; }
+      var questions = [];
+      var rows = document.querySelectorAll('.sv-qrow');
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        var prompt = r.querySelector('.sv-prompt').value.trim();
+        if (!prompt) continue;
+        var kind = r.querySelector('.sv-kind').value;
+        var options = r.querySelector('.sv-opts').value.split('\n').map(function (o) { return o.trim(); }).filter(Boolean);
+        questions.push({ kind: kind, prompt: prompt, options: options, required: r.querySelector('.sv-req').checked });
+      }
+      if (!questions.length) { toast('Add at least one question.'); return; }
+      var btn = document.getElementById('sv-save');
+      btn.disabled = true; btn.textContent = 'Creating…';
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/surveys', { method: 'POST', body: JSON.stringify({ title: title, questions: questions }) });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not create the survey.'); btn.disabled = false; btn.textContent = 'Create survey'; return; }
+        toast('Survey created — copy the link or send it to your guests.');
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); btn.disabled = false; btn.textContent = 'Create survey'; }
+    }
+
+    async function svResults(id, sid) {
+      var box = document.getElementById('sv-results');
+      box.style.display = '';
+      box.innerHTML = '<p class="muted">Loading results…</p>';
+      var res, data;
+      try { res = await authFetch('/parties/api/events/' + id + '/surveys/' + sid + '/results'); data = await res.json(); }
+      catch (e) { box.innerHTML = '<p class="muted">Network error.</p>'; return; }
+      if (!data.ok) { box.innerHTML = '<p class="muted">' + esc(data.error || 'Could not load results.') + '</p>'; return; }
+      var n = data.responses.length;
+      var html = '<div style="border:1px solid var(--border);border-radius:14px;padding:16px;background:rgba(255,255,255,0.035)">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+        '<strong>' + esc(data.survey.title) + '</strong><span class="muted" style="font-size:13px">' + n + ' response' + (n === 1 ? '' : 's') + '</span></div>';
+      if (!n) {
+        html += '<p class="muted" style="margin:0">No answers yet.</p>';
+      } else {
+        data.questions.forEach(function (q) {
+          html += '<div style="margin:14px 0 4px;font-weight:600;font-size:14px">' + esc(q.prompt) + '</div>';
+          if (q.kind === 'text') {
+            data.responses.forEach(function (r) {
+              var v = r.answers[q.id];
+              if (v) html += '<div style="font-size:14px;padding:3px 0"><span class="muted">' + esc(r.name || 'Guest') + ':</span> ' + esc(v) + '</div>';
+            });
+          } else {
+            var counts = {}, answered = 0;
+            q.options.forEach(function (o) { counts[o] = []; });
+            data.responses.forEach(function (r) {
+              var v = r.answers[q.id];
+              if (v === undefined) return;
+              answered++;
+              (Array.isArray(v) ? v : [v]).forEach(function (o) { if (counts[o]) counts[o].push(r.name || 'Guest'); });
+            });
+            q.options.forEach(function (o) {
+              var c = counts[o].length;
+              var pct = answered ? Math.round(c * 100 / answered) : 0;
+              html += '<div style="font-size:14px;padding:3px 0" title="' + esc(counts[o].join(', ')) + '">' +
+                '<span style="display:inline-block;min-width:34px;font-weight:700;color:var(--accent)">' + c + '</span>' + esc(o) +
+                '<span class="muted" style="margin-left:8px;font-size:12px">' + pct + '%</span></div>';
+            });
+          }
+        });
+      }
+      html += '<div style="margin-top:12px"><button class="copy-chip" id="sv-res-hide">Hide results</button></div></div>';
+      box.innerHTML = html;
+      document.getElementById('sv-res-hide').addEventListener('click', function () { box.style.display = 'none'; });
+      box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    async function svSetStatus(id, sid, status) {
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/surveys/' + sid, { method: 'PATCH', body: JSON.stringify({ status: status }) });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not update.'); return; }
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
+    }
+
+    async function svDelete(id, sid) {
+      if (!confirm('Delete this survey and all its responses?')) return;
+      try {
+        var res = await authFetch('/parties/api/events/' + id + '/surveys/' + sid, { method: 'DELETE' });
+        var data = await res.json();
+        if (!data.ok) { toast(data.error || 'Could not delete.'); return; }
+        openDetail(id);
+      } catch (e) { toast('Network error — try again.'); }
     }
 
     async function saveSettings(id) {
@@ -551,7 +731,7 @@
 
     // The server caps each call at 25 sends, so chunk explicit guest IDs and
     // walk through them with a progress line.
-    async function sendBatched(id, kind, message) {
+    async function sendBatched(id, kind, message, surveyId) {
       if (state.sending) return;
       var guests = state.detail.guests;
       var targets = guests.filter(function (g) {
@@ -570,6 +750,7 @@
           prog.textContent = 'Sending… ' + total + ' of ' + targets.length;
           var body = { kind: kind, guestIds: targets.slice(i, i + 25) };
           if (message) body.message = message;
+          if (surveyId) body.surveyId = surveyId;
           var res = await authFetch('/parties/api/events/' + id + '/send', { method: 'POST', body: JSON.stringify(body) });
           var data = await res.json();
           if (!data.ok) { toast(data.error || 'Send failed.'); break; }

@@ -112,8 +112,9 @@ export default {
       return handleReminders(request, env, url);
     }
 
-    // Parties — event invitations + RSVPs (/e/<token> is the short guest link)
-    if (path === '/parties' || path === '/parties/' || path.startsWith('/parties/') || path.startsWith('/e/')) {
+    // Part Plus One — event invitations + RSVPs (/e/<token> is the short
+    // guest link, /s/<token> a survey link)
+    if (path === '/parties' || path === '/parties/' || path.startsWith('/parties/') || path.startsWith('/e/') || path.startsWith('/s/')) {
       return handleParties(request, env, url);
     }
 

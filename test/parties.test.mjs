@@ -3,6 +3,7 @@ import {
   isEmail, parseGuestLine, formatEventWhen,
   buildInviteSms, buildReminderSms, buildUpdateSms, buildAdmitSms,
   buildInviteEmail, buildOgMeta, firstName, COVER_THEMES,
+  buildSurveySms, validateSurveyDef, validateSurveyAnswers,
 } from '../src/parties.js';
 
 let pass = 0, fail = 0;
@@ -102,6 +103,50 @@ ok(!ogNoImg.includes('og:image'), 'no og:image without url');
 
 // --- themes ---
 ok(COVER_THEMES.includes('confetti') && COVER_THEMES.length >= 8, 'cover themes defined');
+
+// --- Survey SMS ---
+const svSms = buildSurveySms({ hostName: 'Chris', eventTitle: 'Rooftop Party', emoji: '🎉', surveyTitle: 'Menu picks', link: 'https://x/s/vabc?g=t1' });
+ok(svSms.includes('Chris has a quick question about Rooftop Party'), 'survey SMS phrasing');
+ok(svSms.includes('"Menu picks"'), 'survey SMS includes title');
+ok(svSms.includes('https://x/s/vabc?g=t1'), 'survey SMS has tokened link');
+
+// --- validateSurveyDef ---
+let def = validateSurveyDef({
+  title: '  Menu picks ',
+  questions: [
+    { kind: 'choice', prompt: 'Main dish?', options: ['Pizza', 'Tacos', 'Pizza', '  '], required: true },
+    { kind: 'multi', prompt: 'Toppings?', options: ['Onions', 'Peppers'] },
+    { kind: 'text', prompt: 'Allergies?' },
+  ],
+});
+ok(!def.error, 'valid survey accepted');
+eq(def.title, 'Menu picks', 'survey title trimmed');
+eq(def.questions.length, 3, 'three questions kept');
+eq(def.questions[0].options.length, 2, 'duplicate/blank options dropped');
+eq(def.questions[0].required, 1, 'required flag kept');
+eq(def.questions[2].options.length, 0, 'text question has no options');
+
+eq(validateSurveyDef({ title: '', questions: [] }).error, 'survey title required', 'missing title rejected');
+eq(validateSurveyDef({ title: 'X', questions: [] }).error, 'at least one question required', 'no questions rejected');
+ok(validateSurveyDef({ title: 'X', questions: [{ kind: 'choice', prompt: 'Pick', options: ['only one'] }] }).error.includes('at least 2 choices'), 'single-option choice rejected');
+ok(validateSurveyDef({ title: 'X', questions: [{ kind: 'nope', prompt: 'Pick' }] }).error === 'invalid question type', 'bad kind rejected');
+
+// --- validateSurveyAnswers ---
+const qs = [
+  { id: 'q1', kind: 'choice', prompt: 'Main dish?', options: ['Pizza', 'Tacos'], required: true },
+  { id: 'q2', kind: 'multi', prompt: 'Toppings?', options: ['Onions', 'Peppers'], required: false },
+  { id: 'q3', kind: 'text', prompt: 'Allergies?', options: [], required: false },
+];
+let ans = validateSurveyAnswers(qs, { q1: 'Pizza', q2: ['Onions', 'Onions', 'Bad'], q3: '  peanuts  ' });
+ok(!ans.error, 'valid answers accepted');
+eq(ans.clean.q1, 'Pizza', 'choice kept');
+eq(JSON.stringify(ans.clean.q2), '["Onions"]', 'multi deduped and invalid options dropped');
+eq(ans.clean.q3, 'peanuts', 'text trimmed');
+
+ok(validateSurveyAnswers(qs, { q2: ['Onions'] }).error.includes('needs an answer'), 'missing required rejected');
+ok(validateSurveyAnswers(qs, { q1: 'Sushi' }).error.includes('invalid choice'), 'off-list choice rejected');
+ans = validateSurveyAnswers(qs, { q1: 'Tacos' });
+ok(!ans.error && ans.clean.q2 === undefined, 'optional questions may be skipped');
 
 console.log(`parties tests: ${pass} passed, ${fail} failed`);
 if (fail) process.exit(1);

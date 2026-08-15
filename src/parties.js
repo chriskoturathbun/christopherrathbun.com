@@ -19,6 +19,12 @@ const AUTO_REMINDER_BATCH = 12;
 const RSVP_CHOICES = ['yes', 'maybe', 'no'];
 export const COVER_THEMES = ['confetti', 'sunset', 'neon', 'ocean', 'garden', 'gold', 'midnight', 'cherry'];
 
+const MAX_SURVEYS_PER_EVENT = 10;
+const MAX_SURVEY_QUESTIONS = 20;
+const MAX_SURVEY_OPTIONS = 12;
+const MAX_SURVEY_RESPONSES = 500;
+export const SURVEY_QUESTION_KINDS = ['text', 'choice', 'multi'];
+
 // --- Pure helpers (unit-tested in test/parties.test.mjs) ---
 
 export function isEmail(s) {
@@ -93,6 +99,65 @@ export function buildAdmitSms({ title, emoji, whenText, link }) {
   const lead = emoji ? `${emoji} ` : '';
   const when = whenText ? ` ${whenText}.` : '';
   return `${lead}A spot opened up — you're in for ${title}!${when} Details: ${link}`;
+}
+
+export function buildSurveySms({ hostName, eventTitle, emoji, surveyTitle, link }) {
+  const lead = emoji ? `${emoji} ` : '';
+  return `${lead}${hostName} has a quick question about ${eventTitle} — "${surveyTitle}": ${link}`;
+}
+
+// Validate a host-submitted survey definition. Returns { error } or
+// { title, questions } with everything trimmed and clamped.
+export function validateSurveyDef(body) {
+  const title = String(body?.title || '').trim().slice(0, 120);
+  if (!title) return { error: 'survey title required' };
+  const raw = Array.isArray(body?.questions) ? body.questions : [];
+  if (!raw.length) return { error: 'at least one question required' };
+  if (raw.length > MAX_SURVEY_QUESTIONS) return { error: `at most ${MAX_SURVEY_QUESTIONS} questions` };
+  const questions = [];
+  for (const q of raw) {
+    const kind = SURVEY_QUESTION_KINDS.includes(q?.kind) ? q.kind : null;
+    if (!kind) return { error: 'invalid question type' };
+    const prompt = String(q?.prompt || '').trim().slice(0, 300);
+    if (!prompt) return { error: 'every question needs a prompt' };
+    let options = [];
+    if (kind !== 'text') {
+      const seen = new Set();
+      options = (Array.isArray(q?.options) ? q.options : [])
+        .map(o => String(o || '').trim().slice(0, 100))
+        .filter(o => o && !seen.has(o) && seen.add(o))
+        .slice(0, MAX_SURVEY_OPTIONS);
+      if (options.length < 2) return { error: `"${prompt}" needs at least 2 choices` };
+    }
+    questions.push({ kind, prompt, options, required: q?.required ? 1 : 0 });
+  }
+  return { title, questions };
+}
+
+// Validate a guest's answers against the survey's questions. Returns
+// { error } or { clean } mapping question id → answer.
+export function validateSurveyAnswers(questions, answers) {
+  const clean = {};
+  const a = (answers && typeof answers === 'object') ? answers : {};
+  for (const q of questions) {
+    const val = a[q.id];
+    const empty = val === undefined || val === null || val === '' || (Array.isArray(val) && !val.length);
+    if (empty) {
+      if (q.required) return { error: `"${q.prompt}" needs an answer` };
+      continue;
+    }
+    if (q.kind === 'text') {
+      clean[q.id] = String(val).trim().slice(0, 1000);
+    } else if (q.kind === 'choice') {
+      if (!q.options.includes(val)) return { error: `invalid choice for "${q.prompt}"` };
+      clean[q.id] = val;
+    } else {
+      const arr = Array.isArray(val) ? val.filter(v => q.options.includes(v)) : [];
+      if (!arr.length) return { error: `invalid choices for "${q.prompt}"` };
+      clean[q.id] = [...new Set(arr)];
+    }
+  }
+  return { clean };
 }
 
 function escapeHtml(s) {
@@ -209,6 +274,33 @@ async function ensureSchema(env) {
       email TEXT NOT NULL,
       added_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE (event_id, email))`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS party_surveys (
+      id TEXT PRIMARY KEY,
+      event_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      token TEXT UNIQUE NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_party_surveys_event ON party_surveys (event_id)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS party_survey_questions (
+      id TEXT PRIMARY KEY,
+      survey_id TEXT NOT NULL,
+      idx INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      options TEXT,
+      required INTEGER NOT NULL DEFAULT 0)`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_party_squestions ON party_survey_questions (survey_id, idx)`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS party_survey_responses (
+      id TEXT PRIMARY KEY,
+      survey_id TEXT NOT NULL,
+      guest_id TEXT,
+      name TEXT,
+      answers TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')))`),
+    db.prepare(`CREATE INDEX IF NOT EXISTS idx_party_sresponses ON party_survey_responses (survey_id, created_at)`),
+    db.prepare(`CREATE UNIQUE INDEX IF NOT EXISTS idx_party_sresponses_guest
+      ON party_survey_responses (survey_id, guest_id) WHERE guest_id IS NOT NULL`),
   ]);
   // Additive columns (idempotent — ignore "duplicate column" on re-run).
   for (const stmt of [
@@ -425,6 +517,11 @@ async function handleEventDetail(request, env, eventId) {
     guests: (guests.results || []).map(g => ({ ...g, link: rsvpLink(env, g.token) })),
     comments: await commentList(env, eventId),
     cohosts: (cohosts.results || []).map(c => c.email),
+    surveys: (await surveySummaries(env, eventId)).map(s => ({
+      id: s.id, title: s.title, status: s.status, token: s.token,
+      link: `${baseUrl(env)}/s/${s.token}`,
+      question_count: s.question_count, response_count: s.response_count,
+    })),
   });
 }
 
@@ -555,9 +652,16 @@ async function handleSend(request, env, eventId) {
   if (ev.status !== 'active') return json({ ok: false, error: 'event is cancelled' }, 400);
   let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
 
-  const kind = ['invite', 'reminder', 'update'].includes(body.kind) ? body.kind : 'invite';
+  const kind = ['invite', 'reminder', 'update', 'survey'].includes(body.kind) ? body.kind : 'invite';
   const message = String(body.message || '').trim().slice(0, 320);
   if (kind === 'update' && !message) return json({ ok: false, error: 'message required for an update' }, 400);
+  let survey = null;
+  if (kind === 'survey') {
+    survey = await env.DB.prepare('SELECT * FROM party_surveys WHERE id = ? AND event_id = ?')
+      .bind(String(body.surveyId || ''), eventId).first();
+    if (!survey) return json({ ok: false, error: 'survey not found' }, 404);
+    if (survey.status !== 'active') return json({ ok: false, error: 'survey is closed' }, 400);
+  }
   const dryRun = !!body.dryRun;
 
   // Resolve targets: explicit guestIds, else a sensible default per kind
@@ -588,12 +692,17 @@ async function handleSend(request, env, eventId) {
   const whenText = formatEventWhen(ev.starts_at, ev.timezone);
   const results = [];
   for (const g of guests) {
-    const link = rsvpLink(env, g.token);
+    // Survey links carry the guest's token so their answers arrive named.
+    const link = kind === 'survey'
+      ? `${baseUrl(env)}/s/${survey.token}?g=${g.token}`
+      : rsvpLink(env, g.token);
     const smsBody = kind === 'invite'
       ? buildInviteSms({ hostName: ev.host_name, title: ev.title, emoji: ev.emoji, whenText, link })
       : kind === 'reminder'
         ? buildReminderSms({ title: ev.title, emoji: ev.emoji, whenText, link })
-        : buildUpdateSms({ title: ev.title, message, link });
+        : kind === 'survey'
+          ? buildSurveySms({ hostName: ev.host_name, eventTitle: ev.title, emoji: ev.emoji, surveyTitle: survey.title, link })
+          : buildUpdateSms({ title: ev.title, message, link });
 
     if (dryRun) {
       results.push({ guestId: g.id, channel: g.phone_e164 ? 'sms' : 'email', preview: smsBody, dryRun: true });
@@ -604,7 +713,10 @@ async function handleSend(request, env, eventId) {
       ? plainEmail(`${ev.emoji ? ev.emoji + ' ' : ''}Update: ${ev.title}`, message, link, 'Details + RSVP')
       : kind === 'reminder'
         ? plainEmail(`${ev.emoji ? ev.emoji + ' ' : ''}Reminder: ${ev.title}`, `Reminder: ${ev.title} is ${whenText || 'coming up soon'}.`, link, 'Details + RSVP')
-        : buildInviteEmail({ hostName: ev.host_name, title: ev.title, emoji: ev.emoji, whenText, location: ev.location, description: ev.description, link });
+        : kind === 'survey'
+          ? plainEmail(`${ev.emoji ? ev.emoji + ' ' : ''}Quick question about ${ev.title}`,
+              `${ev.host_name} has a few questions about ${ev.title} — "${survey.title}".`, link, 'Answer the survey')
+          : buildInviteEmail({ hostName: ev.host_name, title: ev.title, emoji: ev.emoji, whenText, location: ev.location, description: ev.description, link });
 
     const out = await deliverToGuest(env, ev, g, { kind, smsBody, email });
     if (out.ok && kind === 'invite' && !g.invited_at) {
@@ -643,6 +755,164 @@ async function handleAdmitGuest(request, env, eventId, guestId) {
     `A spot opened up — you're in for ${ev.title}!${whenText ? ` ${whenText}.` : ''}`, link, 'Event details');
   const out = await deliverToGuest(env, ev, g, { kind: 'admit', smsBody, email });
   return json({ ok: true, notified: out.ok });
+}
+
+// --- Surveys ---
+
+async function surveyQuestions(env, surveyId) {
+  const rows = await env.DB.prepare(
+    'SELECT id, kind, prompt, options, required FROM party_survey_questions WHERE survey_id = ? ORDER BY idx'
+  ).bind(surveyId).all();
+  return (rows.results || []).map(q => ({
+    id: q.id, kind: q.kind, prompt: q.prompt, required: !!q.required,
+    options: q.options ? JSON.parse(q.options) : [],
+  }));
+}
+
+async function surveySummaries(env, eventId) {
+  const rows = await env.DB.prepare(
+    `SELECT s.*,
+       (SELECT COUNT(*) FROM party_survey_questions q WHERE q.survey_id = s.id) AS question_count,
+       (SELECT COUNT(*) FROM party_survey_responses r WHERE r.survey_id = s.id) AS response_count
+     FROM party_surveys s WHERE s.event_id = ? ORDER BY s.created_at`
+  ).bind(eventId).all();
+  return rows.results || [];
+}
+
+async function handleCreateSurvey(request, env, eventId) {
+  const host = await requireHost(request, env);
+  if (!host) return json({ ok: false, error: 'unauthorized' }, 401);
+  const ev = await loadHostEvent(env, eventId, host);
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+
+  const def = validateSurveyDef(body);
+  if (def.error) return json({ ok: false, error: def.error }, 400);
+  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM party_surveys WHERE event_id = ?').bind(eventId).first();
+  if ((count?.n || 0) >= MAX_SURVEYS_PER_EVENT) return json({ ok: false, error: 'survey limit reached for this event' }, 400);
+
+  const id = shortId(12);
+  const token = 'v' + hexToken(8);
+  await env.DB.prepare('INSERT INTO party_surveys (id, event_id, title, token) VALUES (?, ?, ?, ?)')
+    .bind(id, eventId, def.title, token).run();
+  let idx = 0;
+  for (const q of def.questions) {
+    await env.DB.prepare(
+      'INSERT INTO party_survey_questions (id, survey_id, idx, kind, prompt, options, required) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).bind(shortId(12), id, idx++, q.kind, q.prompt, q.options.length ? JSON.stringify(q.options) : null, q.required).run();
+  }
+  return json({ ok: true, survey: { id, token, link: `${baseUrl(env)}/s/${token}` } });
+}
+
+async function handleUpdateSurvey(request, env, eventId, surveyId) {
+  const host = await requireHost(request, env);
+  if (!host) return json({ ok: false, error: 'unauthorized' }, 401);
+  const ev = await loadHostEvent(env, eventId, host);
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+  if (!['active', 'closed'].includes(body.status)) return json({ ok: false, error: 'status must be active or closed' }, 400);
+  await env.DB.prepare('UPDATE party_surveys SET status = ? WHERE id = ? AND event_id = ?')
+    .bind(body.status, surveyId, eventId).run();
+  return json({ ok: true });
+}
+
+async function handleDeleteSurvey(request, env, eventId, surveyId) {
+  const host = await requireHost(request, env);
+  if (!host) return json({ ok: false, error: 'unauthorized' }, 401);
+  const ev = await loadHostEvent(env, eventId, host);
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM party_survey_responses WHERE survey_id = ?').bind(surveyId),
+    env.DB.prepare('DELETE FROM party_survey_questions WHERE survey_id = ?').bind(surveyId),
+    env.DB.prepare('DELETE FROM party_surveys WHERE id = ? AND event_id = ?').bind(surveyId, eventId),
+  ]);
+  return json({ ok: true });
+}
+
+async function handleSurveyResults(request, env, eventId, surveyId) {
+  const host = await requireHost(request, env);
+  if (!host) return json({ ok: false, error: 'unauthorized' }, 401);
+  const ev = await loadHostEvent(env, eventId, host);
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+  const survey = await env.DB.prepare('SELECT * FROM party_surveys WHERE id = ? AND event_id = ?').bind(surveyId, eventId).first();
+  if (!survey) return json({ ok: false, error: 'not found' }, 404);
+  const rows = await env.DB.prepare(
+    `SELECT name, answers, created_at FROM party_survey_responses WHERE survey_id = ? ORDER BY created_at LIMIT ?`
+  ).bind(surveyId, MAX_SURVEY_RESPONSES).all();
+  return json({
+    ok: true,
+    survey: { id: survey.id, title: survey.title, status: survey.status },
+    questions: await surveyQuestions(env, surveyId),
+    responses: (rows.results || []).map(r => ({ name: r.name, answers: JSON.parse(r.answers), created_at: r.created_at })),
+  });
+}
+
+// Public: fetch a survey by its share token. An optional guest token ties
+// the response to a known guest and pre-fills their previous answers.
+async function handleSurveyLookup(env, token, guestToken) {
+  await ensureSchema(env);
+  const survey = await env.DB.prepare('SELECT * FROM party_surveys WHERE token = ?').bind(token).first();
+  if (!survey) return json({ ok: false, error: 'not found' }, 404);
+  const ev = await env.DB.prepare('SELECT * FROM party_events WHERE id = ?').bind(survey.event_id).first();
+  if (!ev) return json({ ok: false, error: 'not found' }, 404);
+
+  let guest = null, prior = null;
+  if (guestToken) {
+    const g = await env.DB.prepare('SELECT * FROM party_guests WHERE token = ?').bind(guestToken).first();
+    if (g && g.event_id === survey.event_id) {
+      guest = { name: g.name };
+      const r = await env.DB.prepare('SELECT answers FROM party_survey_responses WHERE survey_id = ? AND guest_id = ?')
+        .bind(survey.id, g.id).first();
+      if (r) prior = JSON.parse(r.answers);
+    }
+  }
+  return json({
+    ok: true,
+    survey: { title: survey.title, status: survey.status },
+    event: {
+      title: ev.title, emoji: ev.emoji, host_name: ev.host_name,
+      cover_theme: COVER_THEMES.includes(ev.cover_theme) ? ev.cover_theme : 'confetti',
+    },
+    questions: await surveyQuestions(env, survey.id),
+    guest, prior,
+  });
+}
+
+async function handleSurveySubmit(request, env, token, guestToken) {
+  await ensureSchema(env);
+  let body; try { body = await request.json(); } catch { return json({ ok: false, error: 'bad json' }, 400); }
+  const survey = await env.DB.prepare('SELECT * FROM party_surveys WHERE token = ?').bind(token).first();
+  if (!survey) return json({ ok: false, error: 'not found' }, 404);
+  if (survey.status !== 'active') return json({ ok: false, error: 'this survey is closed' }, 400);
+
+  const questions = await surveyQuestions(env, survey.id);
+  const checked = validateSurveyAnswers(questions, body.answers);
+  if (checked.error) return json({ ok: false, error: checked.error }, 400);
+  if (!Object.keys(checked.clean).length) return json({ ok: false, error: 'answer at least one question' }, 400);
+
+  let guest = null;
+  if (guestToken) {
+    const g = await env.DB.prepare('SELECT * FROM party_guests WHERE token = ?').bind(guestToken).first();
+    if (g && g.event_id === survey.event_id) guest = g;
+  }
+  const name = guest?.name || String(body.name || '').trim().slice(0, 80);
+  if (!name) return json({ ok: false, error: 'name required' }, 400);
+
+  const count = await env.DB.prepare('SELECT COUNT(*) AS n FROM party_survey_responses WHERE survey_id = ?').bind(survey.id).first();
+
+  if (guest) {
+    const existing = await env.DB.prepare('SELECT id FROM party_survey_responses WHERE survey_id = ? AND guest_id = ?')
+      .bind(survey.id, guest.id).first();
+    if (existing) {
+      await env.DB.prepare(`UPDATE party_survey_responses SET answers = ?, name = ?, created_at = datetime('now') WHERE id = ?`)
+        .bind(JSON.stringify(checked.clean), name, existing.id).run();
+      return json({ ok: true, updated: true });
+    }
+  }
+  if ((count?.n || 0) >= MAX_SURVEY_RESPONSES) return json({ ok: false, error: 'this survey is full' }, 429);
+  await env.DB.prepare('INSERT INTO party_survey_responses (id, survey_id, guest_id, name, answers) VALUES (?, ?, ?, ?, ?)')
+    .bind(shortId(12), survey.id, guest?.id || null, name, JSON.stringify(checked.clean)).run();
+  return json({ ok: true });
 }
 
 // --- Co-hosts ---
@@ -899,6 +1169,9 @@ export async function handleParties(request, env, url) {
   const eMatch = path.match(/^\/e\/([A-Za-z0-9]+)\/?$/);
   if (eMatch) return serveRsvpPage(env, url.origin, eMatch[1]);
 
+  // Guest survey page: /s/<token>.
+  if (/^\/s\/[A-Za-z0-9]+\/?$/.test(path)) return servePage(env, url.origin, '/parties/survey.html');
+
   // Public API.
   let m = path.match(/^\/parties\/api\/link\/([A-Za-z0-9]+)$/);
   if (m && request.method === 'GET') return handleLinkLookup(env, m[1]);
@@ -908,6 +1181,9 @@ export async function handleParties(request, env, url) {
   if (m && request.method === 'POST') return handleOpenRsvp(request, env, m[1]);
   m = path.match(/^\/parties\/api\/comment\/([A-Za-z0-9]+)$/);
   if (m && request.method === 'POST') return handlePostComment(request, env, m[1]);
+  m = path.match(/^\/parties\/api\/survey\/([A-Za-z0-9]+)$/);
+  if (m && request.method === 'GET') return handleSurveyLookup(env, m[1], url.searchParams.get('g'));
+  if (m && request.method === 'POST') return handleSurveySubmit(request, env, m[1], url.searchParams.get('g'));
 
   // Host API (Clerk-gated).
   if (path.startsWith('/parties/api/')) {
@@ -928,6 +1204,13 @@ export async function handleParties(request, env, url) {
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/cohosts$/);
     if (m && request.method === 'POST') return handleAddCohost(request, env, m[1]);
     if (m && request.method === 'DELETE') return handleRemoveCohost(request, env, m[1]);
+    m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/surveys$/);
+    if (m && request.method === 'POST') return handleCreateSurvey(request, env, m[1]);
+    m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/surveys\/([A-Za-z0-9]+)$/);
+    if (m && request.method === 'PATCH') return handleUpdateSurvey(request, env, m[1], m[2]);
+    if (m && request.method === 'DELETE') return handleDeleteSurvey(request, env, m[1], m[2]);
+    m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/surveys\/([A-Za-z0-9]+)\/results$/);
+    if (m && request.method === 'GET') return handleSurveyResults(request, env, m[1], m[2]);
     m = path.match(/^\/parties\/api\/events\/([A-Za-z0-9]+)\/comments\/([A-Za-z0-9]+)$/);
     if (m && request.method === 'DELETE') return handleDeleteComment(request, env, m[1], m[2]);
     return json({ ok: false, error: 'not found' }, 404);

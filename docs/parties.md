@@ -1,16 +1,18 @@
-# Parties — event invitations + RSVPs
+# Part Plus One — event invitations + RSVPs
 
-A Partiful-style party tool that lives on christopherrathbun.com: create an
-event, invite people by text or email, guests RSVP from a link with **no
-account, no app, and no questions**. All data stays in the site's own D1
-database — nothing is shared with or sold to anyone.
+A Partiful-style party tool (internal code name "parties") that lives on
+christopherrathbun.com: create an event, invite people by text or email,
+guests RSVP from a link with **no account, no app, and no questions**. All
+data stays in the site's own D1 database — nothing is shared with or sold
+to anyone.
 
 ## URLs
 
 | Path | What |
 |---|---|
-| `/parties` | Host app (Clerk sign-in). Create events, manage guests, send invites/reminders/updates. |
+| `/parties` | Host app (Clerk sign-in). Create events, manage guests, send invites/reminders/updates/surveys. |
 | `/e/<token>` | Guest RSVP page. A personal token (per-guest) or the event's open share token (starts with `s`). Public, no auth. |
+| `/s/<token>` | Guest survey page (survey tokens start with `v`). Public; `?g=<guestToken>` pre-identifies a guest so answers arrive named. |
 
 ## How it works
 
@@ -63,6 +65,15 @@ migration files):
   sending so a crashed tick can't double-text.
 - **Co-hosts** — added by email (`party_cohosts`); anyone signing into
   Clerk with that email can manage the event.
+- **Custom surveys** — per-event surveys built on the dashboard (multiple
+  choice, checkboxes, or free text; optional required flag). Each survey has
+  its own `/s/<token>` link, sendable to the guest list through the same
+  batched SMS/email sender (links carry `?g=<guestToken>` so answers arrive
+  named; bare links ask for a name). Guests can update their answers; hosts
+  see per-option counts and per-person text answers, and can close, reopen,
+  or delete a survey. Tables: `party_surveys`, `party_survey_questions`,
+  `party_survey_responses` (10 surveys/event, 20 questions, 12 options,
+  500 responses, one response per known guest).
 
 ## Abuse limits (in `src/parties.js`)
 
