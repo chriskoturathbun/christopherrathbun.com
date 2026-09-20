@@ -5,6 +5,7 @@ import { handleUsers } from './users-dashboard.js';
 import { handleReminders } from './reminders.js';
 import { handleDishes } from './dishes.js';
 import { handleParties, runPartyReminders } from './parties.js';
+import { handleDreamlist } from './dreamlist.js';
 import { runReconciler, runPreScheduler, runWebhookFallback } from './reminders.js';
 
 function newGameId() {
@@ -144,6 +145,11 @@ export default {
     // Parties — event invitations + RSVPs (/e/<token> is the short guest link)
     if (path === '/parties' || path === '/parties/' || path.startsWith('/parties/') || path.startsWith('/e/')) {
       return handleParties(request, env, url);
+    }
+
+    // Dreamlist — a shared dream list (/d/<token> is the short invite link)
+    if (path === '/dreamlist' || path === '/dreamlist/' || path.startsWith('/dreamlist/') || path.startsWith('/d/')) {
+      return handleDreamlist(request, env, url);
     }
 
     // Sentry error dashboard (private, Google-auth gated)
