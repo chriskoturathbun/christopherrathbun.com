@@ -1,4 +1,5 @@
 // Node sanity test for dreamlist helpers. Run: node test/dreamlist.test.mjs
+import { readFileSync } from 'node:fs';
 import {
   isEmail, escapeHtml, midpoint, needsRenumber, renumber, clampText,
   dayKey, groupByDay, partitionByLocation, boundsFor, normalizeGeoResult,
@@ -164,6 +165,21 @@ ok(!mail.text.includes('–'), 'invite email has no en dashes');
 
 mail = buildInviteEmail({ hostName: 'Chris', listName: '<b>bad</b>', emoji: '✨', link: 'https://x.co/d/t', itemCount: 0 });
 ok(!mail.html.includes('<b>bad</b>'), 'list name is escaped in the html body');
+
+// --- The local-dev sign-in stand-in must never be reachable in production ---
+// devUser() needs DREAMLIST_DEV_USER set AND a request with no cf-ray header.
+// Cloudflare stamps cf-ray on everything crossing its edge, so the second
+// condition already holds. This guards the first: if the var is ever added to
+// wrangler.toml or the deploy workflow, this test fails rather than shipping
+// an open door.
+const wranglerToml = readFileSync(new URL('../wrangler.toml', import.meta.url), 'utf8');
+ok(!/DREAMLIST_DEV_USER/.test(wranglerToml), 'DREAMLIST_DEV_USER is not in wrangler.toml');
+const deployWorkflow = readFileSync(new URL('../.github/workflows/deploy.yml', import.meta.url), 'utf8');
+ok(!/DREAMLIST_DEV_USER/.test(deployWorkflow), 'DREAMLIST_DEV_USER is not set by the deploy workflow');
+
+const workerSrc = readFileSync(new URL('../src/dreamlist.js', import.meta.url), 'utf8');
+ok(/!request\.headers\.get\('cf-ray'\)/.test(workerSrc), 'the dev stand-in still requires a missing cf-ray header');
+ok(/!!env\.DREAMLIST_DEV_USER/.test(workerSrc), 'the dev stand-in still requires the dev var');
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

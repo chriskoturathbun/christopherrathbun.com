@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f1ec" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#17150f" media="(prefers-color-scheme: dark)" />
+  <title>Dreamlist — the things you two keep meaning to do</title>
+  <meta name="description" content="A shared list of the things you want to do together. Pin the places, put dates on the ones that need them, and keep notes on the rest." />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%A8%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/dreamlist/dreamlist.css" />
+  <script
+    async crossorigin="anonymous"
+    data-clerk-publishable-key="pk_live_Y2xlcmsuY2hyaXN0b3BoZXJyYXRoYnVuLmNvbSQ"
+    src="https://clerk.christopherrathbun.com/npm/@clerk/clerk-js@5/dist/clerk.browser.js"
+    type="text/javascript"></script>
+</head>
+<body data-accent="ember">
+
+  <!-- Signed out -->
+  <div class="gate" id="gate" hidden>
+    <div>
+      <div class="mark">✨</div>
+      <h1>The things you two<br />keep meaning to do</h1>
+      <p>One list, both of you. Pin the places, put dates on the ones that need them, and keep the rest somewhere better than a text thread.</p>
+      <div id="clerk-signin"></div>
+      <div id="gate-msg" class="empty" hidden></div>
+    </div>
+  </div>
+
+  <!-- Signed in -->
+  <main class="shell" id="app" hidden>
+    <header class="topbar">
+      <div class="identity">
+        <button class="list-emoji" id="emoji-btn" title="Change the look">✨</button>
+        <h1 class="list-name" id="list-name" spellcheck="false">Dreamlist</h1>
+      </div>
+      <div class="topbar-right">
+        <div class="faces" id="faces"></div>
+        <button class="icon-btn" id="account-btn" title="Account" aria-label="Account">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
+            <circle cx="12" cy="8" r="3.4" /><path d="M4.8 20c.9-3.6 3.8-5.4 7.2-5.4s6.3 1.8 7.2 5.4" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="segmented" id="views" role="tablist">
+      <span class="thumb" id="seg-thumb"></span>
+      <button class="seg" role="tab" data-view="list" aria-selected="true">List</button>
+      <button class="seg" role="tab" data-view="map" aria-selected="false">Map</button>
+      <button class="seg" role="tab" data-view="calendar" aria-selected="false">Calendar</button>
+    </div>
+
+    <!-- List -->
+    <section id="view-list">
+      <form class="composer" id="composer" autocomplete="off">
+        <input id="composer-input" placeholder="What should we do together?" aria-label="Add a dream" maxlength="300" />
+        <button class="add-btn" id="add-btn" type="submit" aria-label="Add">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+        </button>
+      </form>
+      <div id="list-body"></div>
+    </section>
+
+    <!-- Map -->
+    <section id="view-map" hidden>
+      <div class="map-wrap"><div id="map"></div></div>
+      <div class="unpinned" id="unpinned"></div>
+    </section>
+
+    <!-- Calendar -->
+    <section id="view-calendar" hidden>
+      <div class="cal-head">
+        <div class="cal-title" id="cal-title">—</div>
+        <div class="cal-nav">
+          <button class="icon-btn" id="cal-prev" aria-label="Previous month">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 5.5 8 12l6.5 6.5" /></svg>
+          </button>
+          <button class="icon-btn" id="cal-today" aria-label="Today" title="Today">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3.2" /></svg>
+          </button>
+          <button class="icon-btn" id="cal-next" aria-label="Next month">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5.5 6.5 6.5-6.5 6.5" /></svg>
+          </button>
+        </div>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="agenda" id="agenda"></div>
+    </section>
+  </main>
+
+  <div class="scrim" id="scrim"></div>
+
+  <!-- People -->
+  <div class="sheet" id="people-sheet" role="dialog" aria-modal="true" aria-labelledby="people-title">
+    <h3 id="people-title">Who's on this list</h3>
+    <p class="sub">Everyone here can add, finish, reorder, and comment. Same list, same powers.</p>
+    <div id="member-list"></div>
+    <form id="invite-form" style="margin-top:18px" autocomplete="off">
+      <div class="field-label">Invite someone</div>
+      <div style="display:flex;gap:9px">
+        <input class="input" id="invite-email" type="email" placeholder="their@email.com" />
+        <button class="btn primary" type="submit" id="invite-btn">Send</button>
+      </div>
+      <p class="sub" id="invite-note" style="margin:11px 0 0;font-size:13px" hidden></p>
+    </form>
+    <div class="detail-actions">
+      <span></span><button class="btn quiet" data-close-sheet>Done</button>
+    </div>
+  </div>
+
+  <!-- Look -->
+  <div class="sheet" id="look-sheet" role="dialog" aria-modal="true" aria-labelledby="look-title">
+    <h3 id="look-title">How it looks</h3>
+    <p class="sub">Pick a mark and a color for your list.</p>
+    <div class="field">
+      <div class="field-label">Mark</div>
+      <div class="cat-row" id="emoji-row"></div>
+    </div>
+    <div class="field">
+      <div class="field-label">Color</div>
+      <div class="accent-row" id="accent-row"></div>
+    </div>
+    <div class="detail-actions">
+      <span></span><button class="btn quiet" data-close-sheet>Done</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module" src="/dreamlist/app.js"></script>
+</body>
+</html>

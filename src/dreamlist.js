@@ -262,15 +262,38 @@ function inviteLink(env, token) {
   return `${baseUrl(env)}/d/${token}`;
 }
 
+// The same verified Resend mailbox the other apps here send from, under its
+// own display name. A new local part would need its own warm-up.
 function emailFrom(env) {
-  return env.DREAMLIST_EMAIL_FROM || 'Dreamlist <dreamlist@mail.giftanagent.com>';
+  return env.DREAMLIST_EMAIL_FROM || 'Dreamlist <reminders@mail.giftanagent.com>';
 }
 
 // --- Identity and membership ---
 
+// Local development only. Clerk's production keys are bound to
+// christopherrathbun.com, so sign-in cannot work against `wrangler dev`.
+// This stands in for a session there. It needs two things at once: a var
+// that appears in no config file and no secret (pass it with
+// `wrangler dev --var`), and a request with no `cf-ray` header. Cloudflare
+// stamps cf-ray on everything that crosses its edge, so a deployed worker
+// can never satisfy the second condition. `test/dreamlist.test.mjs` also
+// fails if the var is ever added to wrangler.toml.
+export function isLocalDev(request, env) {
+  return !!env.DREAMLIST_DEV_USER && !request.headers.get('cf-ray');
+}
+
+function devUser(request, env) {
+  if (!isLocalDev(request, env)) return null;
+  const [clerkId, name, email] = String(env.DREAMLIST_DEV_USER).split('|');
+  if (!clerkId) return null;
+  return { clerkId, name: name || null, email: (email || '').toLowerCase() || null };
+}
+
 // Resolve the caller from their Clerk session JWT. Returns null when the
 // request carries no valid session.
 async function requireUser(request, env) {
+  const dev = devUser(request, env);
+  if (dev) return dev;
   const auth = request.headers.get('authorization') || '';
   if (!auth.startsWith('Bearer ')) return null;
   const payload = await verifyClerkJWT(auth.slice(7), env);
@@ -282,19 +305,58 @@ async function requireUser(request, env) {
   return { clerkId: payload.sub, name, email: (payload.email || '').toLowerCase() || null };
 }
 
-// The signed-in user's primary email, from the token when present and from
-// Clerk's API otherwise. Cached per request by the caller.
+// Clerk's default session token carries no name or email claim, so those
+// come from the Backend API. One call per user per isolate keeps that off the
+// hot path: reads never need a profile, and writes reuse the cached one.
+const profileCache = new Map();
+
+async function resolveProfile(user, env) {
+  if (user.name && user.email) return user;
+  if (env.DREAMLIST_DEV_USER) return user;
+  const cached = profileCache.get(user.clerkId);
+  if (cached) {
+    user.name = user.name || cached.name;
+    user.email = user.email || cached.email;
+    return user;
+  }
+  if (!env.CLERK_API_KEY) return user;
+  try {
+    const res = await fetch(`https://api.clerk.com/v1/users/${user.clerkId}`, {
+      headers: { Authorization: `Bearer ${env.CLERK_API_KEY}` },
+    });
+    if (!res.ok) return user;
+    const u = await res.json();
+    const primary = (u.email_addresses || []).find(e => e.id === u.primary_email_address_id)
+      || (u.email_addresses || [])[0];
+    const name = [u.first_name, u.last_name].filter(Boolean).join(' ')
+      || u.username
+      || (primary?.email_address || '').split('@')[0]
+      || null;
+    const profile = { name, email: primary?.email_address?.toLowerCase() || null };
+    profileCache.set(user.clerkId, profile);
+    user.name = user.name || profile.name;
+    user.email = user.email || profile.email;
+  } catch { /* a missing profile just means an unnamed author */ }
+  return user;
+}
+
+// The signed-in user's primary email, resolving the profile if we don't
+// already hold it.
 async function userEmail(user, env) {
   if (user.email) return user.email;
-  const e = await getClerkUserEmail(user.clerkId, env);
-  if (e) user.email = e;
-  return e;
+  await resolveProfile(user, env);
+  if (!user.email) {
+    const e = await getClerkUserEmail(user.clerkId, env);
+    if (e) user.email = e;
+  }
+  return user.email;
 }
 
 // Claim any pending invite addressed to this user's email. Runs on every
 // authenticated request, so clicking an invite link and signing up is the
 // entire join flow — there is no separate "accept" step to get stuck on.
 async function claimPendingInvites(env, user) {
+  await resolveProfile(user, env);
   const email = await userEmail(user, env);
   if (!email) return;
   const pending = await env.DB.prepare(
@@ -488,6 +550,7 @@ export function sanitizeItemFields(body, { partial } = { partial: false }) {
 // --- Item handlers ---
 
 async function handleCreateItem(request, env, list, user) {
+  await resolveProfile(user, env);
   let body = {};
   try { body = await request.json(); } catch {}
   const fields = sanitizeItemFields(body, { partial: false });
@@ -536,6 +599,7 @@ async function handleUpdateItem(request, env, list, user, itemId) {
 
   // Completing records who did it; re-opening clears that, so an item that
   // gets un-done doesn't keep claiming it was finished.
+  if (fields.status === 'done' && existing.status !== 'done') await resolveProfile(user, env);
   if (fields.status === 'done' && existing.status !== 'done') {
     fields.done_at = new Date().toISOString();
     fields.done_by_clerk_id = user.clerkId;
@@ -616,6 +680,7 @@ async function handleReorder(request, env, list) {
 // --- Notes ---
 
 async function handleAddNote(request, env, list, user, itemId) {
+  await resolveProfile(user, env);
   const item = await env.DB.prepare(
     'SELECT id FROM dream_items WHERE id = ? AND list_id = ?'
   ).bind(itemId, list.id).first();
@@ -724,6 +789,7 @@ async function handleGeocode(env, url) {
 // --- Lists and members ---
 
 async function handleGetList(env, list, role, user) {
+  await resolveProfile(user, env);
   const [items, members] = await Promise.all([
     itemsOf(env, list.id),
     membersOf(env, list),
@@ -818,6 +884,7 @@ export function buildInviteEmail({ hostName, listName, emoji, link, itemCount })
 }
 
 async function handleInvite(request, env, list, user) {
+  await resolveProfile(user, env);
   let body = {};
   try { body = await request.json(); } catch {}
   const email = (body.email || '').trim().toLowerCase();
@@ -905,6 +972,7 @@ async function handleInviteLanding(env, url, token) {
 
 // Claim runs after Clerk sign-in: bind this token to the signed-in user.
 async function handleClaimInvite(request, env, user) {
+  await resolveProfile(user, env);
   let body = {};
   try { body = await request.json(); } catch {}
   const token = (body.token || '').trim();
@@ -936,8 +1004,17 @@ async function handleClaimInvite(request, env, user) {
 
 // --- Router ---
 
-async function fetchPage(env, origin) {
+async function fetchPage(request, env, origin) {
   const res = await env.ASSETS.fetch(new Request(new URL('/dreamlist/index.html', origin)));
+  // In local dev there is no Clerk session to get a token from, so tell the
+  // page to stand one in. Same double gate as devUser: a deployed worker
+  // always sees cf-ray and so never injects this.
+  if (isLocalDev(request, env)) {
+    const [clerkId, name] = String(env.DREAMLIST_DEV_USER).split('|');
+    const html = (await res.text()).replace('</head>',
+      `<script>window.__DREAMLIST_DEV__=${JSON.stringify({ clerkId, name: name || 'Dev User' })}</script></head>`);
+    return new Response(html, { status: 200, headers: { 'content-type': 'text/html; charset=utf-8' } });
+  }
   return new Response(res.body, {
     status: 200,
     headers: { 'content-type': 'text/html; charset=utf-8' },
@@ -959,7 +1036,7 @@ export async function handleDreamlist(request, env, url) {
   }
 
   const api = path.startsWith('/dreamlist/api/');
-  if (!api) return fetchPage(env, url.origin);
+  if (!api) return fetchPage(request, env, url.origin);
 
   await ensureSchema(env);
   const rest = path.slice('/dreamlist/api/'.length).replace(/\/+$/, '');
@@ -981,6 +1058,7 @@ export async function handleDreamlist(request, env, url) {
   // GET /dreamlist/api/lists — everything the caller can see, creating a
   // starter list on a first visit.
   if (seg[0] === 'lists' && seg.length === 1 && method === 'GET') {
+    await resolveProfile(user, env);
     const lists = await ensureDefaultList(env, user);
     return json({
       lists: lists.map(l => publicList(l, l.role)),
